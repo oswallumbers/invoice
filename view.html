@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Invoice</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="form-style.css">
+    <style>
+        .view-label { font-weight: 600; color: #555; }
+        .view-data { background-color: #f8f9fa; padding: 0.5rem; border-radius: 5px; }
+        .view-data-multiline { white-space: pre-wrap; }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .form-container, .form-container * {
+                visibility: visible;
+            }
+            .form-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container form-container">
+        <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+            <h1 id="view-invoice-no">Invoice Details</h1>
+            <div>
+                <a href="dashboard.html" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+                <button onclick="window.print()" class="btn btn-primary"><i class="fas fa-print"></i> Print</button>
+            </div>
+        </div>
+
+        <div id="invoice-content">
+            <div class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="firebase-init.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const invoiceId = urlParams.get('id');
+            const contentDiv = document.getElementById('invoice-content');
+
+            if (!invoiceId) {
+                contentDiv.innerHTML = '<div class="alert alert-danger">No invoice ID provided.</div>';
+                return;
+            }
+
+            db.collection('invoices').doc(invoiceId).get().then(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    document.getElementById('view-invoice-no').innerText = `Invoice: ${data.invoiceNo}`;
+
+                    // Logic to display buyer's name if available, otherwise fallback to address
+                    const buyerDisplay = data.buyerName 
+                        ? `<p class="view-data view-data-multiline"><strong>${data.buyerName}</strong><br>${data.buyerDetails}</p>` 
+                        : `<p class="view-data view-data-multiline">${data.buyerDetails}</p>`;
+
+                    let itemsHtml = '';
+                    let totalQty = 0;
+                    let totalM3 = 0.0;
+                    let totalAmount = 0.0;
+
+                    data.items.forEach(item => {
+                        totalQty += item.qty;
+                        totalM3 += item.m3;
+                        totalAmount += item.amount;
+                        itemsHtml += `
+                            <tr>
+                                <td>${item.sno}</td>
+                                <td>${item.desc}</td>
+                                <td>${item.hsn}</td>
+                                <td class="text-end">${item.qty}</td>
+                                <td>${item.uom}</td>
+                                <td class="text-end">${parseFloat(item.m3).toFixed(3)}</td>
+                                <td class="text-end">${parseFloat(item.rate).toFixed(2)}</td>
+                                <td class="text-end">${parseFloat(item.amount).toFixed(2)}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    // Add total row
+                    itemsHtml += `
+                        <tr class="table-light fw-bold">
+                            <td colspan="3" class="text-end">TOTAL</td>
+                            <td class="text-end">${totalQty}</td>
+                            <td></td>
+                            <td class="text-end">${totalM3.toFixed(3)}</td>
+                            <td></td>
+                            <td class="text-end">${totalAmount.toFixed(2)}</td>
+                        </tr>
+                    `;
+
+
+                    contentDiv.innerHTML = `
+                        <div class="card mb-4"><div class="card-header">Party Details</div><div class="card-body row">
+                            <div class="col-md-6 mb-3"><p class="view-label">Seller / Shipper</p><p class="view-data view-data-multiline">${data.sellerDetails}</p></div>
+                            <div class="col-md-6 mb-3"><p class="view-label">Buyer / Consignee</p>${buyerDisplay}</div>
+                        </div></div>
+                        
+                        <div class="row"><div class="col-md-6"><div class="card mb-4"><div class="card-header">Invoice Details</div><div class="card-body">
+                            <p class="mb-2"><span class="view-label">Invoice No:</span> ${data.invoiceNo}</p>
+                            <p class="mb-2"><span class="view-label">Date:</span> ${new Date(data.invoiceDate).toLocaleDateString('en-GB')}</p>
+                            <p class="mb-0"><span class="view-label">IEC No:</span> ${data.iecNo || 'N/A'}</p>
+                        </div></div></div><div class="col-md-6"><div class="card mb-4"><div class="card-header">Shipment Details</div><div class="card-body">
+                            <p class="mb-2"><span class="view-label">Terms:</span> ${data.terms}</p>
+                            <p class="mb-2"><span class="view-label">Port of Loading:</span> ${data.portLoading}</p>
+                            <p class="mb-2"><span class="view-label">Port of Discharge:</span> ${data.portDischarge}</p>
+                            <p class="mb-0"><span class="view-label">Country of Origin:</span> ${data.countryOrigin}</p>
+                        </div></div></div></div>
+                        
+                        <h5>Items</h5>
+                        <div class="table-responsive mb-4">
+                            <table class="table table-bordered">
+                                <thead class="table-light text-center"><tr>
+                                    <th>S.No.</th><th>Description</th><th>HSN</th><th class="text-end">Qty</th><th>UOM</th><th class="text-end">M3</th><th class="text-end">Rate</th><th class="text-end">Amount</th>
+                                </tr></thead>
+                                <tbody>${itemsHtml}</tbody>
+                            </table>
+                        </div>
+
+                         <div class="card mb-4"><div class="card-header">Container & Weight Details</div><div class="card-body row">
+                            <div class="col-md-4"><p><span class="view-label">Container No:</span> ${data.containerNo}</p></div>
+                            <div class="col-md-4"><p><span class="view-label">Size:</span> ${data.containerSize}</p></div>
+                            <div class="col-md-4"><p><span class="view-label">Total Items:</span> ${data.totalItems}</p></div>
+                            <div class="col-md-4"><p><span class="view-label">Gross Weight:</span> ${data.grossWeight}</p></div>
+                            <div class="col-md-4"><p><span class="view-label">Net Weight:</span> ${data.netWeight}</p></div>
+                        </div></div>
+
+                        ${data.remarks ? `<div class="card mb-4"><div class="card-header">Remarks</div><div class="card-body"><p>${data.remarks}</p></div></div>` : ''}
+
+                    `;
+                } else {
+                    contentDiv.innerHTML = '<div class="alert alert-danger">Invoice not found.</div>';
+                }
+            }).catch(error => {
+                console.error("Error fetching document:", error);
+                contentDiv.innerHTML = '<div class="alert alert-danger">Error loading invoice data.</div>';
+            });
+        });
+    </script>
+</body>
+</html>
