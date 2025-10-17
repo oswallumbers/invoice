@@ -14,6 +14,23 @@
         #annexure-modal .modal-content {
              max-width: 1200px; /* Wider modal for annexure */
         }
+        
+    /* ... your existing styles ... */
+
+    /* Style for the new item comment input field */
+    .item-comment {
+        font-size: 0.85rem;      /* Makes the text slightly smaller */
+        font-style: italic;      /* Italicizes the placeholder text */
+        margin-top: 4px;         /* Adds a little space from the description above */
+        border-top: 1px solid #eee; /* Adds a subtle separator line */
+        box-shadow: none;        /* Removes any default glow on focus */
+    }
+
+    /* Style to ensure the red 'X' button aligns well with the taller rows */
+    .align-middle .btn {
+        vertical-align: middle;
+    }
+
     </style>
 </head>
 <body>
@@ -315,4 +332,5 @@ A/C NO.: 560101000092024</textarea>
     <script src="annexure-generator.js"></script>
 
 </body>
+
 </html>
