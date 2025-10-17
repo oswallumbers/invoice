@@ -14,11 +14,7 @@
         #annexure-modal .modal-content {
              max-width: 1200px; /* Wider modal for annexure */
         }
-        
-    /* ... your existing styles ... */
-
-    /* Style for the new item comment input field */
-    .item-comment {
+        .item-comment {
         font-size: 0.85rem;      /* Makes the text slightly smaller */
         font-style: italic;      /* Italicizes the placeholder text */
         margin-top: 4px;         /* Adds a little space from the description above */
@@ -30,7 +26,6 @@
     .align-middle .btn {
         vertical-align: middle;
     }
-
     </style>
 </head>
 <body>
@@ -38,6 +33,22 @@
     <div class="container form-container">
         <h1 class="text-center">EXPORT MANAGEMENT SYSTEM</h1>
        <div style="text-align: center;"> <a href="dashboard.html" class="btn btn-primary">Back to Dashboard</a></div>
+<br>
+
+        <div class="card bg-light mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <label for="performa-select" class="form-label"><strong><i class="fas fa-file-import"></i> Create from Performa Invoice:</strong></label>
+                    </div>
+                    <div class="col-md-8">
+                         <select id="performa-select" class="form-select">
+                            <option value="">-- Select a saved Performa Invoice --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
 <br>
 
         <form id="invoice-form">
@@ -332,5 +343,4 @@ A/C NO.: 560101000092024</textarea>
     <script src="annexure-generator.js"></script>
 
 </body>
-
 </html>
