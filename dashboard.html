@@ -7,6 +7,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="form-style.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
    
 </head>
 <body>
@@ -19,9 +22,10 @@
     <div class="container dashboard-container">
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
             <h1>Invoice Dashboard</h1>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap">
                 <button class="btn btn-danger" id="logoutBtn">Logout</button>   
                 <button id="import-btn" class="btn btn-success"><i class="fas fa-file-excel"></i> Import from Excel</button>
+                <a href="performa-invoice.html" class="btn btn-warning"><i class="fas fa-file-alt"></i> New Performa Invoice</a>
                 <a href="index.html" class="btn btn-primary"><i class="fas fa-plus"></i> Create New Invoice</a>
                 <input type="file" id="import-file-input" accept=".xlsx, .xls" style="display: none;">
             </div>
@@ -34,6 +38,7 @@
                         <th>Invoice No</th>
                         <th>Date</th>
                         <th>Buyer</th>
+                        <th>Type</th>
                         <th>Total Amount (US$)</th>
                         <th>Actions</th>
                     </tr>
@@ -87,7 +92,227 @@
         importBtn.addEventListener('click', () => importFileInput.click());
         importFileInput.addEventListener('change', handleFileImport);
     });
+    document.addEventListener('DOMContentLoaded', function() {
+        const tbody = document.querySelector('#invoice-list tbody');
+        
+        // --- Load both commercial and performa invoices ---
+        const invoicesPromise = db.collection('invoices').orderBy('createdAt', 'desc').get();
+        const performaPromise = db.collection('performaInvoices').orderBy('createdAt', 'desc').get();
 
+        Promise.all([invoicesPromise, performaPromise]).then(([invoicesSnapshot, performaSnapshot]) => {
+            let allDocuments = [];
+
+            invoicesSnapshot.forEach(doc => {
+                allDocuments.push({ id: doc.id, type: 'Commercial', ...doc.data() });
+            });
+
+            performaSnapshot.forEach(doc => {
+                allDocuments.push({ id: doc.id, type: 'Performa', ...doc.data() });
+            });
+
+            // Sort all documents by creation date, newest first
+            allDocuments.sort((a, b) => (b.createdAt && a.createdAt) ? b.createdAt.seconds - a.createdAt.seconds : 0);
+            
+            tbody.innerHTML = ''; // Clear existing rows
+
+            if (allDocuments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No invoices found.</td></tr>';
+                return;
+            }
+
+            allDocuments.forEach(doc => {
+                const row = document.createElement('tr');
+                let invoiceNo, invoiceDate, buyerName, totalAmount, actions;
+
+                if (doc.type === 'Commercial') {
+                    invoiceNo = doc.invoiceNo;
+                    invoiceDate = new Date(doc.invoiceDate).toLocaleDateString('en-GB');
+                    buyerName = doc.buyerName || (doc.buyerDetails ? doc.buyerDetails.split('\n')[0] : 'N/A');
+                    totalAmount = (doc.totalAmount || 0).toFixed(2);
+                    actions = `
+                        <button class="btn btn-sm btn-info" onclick="viewInvoice('${doc.id}')" title="View"><i class="fas fa-eye"></i></button>
+                        <button class="btn btn-sm btn-warning" onclick="editInvoice('${doc.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteInvoice('${doc.id}', 'invoices')" title="Delete"><i class="fas fa-trash"></i></button>
+                    `;
+                } else { // Performa Invoice
+                    invoiceNo = doc.performaInvoiceNo;
+                    invoiceDate = new Date(doc.performaInvoiceDate).toLocaleDateString('en-GB');
+                    buyerName = doc.buyerName || 'N/A';
+                    totalAmount = (doc.totalAmount || 0).toFixed(2);
+                    actions = `
+                        <button class="btn btn-sm btn-success" onclick="downloadPerformaPDF('${doc.id}')" title="Download PDF"><i class="fas fa-file-pdf"></i></button>
+                        <button class="btn btn-sm btn-warning" onclick="editPerformaInvoice('${doc.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteInvoice('${doc.id}', 'performaInvoices')" title="Delete"><i class="fas fa-trash"></i></button>
+                    `;
+                }
+                
+                row.innerHTML = `
+                    <td>${invoiceNo}</td>
+                    <td>${invoiceDate}</td>
+                    <td>${buyerName}</td>
+                    <td><span class="badge bg-${doc.type === 'Commercial' ? 'primary' : 'warning'}">${doc.type}</span></td>
+                    <td>${totalAmount}</td>
+                    <td>${actions}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+        }).catch(error => {
+            console.error("Error fetching documents:", error);
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Error loading invoices.</td></tr>';
+        });
+
+        // --- Import Logic remains the same ---
+        const importBtn = document.getElementById('import-btn');
+        const importFileInput = document.getElementById('import-file-input');
+        importBtn.addEventListener('click', () => importFileInput.click());
+        importFileInput.addEventListener('change', handleFileImport);
+    });
+
+    // --- Action Functions ---
+    function viewInvoice(id) { window.location.href = `view.html?id=${id}`; }
+    function editInvoice(id) { window.location.href = `index.html?id=${id}`; }
+    function editPerformaInvoice(id) { window.location.href = `performa-invoice.html?id=${id}`; }
+
+    function deleteInvoice(id, collectionName) {
+        if (confirm(`Are you sure you want to delete this ${collectionName === 'invoices' ? 'invoice' : 'Performa Invoice'}?`)) {
+            db.collection(collectionName).doc(id).delete().then(() => {
+                alert('Document deleted!');
+                location.reload();
+            }).catch(error => console.error("Error removing document: ", error));
+        }
+    }
+
+    // --- NEW: Function to fetch Performa data and generate PDF ---
+    async function downloadPerformaPDF(id) {
+        try {
+            const doc = await db.collection('performaInvoices').doc(id).get();
+            if (doc.exists) {
+                generatePerformaPDF(doc.data());
+            } else {
+                alert('Error: Performa Invoice not found.');
+            }
+        } catch (error) {
+            alert('Could not fetch Performa Invoice data.');
+            console.error(error);
+        }
+    }
+
+    // --- NEW: PDF generation logic (copied and adapted from performa-script.js) ---
+    function generatePerformaPDF(data) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const font = 'Helvetica';
+        doc.setFont(font, 'normal');
+        const margin = 15;
+        const pageWidth = doc.internal.pageSize.width;
+        let y = margin + 5;
+
+        // --- HEADER ---
+        doc.setFontSize(16);
+        doc.setFont(font, 'bold');
+        doc.text('OSWAL LUMBERS PVT. LTD.', margin, y);
+        y += 6;
+        doc.setFontSize(9);
+        doc.setFont(font, 'normal');
+        doc.text('SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA', margin, y);
+        y+= 4;
+        doc.text('E-MAIL: info@oswallumbers.com', margin, y);
+
+        // --- DOC DETAILS ---
+        const piDate = new Date(data.performaInvoiceDate).toLocaleDateString('en-GB');
+        doc.setFont(font, 'bold');
+        doc.text(`Sales Contract No: ${data.performaInvoiceNo}`, pageWidth - margin, y - 5, { align: 'right' });
+        doc.setFont(font, 'normal');
+        doc.text(piDate, pageWidth - margin, y, { align: 'right' });
+
+        y += 15;
+        // --- BUYER ---
+        doc.setFont(font, 'bold');
+        doc.text('Buyer:', margin, y);
+        y += 5;
+        doc.setFont(font, 'normal');
+        const fullBuyerText = data.buyerName + '\n' + data.buyerDetails;
+        doc.text(fullBuyerText, margin, y, { maxWidth: 100 });
+        y += 25;
+        
+        doc.text('Dear Sir,', margin, y);
+        y += 5;
+        doc.text(`We are pleased to confirm having sold to you ${data.mainItemDesc}`, margin, y, { maxWidth: pageWidth - (margin * 2) });
+        y += 10;
+        
+        // --- ITEMS TABLE ---
+        const head = [['NO.', 'HSN', 'DIMENSION', 'QUANTITY ABOUT M3', 'CNF PRICE US$/M3', 'AMOUNT US$']];
+        const body = data.items.map(item => [
+            item.sno,
+            item.hsn,
+            item.dimension,
+            parseFloat(item.m3).toFixed(3),
+            `$${parseFloat(item.rate).toFixed(2)}`,
+            `$${parseFloat(item.amount).toFixed(2)}`
+        ]);
+
+        doc.autoTable({
+            head: head, body: body, startY: y, theme: 'grid',
+            headStyles: { fontStyle: 'bold', halign: 'center' },
+            styles: { fontSize: 9 },
+        });
+        y = doc.autoTable.previous.finalY + 10;
+
+        // --- TERMS ---
+        const addTerm = (label, value) => {
+            if (value) {
+                doc.setFont(font, 'bold');
+                doc.text(label, margin, y, { maxWidth: 40 });
+                doc.setFont(font, 'normal');
+                doc.text(value, margin + 45, y, { maxWidth: pageWidth - margin * 2 - 45 });
+                const textHeight = doc.getTextDimensions(value, { maxWidth: pageWidth - margin * 2 - 45 }).h;
+                y += textHeight + 4;
+            }
+        };
+
+        addTerm('Shipment:', data.shipmentDetails);
+        addTerm('Payment:', data.paymentTerms);
+        addTerm('Freight:', data.freight);
+        addTerm('Partial Shipment:', data.partialShipment);
+        
+        y += 5;
+        doc.setFont(font, 'bold');
+        doc.text('Our Bank details:', margin, y);
+        y += 5;
+        doc.setFont(font, 'normal');
+        doc.text(data.bankDetails, margin + 10, y, { lineHeightFactor: 1.4 });
+        y += 35;
+
+        if (data.calculationNote) {
+            doc.text(data.calculationNote, margin, y);
+            y += 10;
+        }
+
+        doc.text('Best Regards,', margin, y);
+        y += 20;
+
+        doc.setFont(font, 'bold');
+        doc.text('FOR, OSWAL LUMBERS PVT. LTD.', margin, y);
+        y += 5;
+        doc.text('DEEPAK PAREKH', margin, y);
+        y += 5;
+        doc.text('DIRECTOR', margin, y);
+
+        doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/[\/]/g, '-')}.pdf`);
+    }
+
+    // --- Import, Auth, and other functions from original file ---
+    document.addEventListener('DOMContentLoaded', function() {
+        if (sessionStorage.getItem('loggedIn') !== 'true') {
+            window.location.href = 'login.html';
+        }
+        const logoutBtn = document.getElementById('logoutBtn');
+        logoutBtn.addEventListener('click', function() {
+            sessionStorage.removeItem('loggedIn');
+            window.location.href = 'login.html';
+        });
+    });
     function handleFileImport(event) {
         const file = event.target.files[0];
         if (!file) return;
