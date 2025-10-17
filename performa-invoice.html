@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performa Invoice</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="form-style.css">
+    <style>
+        #add-buyer-modal .modal-content {
+            background-color:#fefefe; margin:5% auto; padding:20px; border:1px solid #888; width:80%; max-width:600px; border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container form-container">
+        <h1 class="text-center">PERFORMA INVOICE</h1>
+        <div style="text-align: center;"> <a href="dashboard.html" class="btn btn-primary">Back to Dashboard</a></div>
+        <br>
+
+        <form id="performa-invoice-form">
+            <div class="card mb-4">
+                <div class="card-header">Party Details</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="seller-details" class="form-label"><strong>Seller / Shipper</strong></label>
+                            <textarea id="seller-details" rows="6" class="form-control">OSWAL LUMBERS PVT LTD
+SURVEY NO. 262, 263, 261/2, 261/3
+P.O. BOX 181, NATIONAL HIGHWAY 8A
+GANDHIDHAM - 370 201 - KUTCH - GUJARAT - INDIA
+EMAIL: INFO@OSWALLUMBERS.COM
+GSTIN: 24AAACO3558Q1Z0
+IEC NO. 2089000104</textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="buyer-select" class="form-label"><strong>Buyer / Consignee</strong></label>
+                            <div class="input-group mb-2">
+                                <select id="buyer-select" class="form-select">
+                                    <option value="">-- Select or Add New Buyer --</option>
+                                </select>
+                                <button type="button" id="add-buyer-btn" class="btn btn-outline-secondary">+</button>
+                            </div>
+                            <textarea id="buyer-details" rows="4" class="form-control"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">Performa Invoice Details</div>
+                        <div class="card-body">
+                            <div class="mb-3"><label for="performa-invoice-no" class="form-label">Performa Invoice No:</label><input type="text" id="performa-invoice-no" class="form-control" readonly></div>
+                            <div class="mb-3"><label for="performa-invoice-date" class="form-label">Date:</label><input type="date" id="performa-invoice-date" class="form-control" required></div>
+                        </div>
+                    </div>
+                </div>
+                 <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">Shipment & Payment</div>
+                        <div class="card-body">
+                            <div class="mb-2"><label class="form-label">Terms of Shipment:</label><input type="text" id="terms" class="form-control"></div>
+                            <div class="mb-2"><label class="form-label">Shipment:</label><input type="text" id="shipment-details" class="form-control" placeholder="e.g., CNF Doha, Qatar basis..."></div>
+                            <div class="mb-2"><label class="form-label">Payment:</label><input type="text" id="payment-terms" class="form-control" value="30% advance payment..."></div>
+                            <div class="mb-2"><label class="form-label">Freight:</label><input type="text" id="freight" class="form-control" value="Prepaid."></div>
+                            <div class="mb-2"><label class="form-label">Partial Shipment:</label><input type="text" id="partial-shipment" class="form-control" value="Allowed"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-3">
+                <div class="card-header">Item Details</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="main-item-desc" class="form-label"><strong>Main Item Description (for all items below)</strong></label>
+                        <input type="text" id="main-item-desc" class="form-control" value="PINE WOOD SAWN TIMBER (AD WITH ANTI STAIN):">
+                    </div>
+                    <div class="table-responsive">
+                        <table id="items-table" class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>S. No.</th>
+                                    <th>HSN</th>
+                                    <th>Dimension</th>
+                                    <th>Quantity (M3)</th>
+                                    <th>Rate (US$/M3)</th>
+                                    <th>Amount (US$)</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="items-body"></tbody>
+                        </table>
+                    </div>
+                    <button type="button" id="add-row-btn" class="btn btn-primary">Add Item Row</button>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                     <div class="card mb-3">
+                         <div class="card-header">Bank & Calculation Details</div>
+                         <div class="card-body">
+                            <label class="form-label">Bank Details:</label>
+                             <textarea id="bank-details" rows="6" class="form-control">Beneficiary: Oswal Lumbers Pvt Ltd
+Account No: 560101000092024
+Beneficiary Bank: Union Bank of India
+SWIFT: UBININBBGAN
+Intermediary Bank: Citi Bank NA, New York, USA.
+SWIFT: CITIUS33
+Account No: 10929227</textarea>
+                            <label class="form-label mt-3">Calculation Note:</label>
+                            <input type="text" id="calculation-note" class="form-control" placeholder="e.g., Calculation as 30.294 Pcs = 1.00 M3">
+                         </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card mb-3">
+                        <div class="card-header">Total</div>
+                        <div class="card-body">
+                            <div class="total-field"><h5>Total Amount:</h5><h5 id="total-amount">$0.00</h5></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end border-top pt-3 mt-3">
+                <button type="button" class="btn btn-info" id="save-btn">Save Performa Invoice</button>
+                <button type="submit" class="btn btn-success">Generate Performa PDF</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="add-buyer-modal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
+        <div class="modal-content">
+            <span class="close-btn" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h2>Add New Buyer</h2>
+            <form id="new-buyer-form">
+                <div class="mb-3"><label for="new-buyer-name" class="form-label">Buyer Name:</label><input type="text" id="new-buyer-name" class="form-control" required></div>
+                <div class="mb-3"><label for="new-buyer-address" class="form-label">Buyer Address:</label><textarea id="new-buyer-address" rows="4" class="form-control" required></textarea></div>
+                <div class="mb-3"><label for="new-buyer-terms" class="form-label">Terms of Shipment:</label><input type="text" id="new-buyer-terms" class="form-control" required></div>
+                <div class="mb-3"><label for="new-buyer-port" class="form-label">Port of Discharge:</label><input type="text" id="new-buyer-port" class="form-control" required></div>
+                <button type="submit" class="btn btn-primary">Save Buyer</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="firebase-init.js"></script>
+    <script src="performa-script.js"></script>
+
+</body>
+</html>
