@@ -199,32 +199,37 @@
     }
 
     // --- NEW: PDF generation logic (copied and adapted from performa-script.js) ---
-    function generatePerformaPDF(data) {
-        const { jsPDF } = window.jspdf;
+    function generatePDF() {
         const doc = new jsPDF();
+        const data = getFormData();
         const font = 'Helvetica';
         doc.setFont(font, 'normal');
         const margin = 15;
         const pageWidth = doc.internal.pageSize.width;
         let y = margin + 5;
 
-        // --- HEADER ---
-        doc.setFontSize(16);
+      
+        doc.setFontSize(20);
         doc.setFont(font, 'bold');
-        doc.text('OSWAL LUMBERS PVT. LTD.', margin, y);
-        y += 6;
-        doc.setFontSize(9);
+        doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
+        y += 7;
+        doc.setFontSize(11);
         doc.setFont(font, 'normal');
-        doc.text('SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA', margin, y);
-        y+= 4;
-        doc.text('E-MAIL: info@oswallumbers.com', margin, y);
+        doc.text('SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA', pageWidth / 2, y, { align: 'center' });
+        y += 5;
+        doc.text('E-MAIL: info@oswallumbers.com', pageWidth / 2, y, { align: 'center' });
 
         // --- DOC DETAILS ---
+        y += 10; // Add space after the header
+
+        // --- DOC DETAILS (New Position) ---
         const piDate = new Date(data.performaInvoiceDate).toLocaleDateString('en-GB');
         doc.setFont(font, 'bold');
-        doc.text(`Sales Contract No: ${data.performaInvoiceNo}`, pageWidth - margin, y - 5, { align: 'right' });
+        doc.text(`Sales Contract No: ${data.performaInvoiceNo}`, margin, y);
         doc.setFont(font, 'normal');
-        doc.text(piDate, pageWidth - margin, y, { align: 'right' });
+        doc.text(`Date: ${piDate}`, margin, y + 5);
+
+        y += 5; // Add space before the buyer details
 
         y += 15;
         // --- BUYER ---
@@ -281,12 +286,13 @@
         doc.text('Our Bank details:', margin, y);
         y += 5;
         doc.setFont(font, 'normal');
+        const bankDetailsDims = doc.getTextDimensions(data.bankDetails, { lineHeightFactor: 1.4 });
         doc.text(data.bankDetails, margin + 10, y, { lineHeightFactor: 1.4 });
-        y += 35;
+        y += bankDetailsDims.h + 40; // Dynamically calculate height and add a 10px gap
 
         if (data.calculationNote) {
             doc.text(data.calculationNote, margin, y);
-            y += 10;
+            y += 30;
         }
 
         doc.text('Best Regards,', margin, y);
@@ -299,7 +305,7 @@
         y += 5;
         doc.text('DIRECTOR', margin, y);
 
-        doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/[\/]/g, '-')}.pdf`);
+        doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace('/', '-')}.pdf`);
     }
 
     // --- Import, Auth, and other functions from original file ---
