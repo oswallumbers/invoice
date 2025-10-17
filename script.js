@@ -43,49 +43,64 @@ document.addEventListener('DOMContentLoaded', function () {
      * **MODIFIED**
      * Populates the form, including the new comment field for each item.
      */
-    function populateForm(data) {
-        document.getElementById('seller-details').value = data.sellerDetails;
-        document.getElementById('buyer-details').value = data.buyerDetails;
-        document.getElementById('invoice-no').value = data.invoiceNo;
-        document.getElementById('invoice-no').readOnly = false;
-        document.getElementById('invoice-date').value = data.invoiceDate;
-        document.getElementById('terms').value = data.terms;
-        document.getElementById('port-loading').value = data.portLoading;
-        document.getElementById('port-discharge').value = data.portDischarge;
-        document.getElementById('country-origin').value = data.countryOrigin;
-        document.getElementById('container-no').value = data.containerNo;
-        document.getElementById('container-size').value = data.containerSize;
-        document.getElementById('total-items').value = data.totalItems;
-        document.getElementById('gross-weight').value = data.grossWeight;
-        document.getElementById('net-weight').value = data.netWeight;
-        document.getElementById('bank-details').value = data.bankDetails;
-        document.getElementById('remarks').value = data.remarks || '';
+    // REPLACE your old populateForm function with this complete, corrected version.
 
-        itemsBody.innerHTML = '';
-        data.items.forEach(item => {
-            const row = document.createElement('tr');
-            // **MODIFICATION START**: Added the comment input field and populated it.
-            // Using `|| ''` ensures it works even if old data doesn't have a comment.
-            row.innerHTML = `
-                <td><input type="text" class="item-sno form-control form-control-sm" value="${item.sno}" readonly></td>
-                <td>
-                    <input type="text" class="item-desc form-control form-control-sm" value="${item.desc}">
-                    <input type="text" class="item-comment form-control form-control-sm" style="font-size: 0.85em; margin-top: 4px;" placeholder="Add comments/details..." value="${item.comment || ''}">
-                </td>
-                <td><input type="text" class="item-hsn form-control form-control-sm" value="${item.hsn}"></td>
-                <td><input type="number" class="item-qty form-control form-control-sm" value="${item.qty}" min="0"></td>
-                <td><input type="text" class="item-uom form-control form-control-sm" value="${item.uom}"></td>
-                <td><input type="number" class="item-m3 form-control form-control-sm" value="${item.m3}" step="0.001"></td>
-                <td><input type="number" class="item-rate form-control form-control-sm" value="${item.rate}" step="0.01"></td>
-                <td><input type="text" class="item-amount form-control form-control-sm" value="${item.amount.toFixed(2)}" readonly></td>
-                <td><button type="button" class="delete-row-btn btn btn-danger btn-sm">X</button></td>
-            `;
-            // **MODIFICATION END**
-            itemsBody.appendChild(row);
-        });
-        itemCounter = data.items.length;
-        updateTotals();
+function populateForm(data) {
+    document.getElementById('seller-details').value = data.sellerDetails;
+    document.getElementById('buyer-details').value = data.buyerDetails;
+    document.getElementById('invoice-no').value = data.invoiceNo;
+    document.getElementById('invoice-no').readOnly = false;
+    document.getElementById('invoice-date').value = data.invoiceDate;
+    document.getElementById('terms').value = data.terms;
+    document.getElementById('port-loading').value = data.portLoading;
+    document.getElementById('port-discharge').value = data.portDischarge;
+    document.getElementById('country-origin').value = data.countryOrigin;
+    document.getElementById('container-no').value = data.containerNo;
+    document.getElementById('container-size').value = data.containerSize;
+    document.getElementById('total-items').value = data.totalItems;
+    document.getElementById('gross-weight').value = data.grossWeight;
+    document.getElementById('net-weight').value = data.netWeight;
+    document.getElementById('bank-details').value = data.bankDetails;
+    document.getElementById('remarks').value = data.remarks || '';
+
+    // --- NEW CODE START ---
+    // This new block finds and selects the correct buyer in the dropdown.
+    const savedBuyerName = data.buyerName;
+    if (savedBuyerName) {
+        const buyerSelect = document.getElementById('buyer-select');
+        // Loop through all the options in the dropdown
+        for (let i = 0; i < buyerSelect.options.length; i++) {
+            // If an option's text matches the saved buyer name...
+            if (buyerSelect.options[i].text === savedBuyerName) {
+                buyerSelect.selectedIndex = i; // ...select it.
+                break; // Stop looping once we've found it.
+            }
+        }
     }
+    // --- NEW CODE END ---
+
+    itemsBody.innerHTML = '';
+    data.items.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><input type="text" class="item-sno form-control form-control-sm" value="${item.sno}" readonly></td>
+            <td>
+                <input type="text" class="item-desc form-control form-control-sm" value="${item.desc}">
+                <input type="text" class="item-comment form-control form-control-sm" style="font-size: 0.85em; margin-top: 4px;" placeholder="Add comments/details..." value="${item.comment || ''}">
+            </td>
+            <td><input type="text" class="item-hsn form-control form-control-sm" value="${item.hsn}"></td>
+            <td><input type="number" class="item-qty form-control form-control-sm" value="${item.qty}" min="0"></td>
+            <td><input type="text" class="item-uom form-control form-control-sm" value="${item.uom}"></td>
+            <td><input type="number" class="item-m3 form-control form-control-sm" value="${item.m3}" step="0.001"></td>
+            <td><input type="number" class="item-rate form-control form-control-sm" value="${item.rate}" step="0.01"></td>
+            <td><input type="text" class="item-amount form-control form-control-sm" value="${item.amount.toFixed(2)}" readonly></td>
+            <td><button type="button" class="delete-row-btn btn btn-danger btn-sm">X</button></td>
+        `;
+        itemsBody.appendChild(row);
+    });
+    itemCounter = data.items.length;
+    updateTotals();
+}
     
     async function autoGenerateInvoiceNumber() {
         // This function is unchanged.
