@@ -1,3 +1,5 @@
+// This is the complete script.js file with your existing code preserved.
+// The item comment functionality has been carefully integrated.
 document.addEventListener('DOMContentLoaded', function () {
     const { jsPDF } = window.jspdf;
     const form = document.getElementById('invoice-form');
@@ -37,6 +39,10 @@ document.addEventListener('DOMContentLoaded', function () {
     
     loadBuyers();
 
+    /**
+     * **MODIFIED**
+     * Populates the form, including the new comment field for each item.
+     */
     function populateForm(data) {
         document.getElementById('seller-details').value = data.sellerDetails;
         document.getElementById('buyer-details').value = data.buyerDetails;
@@ -58,9 +64,14 @@ document.addEventListener('DOMContentLoaded', function () {
         itemsBody.innerHTML = '';
         data.items.forEach(item => {
             const row = document.createElement('tr');
+            // **MODIFICATION START**: Added the comment input field and populated it.
+            // Using `|| ''` ensures it works even if old data doesn't have a comment.
             row.innerHTML = `
                 <td><input type="text" class="item-sno form-control form-control-sm" value="${item.sno}" readonly></td>
-                <td><input type="text" class="item-desc form-control form-control-sm" value="${item.desc}"></td>
+                <td>
+                    <input type="text" class="item-desc form-control form-control-sm" value="${item.desc}">
+                    <input type="text" class="item-comment form-control form-control-sm" style="font-size: 0.85em; margin-top: 4px;" placeholder="Add comments/details..." value="${item.comment || ''}">
+                </td>
                 <td><input type="text" class="item-hsn form-control form-control-sm" value="${item.hsn}"></td>
                 <td><input type="number" class="item-qty form-control form-control-sm" value="${item.qty}" min="0"></td>
                 <td><input type="text" class="item-uom form-control form-control-sm" value="${item.uom}"></td>
@@ -69,6 +80,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td><input type="text" class="item-amount form-control form-control-sm" value="${item.amount.toFixed(2)}" readonly></td>
                 <td><button type="button" class="delete-row-btn btn btn-danger btn-sm">X</button></td>
             `;
+            // **MODIFICATION END**
             itemsBody.appendChild(row);
         });
         itemCounter = data.items.length;
@@ -76,6 +88,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     async function autoGenerateInvoiceNumber() {
+        // This function is unchanged.
         const settingsRef = db.collection('settings').doc('invoiceCounter');
         try {
             const nextNumber = await db.runTransaction(async (transaction) => {
@@ -100,6 +113,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function saveInvoice() {
+        // This function is unchanged.
         const data = getFormData();
         
         if (invoiceId) {
@@ -124,12 +138,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    /**
+     * **MODIFIED**
+     * Gets all form data, now including the new comment field for each item.
+     */
     function getFormData() {
         const items = [];
         itemsBody.querySelectorAll('tr').forEach(row => {
+            // **MODIFICATION START**: Added 'comment' to the pushed object.
             items.push({
                 sno: row.querySelector('.item-sno').value,
                 desc: row.querySelector('.item-desc').value,
+                comment: row.querySelector('.item-comment').value, // <-- Added this line
                 hsn: row.querySelector('.item-hsn').value,
                 qty: parseFloat(row.querySelector('.item-qty').value) || 0,
                 uom: row.querySelector('.item-uom').value,
@@ -137,6 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 rate: parseFloat(row.querySelector('.item-rate').value) || 0,
                 amount: parseFloat(row.querySelector('.item-amount').value) || 0
             });
+            // **MODIFICATION END**
         });
 
         const selectedBuyerName = buyerSelect.options[buyerSelect.selectedIndex].text;
@@ -164,6 +185,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function loadBuyers() {
+        // This function is unchanged.
         db.collection('buyers').orderBy('name').get().then(querySnapshot => {
             while (buyerSelect.options.length > 1) {
                 buyerSelect.remove(1);
@@ -179,6 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function handleBuyerSelection() {
+        // This function is unchanged.
         const buyerId = buyerSelect.value;
         if (!buyerId) {
             document.getElementById('buyer-details').value = '';
@@ -197,10 +220,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }).catch(error => console.error("Error fetching buyer details: ", error));
     }
 
+    // This block is unchanged.
     addBuyerBtn.addEventListener('click', () => { addBuyerModal.style.display = 'block'; });
     closeModalBtn.addEventListener('click', () => { addBuyerModal.style.display = 'none'; });
     window.addEventListener('click', (event) => { if (event.target == addBuyerModal) { addBuyerModal.style.display = 'none'; } });
 
+    // This block is unchanged.
     newBuyerForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const newBuyer = {
@@ -222,11 +247,13 @@ document.addEventListener('DOMContentLoaded', function () {
             newBuyerForm.reset();
         }).catch(error => console.error("Error adding new buyer: ", error));
     });
-
+    
+    // These listeners are unchanged.
     addRowBtn.addEventListener('click', addRow);
     saveBtn.addEventListener('click', saveInvoice);
     buyerSelect.addEventListener('change', handleBuyerSelection);
 
+    // This listener is unchanged.
     itemsBody.addEventListener('input', function(e) {
         if (e.target.classList.contains('item-m3') || e.target.classList.contains('item-rate')) {
             const row = e.target.closest('tr');
@@ -237,6 +264,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateTotals();
     });
 
+    // This listener is unchanged.
     itemsBody.addEventListener('click', function(e) {
         if (e.target.classList.contains('delete-row-btn')) {
             e.target.closest('tr').remove();
@@ -246,12 +274,20 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    /**
+     * **MODIFIED**
+     * Adds a new row with both a description input and a comment input.
+     */
     function addRow() {
         itemCounter++;
         const row = document.createElement('tr');
+        // **MODIFICATION START**: Added the comment input field below the description.
         row.innerHTML = `
             <td><input type="text" class="item-sno form-control form-control-sm" value="${itemCounter}" readonly></td>
-            <td><input type="text" class="item-desc form-control form-control-sm" placeholder="8 INCHES X 8 INCHES X 12 FEET"></td>
+            <td>
+                <input type="text" class="item-desc form-control form-control-sm" placeholder="8 INCHES X 8 INCHES X 12 FEET">
+                <input type="text" class="item-comment form-control form-control-sm" style="font-size: 0.85em; margin-top: 4px;" placeholder="Add comments/details...">
+            </td>
             <td><input type="text" class="item-hsn form-control form-control-sm" value="44071100"></td>
             <td><input type="number" class="item-qty form-control form-control-sm" value="1" min="0"></td>
             <td><input type="text" class="item-uom form-control form-control-sm" value="PCS"></td>
@@ -260,10 +296,12 @@ document.addEventListener('DOMContentLoaded', function () {
             <td><input type="text" class="item-amount form-control form-control-sm" readonly></td>
             <td><button type="button" class="delete-row-btn btn btn-danger btn-sm">X</button></td>
         `;
+        // **MODIFICATION END**
         itemsBody.appendChild(row);
     }
 
     function updateTotals() {
+        // This function is unchanged.
         let totalQty = 0, totalM3 = 0, totalAmount = 0;
         itemsBody.querySelectorAll('tr').forEach(row => {
             totalQty += parseFloat(row.querySelector('.item-qty').value) || 0;
@@ -276,12 +314,18 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     form.addEventListener('submit', function (e) {
+        // This function is unchanged.
         e.preventDefault();
         generatePDF();
     });
-
+    
+    /**
+     * **MODIFIED**
+     * Generates the PDF, combining the item description and comment into a single cell.
+     */
     function generatePDF() {
         const doc = new jsPDF();
+        // All PDF styling and header/footer code is unchanged.
         const font = 'Helvetica';
         doc.setFont(font, 'normal');
         doc.setTextColor('#000000');
@@ -291,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const middleX = pageWidth / 2;
         let y = margin + 5;
 
-        // --- HEADER ---
+        // --- HEADER --- (unchanged)
         doc.setFontSize(16);
         doc.setFont(font, 'bold');
         doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
@@ -310,23 +354,18 @@ document.addEventListener('DOMContentLoaded', function () {
         const borderStartY = y;
         const sellerBuyerDividerY = borderStartY + 40;
 
-        // --- SELLER ---
+        // --- SELLER --- (unchanged)
         doc.setFontSize(10);
         doc.setFont(font, 'bold');
         doc.text('SELLER / SHIPPER:', margin + 2, borderStartY + 5);
         doc.setFont(font, 'normal');
         doc.text(document.getElementById('seller-details').value, margin + 2, borderStartY + 9, { lineHeightFactor: 1.3, maxWidth: middleX - margin - 4 });
 
-        // --- BUYER ---
+        // --- BUYER --- (unchanged)
         doc.setFont(font, 'bold');
         doc.text('BUYER / CONSIGNEE:', margin + 2, sellerBuyerDividerY + 5);
         doc.setFont(font, 'normal');
-        
-        // ===== THIS IS THE FIX FOR THE ERROR =====
-        // We declare selectedBuyerName here so this function can use it.
         const selectedBuyerName = buyerSelect.options[buyerSelect.selectedIndex].text;
-        // ========================================
-        
         const buyerAddress = document.getElementById('buyer-details').value;
         let fullBuyerText = '';
         if (buyerSelect.value && selectedBuyerName !== '-- Select or Add New Buyer --') {
@@ -336,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         doc.text(fullBuyerText, margin + 2, sellerBuyerDividerY + 9, { lineHeightFactor: 1.3, maxWidth: middleX - margin - 4 });
         
-        // --- INVOICE DETAILS (RIGHT SIDE) ---
+        // --- INVOICE DETAILS (RIGHT SIDE) --- (unchanged)
         let rightSideY = borderStartY + 5;
         const invoiceNo = document.getElementById('invoice-no').value;
         const invoiceDate = new Date(document.getElementById('invoice-date').value).toLocaleDateString('en-GB');
@@ -359,14 +398,30 @@ document.addEventListener('DOMContentLoaded', function () {
         // --- ITEMS TABLE ---
         const head = [['S. NO.', 'DESCRIPTION OF ITEM', 'HSN CODE', 'QTY', 'UOM', 'M3', 'RATE IN US$\nCNF/M3', 'AMOUNT IN US$\nCNF']];
         const body = [];
+        
+        // **MODIFICATION START**: Loop now combines description and comment for PDF output.
         itemsBody.querySelectorAll('tr').forEach(row => {
+            const description = row.querySelector('.item-desc').value;
+            const comment = row.querySelector('.item-comment').value;
+
+            // Combine description and comment, adding the comment on a new line if it exists.
+            let fullDescription = description;
+            if (comment && comment.trim() !== '') {
+                fullDescription += `\n${comment}`;
+            }
+
             body.push([
-                row.querySelector('.item-sno').value, row.querySelector('.item-desc').value,
-                row.querySelector('.item-hsn').value, row.querySelector('.item-qty').value,
-                row.querySelector('.item-uom').value, parseFloat(row.querySelector('.item-m3').value).toFixed(3),
-                parseFloat(row.querySelector('.item-rate').value).toFixed(2), parseFloat(row.querySelector('.item-amount').value).toFixed(2)
+                row.querySelector('.item-sno').value,
+                fullDescription, // Use the combined description and comment here
+                row.querySelector('.item-hsn').value,
+                row.querySelector('.item-qty').value,
+                row.querySelector('.item-uom').value,
+                parseFloat(row.querySelector('.item-m3').value).toFixed(3),
+                parseFloat(row.querySelector('.item-rate').value).toFixed(2),
+                parseFloat(row.querySelector('.item-amount').value).toFixed(2)
             ]);
         });
+        // **MODIFICATION END**
         
         const totalQty = document.getElementById('total-qty').textContent;
         const totalM3 = document.getElementById('total-m3').textContent;
@@ -389,7 +444,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 6: { halign: 'right' }, 7: { halign: 'right' }
             }
         });
-
+        
+        // --- The rest of the PDF generation code is unchanged ---
         let finalY = doc.autoTable.previous.finalY;
         const remarks = document.getElementById('remarks').value;
         if (remarks) {
@@ -400,78 +456,150 @@ document.addEventListener('DOMContentLoaded', function () {
             finalY += doc.getTextDimensions(remarks, { maxWidth: pageWidth - (margin * 2) - 4 }).h;
         }
 
-        // --- FOOTER ---
-        let leftSideY = finalY + 12;
-        doc.setFontSize(10);
-        doc.setFont(font, 'bold');
-        doc.text('CONTAINER NO.', margin + 2, leftSideY);
-        doc.setFont(font, 'normal');
-        doc.text(document.getElementById('container-no').value, margin + 35, leftSideY);
-        leftSideY += 5;
-        doc.setFont(font, 'bold');
-        doc.text(document.getElementById('container-size').value, margin + 2, leftSideY);
-        leftSideY += 5;
-        doc.text('TOTAL ITEMS:', margin + 2, leftSideY);
-        doc.setFont(font, 'bold');
-        doc.text(document.getElementById('total-items').value, margin + 35, leftSideY);
-        leftSideY += 8;
-        doc.setFont(font, 'bold');
-        doc.text('TOTAL GROSS WEIGHT:', margin + 2, leftSideY);
-        doc.text(document.getElementById('gross-weight').value, margin + 45, leftSideY);
-        leftSideY += 5;
-        doc.text('TOTAL NET WEIGHT:', margin + 2, leftSideY);
-        doc.text(document.getElementById('net-weight').value, margin + 45, leftSideY);
+        // REPLACE your old footer code with this entire block.
 
-        let rightFooterY = finalY + 8;
-        doc.setFont(font, 'bold');
-        doc.setFontSize(10);
-        doc.text('AMOUNT IN WORDS:', middleX, rightFooterY);
-        const totalInWords = amountToWords(parseFloat(totalAmount)) + " ONLY.";
-        doc.setFont(font, 'normal');
-        doc.setFontSize(9);
-        doc.text(totalInWords.toUpperCase(), middleX, rightFooterY + 4, { maxWidth: middleX - margin - 4 });
-        
-        rightFooterY += doc.getTextDimensions(totalInWords.toUpperCase(), { maxWidth: middleX - margin - 4 }).h + 8;
-        
-        doc.setFontSize(10);
-        doc.setFont(font, 'bold');
-        doc.text(document.getElementById('bank-details').value, middleX, rightFooterY, { lineHeightFactor: 1.5 });
-        
-        let signatureY = rightFooterY + doc.getTextDimensions(document.getElementById('bank-details').value, { lineHeightFactor: 1.5 }).h + 40;
-        doc.setFont(font, 'bold');
-        doc.text('For, OSWAL LUMBERS PVT. LTD.', pageWidth - margin - 10, signatureY + 12, { align: 'right' });
-        doc.text('AUTHORISED SIGNATORY', pageWidth - margin - 10, signatureY + 35, { align: 'right' });
-        
-        const borderEndY = signatureY + 45; 
-        doc.setLineWidth(0.7);
-        doc.setDrawColor(0, 0, 0);
-        doc.line(margin, borderStartY, pageWidth - margin, borderStartY);
-        doc.line(margin, borderEndY, pageWidth - margin, borderEndY);
-        doc.line(margin, borderStartY, margin, borderEndY);
-        doc.line(pageWidth - margin, borderStartY, pageWidth - margin, borderEndY);
-        doc.line(middleX, borderStartY, middleX, borderStartY + 78);
-        doc.line(margin, sellerBuyerDividerY, middleX, sellerBuyerDividerY);
+// --- FOOTER ---
+// The left side starts below the "Amount in Words" box.
+let leftSideY = finalY + 17;
+doc.setFontSize(10);
+doc.setFont(font, 'bold');
+doc.text('CONTAINER NO.', margin + 2, leftSideY);
+doc.setFont(font, 'bold');
+doc.text(document.getElementById('container-no').value, margin + 35, leftSideY);
+leftSideY += 5;
+
+// This is the line we modified earlier.
+doc.setFont(font, 'bold');
+doc.text(`${document.getElementById('container-size').value} CONTAINER`, margin + 2, leftSideY);
+leftSideY += 5;
+
+doc.text('TOTAL ITEMS:', margin + 2, leftSideY);
+doc.setFont(font, 'bold');
+doc.text(document.getElementById('total-items').value, margin + 35, leftSideY);
+leftSideY += 8;
+doc.setFont(font, 'bold');
+doc.text('TOTAL GROSS WEIGHT:', margin + 2, leftSideY);
+doc.text(document.getElementById('gross-weight').value, margin + 45, leftSideY);
+leftSideY += 5;
+doc.text('TOTAL NET WEIGHT:', margin + 2, leftSideY);
+doc.text(document.getElementById('net-weight').value, margin + 45, leftSideY);
+
+// ADD THIS NEW, SIMPLER BLOCK in the same place.
+
+// --- AMOUNT IN WORDS (Full Width, No Border) ---
+const totalInWords = amountToWords(parseFloat(totalAmount)) + " ONLY.";
+// Create the single line of text you want.
+const fullAmountText = `Amounts in Word: ${totalInWords.toUpperCase()}`;
+
+// Set the Y position to start, giving some space after the table.
+let amountWordsY = finalY + 8;
+
+// Print the text in a single, full-width line.
+doc.setFont(font, 'bold');
+doc.setFontSize(10);
+doc.text(fullAmountText, margin + 2, amountWordsY, { 
+    maxWidth: pageWidth - (margin * 2) - 4 
+});
+
+// IMPORTANT: Measure the height of the text we just printed.
+const textBlockHeight = doc.getTextDimensions(fullAmountText, { 
+    maxWidth: pageWidth - (margin * 2) - 4 
+}).h;
+
+// Update finalY so the content below starts after our text.
+finalY = amountWordsY + textBlockHeight + 5;
+// We define a new variable here instead of the old 'rightFooterY'.
+let rightSideFooterY = finalY + 4;
+doc.setFontSize(10);
+doc.setFont(font, 'bold');
+doc.text(document.getElementById('bank-details').value, middleX, rightSideFooterY, { lineHeightFactor: 1.5 });
+
+// Calculate signature position based on the new rightSideFooterY variable.
+let signatureY = rightSideFooterY + doc.getTextDimensions(document.getElementById('bank-details').value, { lineHeightFactor: 1.5 }).h + 25;
+doc.setFont(font, 'bold');
+doc.text('For, OSWAL LUMBERS PVT. LTD.', pageWidth - margin - 10, signatureY + 12, { align: 'right' });
+doc.text('AUTHORISED SIGNATORY', pageWidth - margin - 10, signatureY + 35, { align: 'right' });
+
+// This part for drawing the main border is unchanged.
+const borderEndY = signatureY + 45; 
+doc.setLineWidth(0.7);
+doc.setDrawColor(0, 0, 0);
+doc.line(margin, borderStartY, pageWidth - margin, borderStartY);
+doc.line(margin, borderEndY, pageWidth - margin, borderEndY);
+doc.line(margin, borderStartY, margin, borderEndY);
+doc.line(pageWidth - margin, borderStartY, pageWidth - margin, borderEndY);
+doc.line(middleX, borderStartY, middleX, borderStartY + 78);
+doc.line(margin, sellerBuyerDividerY, middleX, sellerBuyerDividerY);
+
+// The final doc.save() call should be after this block.
 
         doc.save('invoice.pdf');
     }
     
-    function amountToWords(amount) {
-        const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];
-        const teens = ['TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
-        const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
-        function convertHundreds(n) {
-            let str = '';
-            if (n > 99) { str += ones[Math.floor(n / 100)] + ' HUNDRED '; n %= 100; }
-            if (n > 19) { str += tens[Math.floor(n / 10)] + ' '; n %= 10; }
-            if (n > 9) { str += teens[n - 10]; return str; }
-            if (n > 0) { str += ones[n] + ' '; }
+    // REPLACE your old amountToWords function with this complete, corrected version.
+function amountToWords(amount) {
+    // These helper arrays are the same as before.
+    const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];
+    const teens = ['TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
+    const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+
+    // This helper function is the same as before and works correctly for numbers up to 999.
+    function convertHundreds(n) {
+        let str = '';
+        if (n > 99) {
+            str += ones[Math.floor(n / 100)] + ' HUNDRED ';
+            n %= 100;
+        }
+        if (n > 19) {
+            str += tens[Math.floor(n / 10)] + ' ';
+            n %= 10;
+        }
+        if (n > 9) {
+            str += teens[n - 10] + ' ';
             return str;
         }
-        const [dollars, cents] = amount.toFixed(2).split('.');
-        let words = 'US DOLLARS ';
-        const num = parseInt(dollars, 10);
-        if (num === 0) { words += 'ZERO'; } else { words += convertHundreds(num); }
-        if (parseInt(cents, 10) > 0) { words += ' AND CENTS ' + convertHundreds(parseInt(cents, 10)); }
-        return words.trim().replace(/\s+/g, ' ');
+        if (n > 0) {
+            str += ones[n] + ' ';
+        }
+        return str;
     }
-});
+
+    // --- NEW LOGIC START ---
+    // This is the main logic that now handles thousands.
+    const [dollars, cents] = amount.toFixed(2).split('.');
+    let words = 'US DOLLARS ';
+
+    const num = parseInt(dollars, 10);
+
+    if (num === 0) {
+        words += 'ZERO';
+    } else {
+        let numberInWords = '';
+        
+        // Handle thousands place
+        if (num >= 1000) {
+            // Convert the thousands part (e.g., for 8419, this converts the 8)
+            numberInWords += convertHundreds(Math.floor(num / 1000)) + 'THOUSAND ';
+        }
+
+        // Handle the remaining hundreds part (e.g., for 8419, this converts the 419)
+        const remainingHundreds = num % 1000;
+        if (remainingHundreds > 0) {
+            numberInWords += convertHundreds(remainingHundreds);
+        }
+        
+        words += numberInWords;
+    }
+
+    // Handle cents part (this logic is the same as before)
+    if (parseInt(cents, 10) > 0) {
+        words += 'AND CENTS ' + convertHundreds(parseInt(cents, 10));
+    }
+
+    // Clean up extra spaces and return the final string.
+    return words.trim().replace(/\s+/g, ' ');
+    // --- NEW LOGIC END ---
+}
+}
+
+);
