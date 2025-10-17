@@ -52,6 +52,7 @@ async function initializePage() {
 
 // Run the initialization function
 initializePage();
+loadPerformaInvoices();
 
     /**
      * **MODIFIED**
@@ -281,6 +282,7 @@ function populateForm(data) {
     addRowBtn.addEventListener('click', addRow);
     saveBtn.addEventListener('click', saveInvoice);
     buyerSelect.addEventListener('change', handleBuyerSelection);
+    document.getElementById('performa-select').addEventListener('change', handlePerformaSelection); // <-- ADD THIS LINE
 
     // This listener is unchanged.
     itemsBody.addEventListener('input', function(e) {
@@ -341,7 +343,84 @@ function populateForm(data) {
         document.getElementById('total-m3').textContent = totalM3.toFixed(3);
         document.getElementById('total-amount').textContent = `$${totalAmount.toFixed(2)}`;
     }
+    // ===== NEW FUNCTIONS TO LOAD FROM PERFORMA INVOICE =====
 
+    function loadPerformaInvoices() {
+        const select = document.getElementById('performa-select');
+        db.collection('performaInvoices').orderBy('createdAt', 'desc').get().then(querySnapshot => {
+            querySnapshot.forEach(doc => {
+                const pi = doc.data();
+                const option = document.createElement('option');
+                option.value = doc.id;
+                option.textContent = `${pi.performaInvoiceNo} - ${pi.buyerName}`;
+                select.appendChild(option);
+            });
+        }).catch(error => console.error("Error loading performa invoices: ", error));
+    }
+
+    function handlePerformaSelection(e) {
+        const piId = e.target.value;
+        if (!piId) {
+            // Optional: You could clear the form if the user selects the default option
+            return;
+        }
+        db.collection('performaInvoices').doc(piId).get().then(doc => {
+            if (doc.exists) {
+                populateFormFromPerforma(doc.data());
+            }
+        }).catch(error => console.error("Error fetching performa invoice:", error));
+    }
+
+    function populateFormFromPerforma(data) {
+        // Populate buyer and shipment details
+        document.getElementById('buyer-details').value = data.buyerDetails || '';
+        document.getElementById('terms').value = data.terms || '';
+        
+        // Find and select the buyer in the dropdown
+        if (data.buyerName) {
+            for (let i = 0; i < buyerSelect.options.length; i++) {
+                if (buyerSelect.options[i].text === data.buyerName) {
+                    buyerSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        // Trigger change to load port of discharge if available
+        buyerSelect.dispatchEvent(new Event('change'));
+
+        // Clear existing items and populate from performa
+        itemsBody.innerHTML = '';
+        itemCounter = 0; // Reset counter
+        data.items.forEach(itemData => {
+            itemCounter++;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="text" class="item-sno form-control form-control-sm" value="${itemCounter}" readonly></td>
+                <td>
+                    <input type="text" class="item-desc form-control form-control-sm" value="${data.mainItemDesc || 'PINE WOOD SAWN TIMBER (AD WITH ANTI STAIN):'}">
+                    <input type="text" class="item-comment form-control form-control-sm" style="font-size: 0.85em; margin-top: 4px;" placeholder="Add comments/details..." value="${itemData.dimension || ''}">
+                </td>
+                <td><input type="text" class="item-hsn form-control form-control-sm" value="${itemData.hsn || ''}"></td>
+                <td><input type="number" class="item-qty form-control form-control-sm" value="" min="0" placeholder="Enter Qty"></td>
+                <td><input type="text" class="item-uom form-control form-control-sm" value="PCS"></td>
+                <td><input type="number" class="item-m3 form-control form-control-sm" value="${itemData.m3 || 0}" step="0.001"></td>
+                <td><input type="number" class="item-rate form-control form-control-sm" value="${itemData.rate || 0}" step="0.01"></td>
+                <td><input type="text" class="item-amount form-control form-control-sm" value="${(itemData.m3 * itemData.rate).toFixed(2)}" readonly></td>
+                <td><button type="button" class="delete-row-btn btn btn-danger btn-sm">X</button></td>
+            `;
+            itemsBody.appendChild(row);
+        });
+
+        // Clear fields that need manual input
+        document.getElementById('container-no').value = '';
+        document.getElementById('gross-weight').value = '';
+        document.getElementById('net-weight').value = '';
+        
+        updateTotals();
+        alert('Form populated from Performa Invoice. Please enter Quantity, Container, and Weight details.');
+    }
+
+    // This is the closing of the main DOMContentLoaded function
     form.addEventListener('submit', function (e) {
         // This function is unchanged.
         e.preventDefault();
