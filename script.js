@@ -19,25 +19,39 @@ document.addEventListener('DOMContentLoaded', function () {
     const urlParams = new URLSearchParams(window.location.search);
     const invoiceId = urlParams.get('id');
 
+    // ADD THIS NEW BLOCK IN ITS PLACE
+
+// This is an async function that controls the page startup sequence
+async function initializePage() {
+    // 1. FIRST, wait for the buyer list to be fully loaded into the dropdown.
+    await loadBuyers();
+
+    // 2. NOW, check if we are in edit mode.
     if (invoiceId) {
-        // --- EDIT MODE ---
-        db.collection('invoices').doc(invoiceId).get().then(doc => {
+        try {
+            const doc = await db.collection('invoices').doc(invoiceId).get();
             if (doc.exists) {
+                // 3. ONLY after buyers are loaded, populate the form.
                 populateForm(doc.data());
             } else {
                 console.error("No such document!");
+                alert("Could not find the requested invoice.");
             }
-        }).catch(error => console.error("Error getting document:", error));
+        } catch (error) {
+            console.error("Error getting document:", error);
+        }
     } else {
-        // --- CREATE MODE ---
+        // This is for CREATE mode and runs if there's no invoice ID.
         const invoiceNoInput = document.getElementById('invoice-no');
         invoiceNoInput.value = 'Will be generated on save';
         invoiceNoInput.readOnly = true;
         document.getElementById('invoice-date').valueAsDate = new Date();
         addRow();
     }
-    
-    loadBuyers();
+}
+
+// Run the initialization function
+initializePage();
 
     /**
      * **MODIFIED**
