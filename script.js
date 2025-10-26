@@ -163,51 +163,50 @@ function populateForm(data) {
         }
     }
 
-    /**
-     * **MODIFIED**
-     * Gets all form data, now including the new comment field for each item.
-     */
     function getFormData() {
-        const items = [];
-        itemsBody.querySelectorAll('tr').forEach(row => {
-            // **MODIFICATION START**: Added 'comment' to the pushed object.
-            items.push({
-                sno: row.querySelector('.item-sno').value,
-                desc: row.querySelector('.item-desc').value,
-                comment: row.querySelector('.item-comment').value, // <-- Added this line
-                hsn: row.querySelector('.item-hsn').value,
-                qty: parseFloat(row.querySelector('.item-qty').value) || 0,
-                uom: row.querySelector('.item-uom').value,
-                m3: parseFloat(row.querySelector('.item-m3').value) || 0,
-                rate: parseFloat(row.querySelector('.item-rate').value) || 0,
-                amount: parseFloat(row.querySelector('.item-amount').value) || 0
-            });
-            // **MODIFICATION END**
+    const items = [];
+    let totalM3 = 0; // Keep track of M3 for the commercial invoice
+    itemsBody.querySelectorAll('tr').forEach(row => {
+        const m3 = parseFloat(row.querySelector('.item-m3').value) || 0;
+        items.push({
+            sno: row.querySelector('.item-sno').value,
+            desc: row.querySelector('.item-desc').value,
+            comment: row.querySelector('.item-comment').value,
+            hsn: row.querySelector('.item-hsn').value,
+            qty: parseFloat(row.querySelector('.item-qty').value) || 0,
+            uom: row.querySelector('.item-uom').value,
+            m3: m3,
+            rate: parseFloat(row.querySelector('.item-rate').value) || 0,
+            amount: parseFloat(row.querySelector('.item-amount').value) || 0
         });
+        totalM3 += m3; // Add to this invoice's total
+    });
 
-        const selectedBuyerName = buyerSelect.options[buyerSelect.selectedIndex].text;
+    const selectedBuyerName = buyerSelect.options[buyerSelect.selectedIndex].text;
 
-        return {
-            buyerName: (buyerSelect.value && selectedBuyerName !== '-- Select or Add New Buyer --') ? selectedBuyerName : '',
-            sellerDetails: document.getElementById('seller-details').value,
-            buyerDetails: document.getElementById('buyer-details').value,
-            invoiceNo: document.getElementById('invoice-no').value,
-            invoiceDate: document.getElementById('invoice-date').value,
-            terms: document.getElementById('terms').value,
-            portLoading: document.getElementById('port-loading').value,
-            portDischarge: document.getElementById('port-discharge').value,
-            countryOrigin: document.getElementById('country-origin').value,
-            containerNo: document.getElementById('container-no').value,
-            containerSize: document.getElementById('container-size').value,
-            totalItems: document.getElementById('total-items').value,
-            grossWeight: document.getElementById('gross-weight').value,
-            netWeight: document.getElementById('net-weight').value,
-            bankDetails: document.getElementById('bank-details').value,
-            remarks: document.getElementById('remarks').value,
-            totalAmount: parseFloat(document.getElementById('total-amount').textContent.replace('$', '')) || 0,
-            items: items
-        };
-    }
+    return {
+        sourcePerformaId: document.getElementById('source-performa-id').value, // <-- ADD THIS LINE
+        buyerName: (buyerSelect.value && selectedBuyerName !== '-- Select or Add New Buyer --') ? selectedBuyerName : '',
+        sellerDetails: document.getElementById('seller-details').value,
+        buyerDetails: document.getElementById('buyer-details').value,
+        invoiceNo: document.getElementById('invoice-no').value,
+        invoiceDate: document.getElementById('invoice-date').value,
+        terms: document.getElementById('terms').value,
+        portLoading: document.getElementById('port-loading').value,
+        portDischarge: document.getElementById('port-discharge').value,
+        countryOrigin: document.getElementById('country-origin').value,
+        containerNo: document.getElementById('container-no').value,
+        containerSize: document.getElementById('container-size').value,
+        totalItems: document.getElementById('total-items').value,
+        grossWeight: document.getElementById('gross-weight').value,
+        netWeight: document.getElementById('net-weight').value,
+        bankDetails: document.getElementById('bank-details').value,
+        remarks: document.getElementById('remarks').value,
+        totalAmount: parseFloat(document.getElementById('total-amount').textContent.replace('$', '')) || 0,
+        totalM3: totalM3, // <-- ADD THIS LINE to store the total M3 for this specific invoice
+        items: items
+    };
+}
 
     function loadBuyers() {
         // This function is unchanged.
@@ -311,8 +310,8 @@ function populateForm(data) {
     row.innerHTML = `
         <td class="px-2 py-1 align-top"><input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemCounter}" readonly></td>
         <td class="px-2 py-1">
-            <input type="text" class="item-desc w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" placeholder="PINE WOOD SAWN TIMBER">
-            <input type="text" class="item-comment w-full border-gray-300 rounded-md shadow-sm text-sm mt-1 px-2 py-1 text-gray-500" placeholder="8 INCHES X 8 INCHES X 12 FEET">
+            <input type="text" class="item-desc w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" placeholder="8 INCHES X 8 INCHES X 12 FEET">
+            <input type="text" class="item-comment w-full border-gray-300 rounded-md shadow-sm text-sm mt-1 px-2 py-1 text-gray-500" placeholder="Add comments/details...">
         </td>
         <td class="px-2 py-1 align-top"><input type="text" class="item-hsn w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="44071100"></td>
         <td class="px-2 py-1 align-top"><input type="number" class="item-qty w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="1" min="0"></td>
@@ -354,6 +353,9 @@ function populateForm(data) {
 
     function handlePerformaSelection(e) {
         const piId = e.target.value;
+        // Add this line to store the selected ID
+        document.getElementById('source-performa-id').value = piId;
+
         if (!piId) {
             // Optional: You could clear the form if the user selects the default option
             return;
@@ -709,4 +711,3 @@ function amountToWords(amount) {
 }
 
 );
-
