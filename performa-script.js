@@ -66,14 +66,14 @@ document.addEventListener('DOMContentLoaded', function () {
         data.items.forEach(item => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><input type="text" class="item-sno form-control form-control-sm" value="${item.sno}" readonly></td>
-                <td><input type="text" class="item-hsn form-control form-control-sm" value="${item.hsn}"></td>
-                <td><input type="text" class="item-dimension form-control form-control-sm" value="${item.dimension}"></td>
-                <td><input type="number" class="item-m3 form-control form-control-sm" value="${item.m3}" step="0.001"></td>
-                <td><input type="number" class="item-rate form-control form-control-sm" value="${item.rate}" step="0.01"></td>
-                <td><input type="text" class="item-amount form-control form-control-sm" value="${item.amount.toFixed(2)}" readonly></td>
-                <td><button type="button" class="delete-row-btn btn btn-danger btn-sm">X</button></td>
-            `;
+            <td class="px-2 py-1"><input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.sno}" readonly></td>
+            <td class="px-2 py-1"><input type="text" class="item-hsn w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.hsn}"></td>
+            <td class="px-2 py-1"><input type="text" class="item-dimension w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.dimension}"></td>
+            <td class="px-2 py-1"><input type="number" class="item-m3 w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.m3}" step="0.001"></td>
+            <td class="px-2 py-1"><input type="number" class="item-rate w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.rate}" step="0.01"></td>
+            <td class="px-2 py-1"><input type="text" class="item-amount w-full bg-gray-100 border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.amount.toFixed(2)}" readonly></td>
+            <td class="px-2 py-1 text-center"><button type="button" class="delete-row-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button></td>
+`;
             itemsBody.appendChild(row);
         });
         itemCounter = data.items.length;
@@ -195,9 +195,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }).catch(error => console.error("Error fetching buyer details: ", error));
     }
     
-    addBuyerBtn.addEventListener('click', () => { addBuyerModal.style.display = 'block'; });
-    closeModalBtn.addEventListener('click', () => { addBuyerModal.style.display = 'none'; });
-    window.addEventListener('click', (event) => { if (event.target == addBuyerModal) { addBuyerModal.style.display = 'none'; } });
+            // --- Event Listeners for Modal ---
+        addBuyerBtn.addEventListener('click', () => { addBuyerModal.classList.remove('hidden'); });
+        closeModalBtn.addEventListener('click', () => { addBuyerModal.classList.add('hidden'); });
+        window.addEventListener('click', (event) => { if (event.target == addBuyerModal) { addBuyerModal.classList.add('hidden'); } });
 
     newBuyerForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -245,19 +246,19 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function addRow() {
-        itemCounter++;
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><input type="text" class="item-sno form-control form-control-sm" value="${itemCounter}" readonly></td>
-            <td><input type="text" class="item-hsn form-control form-control-sm" value="44071100"></td>
-            <td><input type="text" class="item-dimension form-control form-control-sm" placeholder="e.g., 92 MM X 92 MM X 3.9 METER"></td>
-            <td><input type="number" class="item-m3 form-control form-control-sm" value="0" step="0.001"></td>
-            <td><input type="number" class="item-rate form-control form-control-sm" value="0" step="0.01"></td>
-            <td><input type="text" class="item-amount form-control form-control-sm" readonly></td>
-            <td><button type="button" class="delete-row-btn btn btn-danger btn-sm">X</button></td>
-        `;
-        itemsBody.appendChild(row);
-    }
+    itemCounter++;
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td class="px-2 py-1"><input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemCounter}" readonly></td>
+        <td class="px-2 py-1"><input type="text" class="item-hsn w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="44071100"></td>
+        <td class="px-2 py-1"><input type="text" class="item-dimension w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" placeholder="e.g., 92 MM X 92 MM X 3.9 METER"></td>
+        <td class="px-2 py-1"><input type="number" class="item-m3 w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="0" step="0.001"></td>
+        <td class="px-2 py-1"><input type="number" class="item-rate w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="0" step="0.01"></td>
+        <td class="px-2 py-1"><input type="text" class="item-amount w-full bg-gray-100 border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" readonly></td>
+        <td class="px-2 py-1 text-center"><button type="button" class="delete-row-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button></td>
+    `;
+    itemsBody.appendChild(row);
+}
 
     function updateTotals() {
         let totalAmount = 0;
@@ -282,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let y = margin + 5;
 
       
-        doc.setFontSize(20);
+        doc.setFontSize(30);
         doc.setFont(font, 'bold');
         doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
         y += 7;
