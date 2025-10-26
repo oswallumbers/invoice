@@ -133,15 +133,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function getFormData() {
         const items = [];
+        let totalM3 = 0; // Add this line
         itemsBody.querySelectorAll('tr').forEach(row => {
+            const m3 = parseFloat(row.querySelector('.item-m3').value) || 0; // Get m3 value
             items.push({
                 sno: row.querySelector('.item-sno').value,
                 hsn: row.querySelector('.item-hsn').value,
                 dimension: row.querySelector('.item-dimension').value,
-                m3: parseFloat(row.querySelector('.item-m3').value) || 0,
+                m3: m3,
                 rate: parseFloat(row.querySelector('.item-rate').value) || 0,
                 amount: parseFloat(row.querySelector('.item-amount').value) || 0
             });
+            totalM3 += m3; // Add to total
         });
 
         const selectedBuyerName = buyerSelect.options[buyerSelect.selectedIndex].text;
@@ -161,6 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
             bankDetails: document.getElementById('bank-details').value,
             calculationNote: document.getElementById('calculation-note').value,
             totalAmount: parseFloat(document.getElementById('total-amount').textContent.replace('$', '')) || 0,
+            totalM3: totalM3, // Add totalM3 to the returned object
             items: items
         };
     }
