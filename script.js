@@ -311,8 +311,8 @@ function populateForm(data) {
     row.innerHTML = `
         <td class="px-2 py-1 align-top"><input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemCounter}" readonly></td>
         <td class="px-2 py-1">
-            <input type="text" class="item-desc w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" placeholder="8 INCHES X 8 INCHES X 12 FEET">
-            <input type="text" class="item-comment w-full border-gray-300 rounded-md shadow-sm text-sm mt-1 px-2 py-1 text-gray-500" placeholder="Add comments/details...">
+            <input type="text" class="item-desc w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" placeholder="PINE WOOD SAWN TIMBER">
+            <input type="text" class="item-comment w-full border-gray-300 rounded-md shadow-sm text-sm mt-1 px-2 py-1 text-gray-500" placeholder="8 INCHES X 8 INCHES X 12 FEET">
         </td>
         <td class="px-2 py-1 align-top"><input type="text" class="item-hsn w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="44071100"></td>
         <td class="px-2 py-1 align-top"><input type="number" class="item-qty w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="1" min="0"></td>
@@ -709,3 +709,4 @@ function amountToWords(amount) {
 }
 
 );
+
