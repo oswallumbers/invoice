@@ -17,7 +17,7 @@ function generatePackingList() {
     let y = margin + 5;
 
     // --- Header Text ---
-    doc.setFontSize(18);
+    doc.setFontSize(30);
     doc.setFont(font, 'bold');
     doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
     y += 6;
