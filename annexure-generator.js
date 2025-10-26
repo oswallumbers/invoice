@@ -13,14 +13,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (tableBody.rows.length === 0) {
             addAnnexureRow();
         }
-        modal.style.display = "block";
+        modal.classList.remove('hidden');
     }
     closeModalSpan.onclick = function() {
-        modal.style.display = "none";
+        modal.classList.add('hidden');
     }
     window.onclick = function(event) {
         if (event.target == modal) {
-            modal.style.display = "none";
+            modal.classList.add('hidden');
         }
     }
 
@@ -37,15 +37,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
         newRow.innerHTML = `
             <td><span class="sr-no">${srNoCounter}</span></td>
-            <td><input type="text" class="container-no" value="${prefilledContainerNo}"></td>
-            <td><input type="text" class="size" value="40'"></td>
-            <td><input type="text" class="line-seal-no" value=""></td>
-            <td><input type="text" class="e-seal-no" value=""></td>
-            <td><input type="text" class="factory-name" value="${document.getElementById('seller-details').value.split('\n')[0] || ''}"></td>
-            <td><input type="text" class="qty-pcs" value="${prefilledQty}"></td>
-            <td><input type="text" class="weight-nett" value="${prefilledNett}"></td>
-            <td><input type="text" class="weight-gross" value="${prefilledGross}"></td>
-            <td><button type="button" class="delete-row-btn" style="background-color: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">X</button></td>
+            <td><input type="text" class="container-no form-input w-full text-sm" value="${prefilledContainerNo}"></td>
+            <td><input type="text" class="size form-input w-full text-sm" value="40'"></td>
+            <td><input type="text" class="line-seal-no form-input w-full text-sm" value=""></td>
+            <td><input type="text" class="e-seal-no form-input w-full text-sm" value=""></td>
+            <td><input type="text" class="factory-name form-input w-full text-sm" value="${document.getElementById('seller-details').value.split('\n')[0] || ''}"></td>
+            <td><input type="text" class="qty-pcs form-input w-full text-sm" value="${prefilledQty}"></td>
+            <td><input type="text" class="weight-nett form-input w-full text-sm" value="${prefilledNett}"></td>
+            <td><input type="text" class="weight-gross form-input w-full text-sm" value="${prefilledGross}"></td>
+            <td><button type="button" class="delete-row-btn text-red-500 hover:text-red-700">&times;</button></td>
         `;
     }
 
@@ -66,7 +66,17 @@ document.addEventListener('DOMContentLoaded', function () {
     function generateAndPrintAnnexure() {
         try {
             const templateNode = document.getElementById('annexure-html-template');
-            let template = templateNode.innerHTML;
+            
+            // --- THIS IS THE CORRECTED PART ---
+            // We get the content of the template, find the main printable div inside it,
+            // and then get its full HTML. This is more reliable than .innerHTML.
+            const printElement = templateNode.content.querySelector('.print-template');
+            if (!printElement) {
+                alert('Error: Could not find the printable template content.');
+                return;
+            }
+            let template = printElement.outerHTML;
+            // --- END OF CORRECTION ---
 
             const sellerDetails = document.getElementById('seller-details').value.split('\n');
             const sellerName = sellerDetails[0] || '';
@@ -99,7 +109,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     <tr>
                         <td style="padding: 4px;">${row.querySelector('.sr-no').textContent}</td>
                         <td style="padding: 4px;">${row.querySelector('.container-no').value}</td>
-                        
                         <td style="padding: 4px;">${row.querySelector('.size').value}</td>
                         <td style="padding: 4px;">${row.querySelector('.line-seal-no').value}</td>
                         <td style="padding: 4px;">${row.querySelector('.e-seal-no').value}</td>
@@ -111,9 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 `;
             });
 
-            // This now correctly finds and replaces the comment placeholder
             template = template.replace('<tbody></tbody>', `<tbody>${containersHtml}</tbody>`);
-
             
             const printWindow = window.open('', '_blank');
             printWindow.document.write('<html><head><title>Print Annexure</title></head><body>');
