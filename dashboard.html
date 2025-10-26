@@ -4,486 +4,415 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="form-style.css">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-   
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
-    <div class="header">
-        
-                <h1 style="text-align: center;">OSWAL LUMBERS PVT LTD </h1>
- 
+<body class="bg-pink-50">
+
+    <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <header class="flex flex-col sm:flex-row justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-pink-800">Invoice Dashboard</h1>
+                <p class="text-gray-600">Oswal Lumbers Pvt Ltd</p>
             </div>
-                  
-    <div class="container dashboard-container">
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-            <h1>Invoice Dashboard</h1>
-            <div class="d-flex gap-2 flex-wrap">
-                <button class="btn btn-danger" id="logoutBtn">Logout</button>   
-                <button id="import-btn" class="btn btn-success"><i class="fas fa-file-excel"></i> Import from Excel</button>
-                <a href="performa-invoice.html" class="btn btn-warning"><i class="fas fa-file-alt"></i> New Performa Invoice</a>
-                <a href="index.html" class="btn btn-primary"><i class="fas fa-plus"></i> Create New Invoice</a>
+            <div class="flex items-center gap-2 mt-4 sm:mt-0 flex-wrap">
+                <a href="performa-invoice.html" class="bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-yellow-600 transition-all duration-300 ease-in-out transform hover:-translate-y-0.5">
+                    <i class="fas fa-file-alt"></i> New Performa Invoice
+                </a>
+                <a href="index.html" class="bg-pink-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-pink-700 transition-all duration-300 ease-in-out transform hover:-translate-y-0.5">
+                    <i class="fas fa-plus"></i> Create New Invoice
+                </a>
+                 <button id="import-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 transition-all duration-300 ease-in-out transform hover:-translate-y-0.5">
+                    <i class="fas fa-file-excel"></i> Import from Excel
+                </button>
+                <button id="logoutBtn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-red-700 transition-all duration-300 ease-in-out transform hover:-translate-y-0.5">
+                    Logout
+                </button>
                 <input type="file" id="import-file-input" accept=".xlsx, .xls" style="display: none;">
             </div>
-        </div>
-        
-        <div class="table-responsive">
-            <table id="invoice-list" class="table table-striped table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Invoice No</th>
-                        <th>Date</th>
-                        <th>Buyer</th>
-                        <th>Type</th>
-                        <th>Total Amount (US$)</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    </tbody>
-            </table>
+        </header>
+
+        <div class="bg-white rounded-2xl shadow-xl p-6 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table id="invoice-list" class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice No</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buyer</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount (US$)</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="firebase-init.js"></script>
-    
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-
- <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const tbody = document.querySelector('#invoice-list tbody');
-        const importBtn = document.getElementById('import-btn');
-        const importFileInput = document.getElementById('import-file-input');
-
-        // --- Load existing invoices ---
-        db.collection('invoices').orderBy('createdAt', 'desc').get().then(querySnapshot => {
-            if (querySnapshot.empty) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No invoices found.</td></tr>';
-            }
-            querySnapshot.forEach(doc => {
-                const invoice = doc.data();
-                const row = document.createElement('tr');
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tbody = document.querySelector('#invoice-list tbody');
+            const importBtn = document.getElementById('import-btn');
+            const importFileInput = document.getElementById('import-file-input');
+    
+            const invoicesPromise = db.collection('invoices').orderBy('createdAt', 'desc').get();
+            const performaPromise = db.collection('performaInvoices').orderBy('createdAt', 'desc').get();
+    
+            Promise.all([invoicesPromise, performaPromise]).then(([invoicesSnapshot, performaSnapshot]) => {
+                let allDocuments = [];
+    
+                invoicesSnapshot.forEach(doc => {
+                    allDocuments.push({ id: doc.id, type: 'Commercial', ...doc.data() });
+                });
+    
+                performaSnapshot.forEach(doc => {
+                    allDocuments.push({ id: doc.id, type: 'Performa', ...doc.data() });
+                });
+    
+                allDocuments.sort((a, b) => (b.createdAt && a.createdAt) ? b.createdAt.seconds - a.createdAt.seconds : 0);
                 
-                // --- THIS LOGIC IS NOW UPDATED ---
-                const buyerName = invoice.buyerName || (invoice.buyerDetails ? invoice.buyerDetails.split('\n')[0] : 'N/A');
-                
-                row.innerHTML = `
-                    <td>${invoice.invoiceNo}</td>
-                    <td>${new Date(invoice.invoiceDate).toLocaleDateString('en-GB')}</td>
-                    <td>${buyerName}</td>
-                    <td>${(invoice.totalAmount || 0).toFixed(2)}</td>
-                    <td>
-                        <button class="btn btn-sm btn-info" onclick="viewInvoice('${doc.id}')" title="View"><i class="fas fa-eye"></i></button>
-                        <button class="btn btn-sm btn-warning" onclick="editInvoice('${doc.id}')" title="Edit"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteInvoice('${doc.id}')" title="Delete"><i class="fas fa-trash"></i></button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        });
-
-        // --- Import Logic (and other functions) remain the same ---
-        importBtn.addEventListener('click', () => importFileInput.click());
-        importFileInput.addEventListener('change', handleFileImport);
-    });
-    document.addEventListener('DOMContentLoaded', function() {
-        const tbody = document.querySelector('#invoice-list tbody');
-        
-        // --- Load both commercial and performa invoices ---
-        const invoicesPromise = db.collection('invoices').orderBy('createdAt', 'desc').get();
-        const performaPromise = db.collection('performaInvoices').orderBy('createdAt', 'desc').get();
-
-        Promise.all([invoicesPromise, performaPromise]).then(([invoicesSnapshot, performaSnapshot]) => {
-            let allDocuments = [];
-
-            invoicesSnapshot.forEach(doc => {
-                allDocuments.push({ id: doc.id, type: 'Commercial', ...doc.data() });
-            });
-
-            performaSnapshot.forEach(doc => {
-                allDocuments.push({ id: doc.id, type: 'Performa', ...doc.data() });
-            });
-
-            // Sort all documents by creation date, newest first
-            allDocuments.sort((a, b) => (b.createdAt && a.createdAt) ? b.createdAt.seconds - a.createdAt.seconds : 0);
-            
-            tbody.innerHTML = ''; // Clear existing rows
-
-            if (allDocuments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No invoices found.</td></tr>';
-                return;
-            }
-
-            allDocuments.forEach(doc => {
-                const row = document.createElement('tr');
-                let invoiceNo, invoiceDate, buyerName, totalAmount, actions;
-
-                if (doc.type === 'Commercial') {
-                    invoiceNo = doc.invoiceNo;
-                    invoiceDate = new Date(doc.invoiceDate).toLocaleDateString('en-GB');
-                    buyerName = doc.buyerName || (doc.buyerDetails ? doc.buyerDetails.split('\n')[0] : 'N/A');
-                    totalAmount = (doc.totalAmount || 0).toFixed(2);
-                    actions = `
-                        <button class="btn btn-sm btn-info" onclick="viewInvoice('${doc.id}')" title="View"><i class="fas fa-eye"></i></button>
-                        <button class="btn btn-sm btn-warning" onclick="editInvoice('${doc.id}')" title="Edit"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteInvoice('${doc.id}', 'invoices')" title="Delete"><i class="fas fa-trash"></i></button>
-                    `;
-                } else { // Performa Invoice
-                    invoiceNo = doc.performaInvoiceNo;
-                    invoiceDate = new Date(doc.performaInvoiceDate).toLocaleDateString('en-GB');
-                    buyerName = doc.buyerName || 'N/A';
-                    totalAmount = (doc.totalAmount || 0).toFixed(2);
-                    actions = `
-                        <button class="btn btn-sm btn-success" onclick="downloadPerformaPDF('${doc.id}')" title="Download PDF"><i class="fas fa-file-pdf"></i></button>
-                        <button class="btn btn-sm btn-warning" onclick="editPerformaInvoice('${doc.id}')" title="Edit"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteInvoice('${doc.id}', 'performaInvoices')" title="Delete"><i class="fas fa-trash"></i></button>
-                    `;
+                tbody.innerHTML = '';
+    
+                if (allDocuments.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500">No invoices found.</td></tr>';
+                    return;
                 }
-                
-                row.innerHTML = `
-                    <td>${invoiceNo}</td>
-                    <td>${invoiceDate}</td>
-                    <td>${buyerName}</td>
-                    <td><span class="badge bg-${doc.type === 'Commercial' ? 'primary' : 'warning'}">${doc.type}</span></td>
-                    <td>${totalAmount}</td>
-                    <td>${actions}</td>
-                `;
-                tbody.appendChild(row);
+    
+                allDocuments.forEach(doc => {
+                    const row = document.createElement('tr');
+                    row.classList.add('hover:bg-pink-50');
+                    let invoiceNo, invoiceDate, buyerName, totalAmount, actions, typeBadge;
+    
+                    if (doc.type === 'Commercial') {
+                        invoiceNo = doc.invoiceNo;
+                        invoiceDate = new Date(doc.invoiceDate).toLocaleDateString('en-GB');
+                        buyerName = doc.buyerName || (doc.buyerDetails ? doc.buyerDetails.split('\n')[0] : 'N/A');
+                        totalAmount = (doc.totalAmount || 0).toFixed(2);
+                        typeBadge = '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Commercial</span>';
+                        actions = `
+                            <button class="text-blue-600 hover:text-blue-900" onclick="viewInvoice('${doc.id}')" title="View"><i class="fas fa-eye"></i></button>
+                            <button class="text-yellow-600 hover:text-yellow-900 ml-2" onclick="editInvoice('${doc.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                            <button class="text-red-600 hover:text-red-900 ml-2" onclick="deleteInvoice('${doc.id}', 'invoices')" title="Delete"><i class="fas fa-trash"></i></button>
+                        `;
+                    } else { // Performa Invoice
+                        invoiceNo = doc.performaInvoiceNo;
+                        invoiceDate = new Date(doc.performaInvoiceDate).toLocaleDateString('en-GB');
+                        buyerName = doc.buyerName || 'N/A';
+                        totalAmount = (doc.totalAmount || 0).toFixed(2);
+                        typeBadge = '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Performa</span>';
+                        actions = `
+                            <button class="text-green-600 hover:text-green-900" onclick="downloadPerformaPDF('${doc.id}')" title="Download PDF"><i class="fas fa-file-pdf"></i></button>
+                            <button class="text-yellow-600 hover:text-yellow-900 ml-2" onclick="editPerformaInvoice('${doc.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                            <button class="text-red-600 hover:text-red-900 ml-2" onclick="deleteInvoice('${doc.id}', 'performaInvoices')" title="Delete"><i class="fas fa-trash"></i></button>
+                        `;
+                    }
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${invoiceNo}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${invoiceDate}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${buyerName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${typeBadge}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-pink-700">${totalAmount}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">${actions}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+    
+            }).catch(error => {
+                console.error("Error fetching documents:", error);
+                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-red-500">Error loading invoices.</td></tr>';
             });
-
-        }).catch(error => {
-            console.error("Error fetching documents:", error);
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Error loading invoices.</td></tr>';
+    
+            importBtn.addEventListener('click', () => importFileInput.click());
+            importFileInput.addEventListener('change', handleFileImport);
         });
-
-        // --- Import Logic remains the same ---
-        const importBtn = document.getElementById('import-btn');
-        const importFileInput = document.getElementById('import-file-input');
-        importBtn.addEventListener('click', () => importFileInput.click());
-        importFileInput.addEventListener('change', handleFileImport);
-    });
-
-    // --- Action Functions ---
-    function viewInvoice(id) { window.location.href = `view.html?id=${id}`; }
-    function editInvoice(id) { window.location.href = `index.html?id=${id}`; }
-    function editPerformaInvoice(id) { window.location.href = `performa-invoice.html?id=${id}`; }
-
-    function deleteInvoice(id, collectionName) {
-        if (confirm(`Are you sure you want to delete this ${collectionName === 'invoices' ? 'invoice' : 'Performa Invoice'}?`)) {
-            db.collection(collectionName).doc(id).delete().then(() => {
-                alert('Document deleted!');
-                location.reload();
-            }).catch(error => console.error("Error removing document: ", error));
-        }
-    }
-
-    // --- NEW: Function to fetch Performa data and generate PDF ---
-    async function downloadPerformaPDF(id) {
-        try {
-            const doc = await db.collection('performaInvoices').doc(id).get();
-            if (doc.exists) {
-                generatePerformaPDF(doc.data());
-            } else {
-                alert('Error: Performa Invoice not found.');
+    
+        function viewInvoice(id) { window.location.href = `view.html?id=${id}`; }
+        function editInvoice(id) { window.location.href = `index.html?id=${id}`; }
+        function editPerformaInvoice(id) { window.location.href = `performa-invoice.html?id=${id}`; }
+    
+        function deleteInvoice(id, collectionName) {
+            if (confirm(`Are you sure you want to delete this ${collectionName === 'invoices' ? 'invoice' : 'Performa Invoice'}?`)) {
+                db.collection(collectionName).doc(id).delete().then(() => {
+                    alert('Document deleted!');
+                    location.reload();
+                }).catch(error => console.error("Error removing document: ", error));
             }
-        } catch (error) {
-            alert('Could not fetch Performa Invoice data.');
-            console.error(error);
         }
-    }
-
-    // --- NEW: PDF generation logic (copied and adapted from performa-script.js) ---
-    function generatePDF() {
-        const doc = new jsPDF();
-        const data = getFormData();
-        const font = 'Helvetica';
-        doc.setFont(font, 'normal');
-        const margin = 15;
-        const pageWidth = doc.internal.pageSize.width;
-        let y = margin + 5;
-
-      
-        doc.setFontSize(20);
-        doc.setFont(font, 'bold');
-        doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
-        y += 7;
-        doc.setFontSize(11);
-        doc.setFont(font, 'normal');
-        doc.text('SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA', pageWidth / 2, y, { align: 'center' });
-        y += 5;
-        doc.text('E-MAIL: info@oswallumbers.com', pageWidth / 2, y, { align: 'center' });
-
-        // --- DOC DETAILS ---
-        y += 10; // Add space after the header
-
-        // --- DOC DETAILS (New Position) ---
-        const piDate = new Date(data.performaInvoiceDate).toLocaleDateString('en-GB');
-        doc.setFont(font, 'bold');
-        doc.text(`Sales Contract No: ${data.performaInvoiceNo}`, margin, y);
-        doc.setFont(font, 'normal');
-        doc.text(`Date: ${piDate}`, margin, y + 5);
-
-        y += 5; // Add space before the buyer details
-
-        y += 15;
-        // --- BUYER ---
-        doc.setFont(font, 'bold');
-        doc.text('Buyer:', margin, y);
-        y += 5;
-        doc.setFont(font, 'normal');
-        const fullBuyerText = data.buyerName + '\n' + data.buyerDetails;
-        doc.text(fullBuyerText, margin, y, { maxWidth: 100 });
-        y += 25;
-        
-        doc.text('Dear Sir,', margin, y);
-        y += 5;
-        doc.text(`We are pleased to confirm having sold to you ${data.mainItemDesc}`, margin, y, { maxWidth: pageWidth - (margin * 2) });
-        y += 10;
-        
-        // --- ITEMS TABLE ---
-        const head = [['NO.', 'HSN', 'DIMENSION', 'QUANTITY ABOUT M3', 'CNF PRICE US$/M3', 'AMOUNT US$']];
-        const body = data.items.map(item => [
-            item.sno,
-            item.hsn,
-            item.dimension,
-            parseFloat(item.m3).toFixed(3),
-            `$${parseFloat(item.rate).toFixed(2)}`,
-            `$${parseFloat(item.amount).toFixed(2)}`
-        ]);
-
-        doc.autoTable({
-            head: head, body: body, startY: y, theme: 'grid',
-            headStyles: { fontStyle: 'bold', halign: 'center' },
-            styles: { fontSize: 9 },
-        });
-        y = doc.autoTable.previous.finalY + 10;
-
-        // --- TERMS ---
-        const addTerm = (label, value) => {
-            if (value) {
-                doc.setFont(font, 'bold');
-                doc.text(label, margin, y, { maxWidth: 40 });
-                doc.setFont(font, 'normal');
-                doc.text(value, margin + 45, y, { maxWidth: pageWidth - margin * 2 - 45 });
-                const textHeight = doc.getTextDimensions(value, { maxWidth: pageWidth - margin * 2 - 45 }).h;
-                y += textHeight + 4;
-            }
-        };
-
-        addTerm('Shipment:', data.shipmentDetails);
-        addTerm('Payment:', data.paymentTerms);
-        addTerm('Freight:', data.freight);
-        addTerm('Partial Shipment:', data.partialShipment);
-        
-        y += 5;
-        doc.setFont(font, 'bold');
-        doc.text('Our Bank details:', margin, y);
-        y += 5;
-        doc.setFont(font, 'normal');
-        const bankDetailsDims = doc.getTextDimensions(data.bankDetails, { lineHeightFactor: 1.4 });
-        doc.text(data.bankDetails, margin + 10, y, { lineHeightFactor: 1.4 });
-        y += bankDetailsDims.h + 40; // Dynamically calculate height and add a 10px gap
-
-        if (data.calculationNote) {
-            doc.text(data.calculationNote, margin, y);
-            y += 30;
-        }
-
-        doc.text('Best Regards,', margin, y);
-        y += 20;
-
-        doc.setFont(font, 'bold');
-        doc.text('FOR, OSWAL LUMBERS PVT. LTD.', margin, y);
-        y += 5;
-        doc.text('DEEPAK PAREKH', margin, y);
-        y += 5;
-        doc.text('DIRECTOR', margin, y);
-
-        doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace('/', '-')}.pdf`);
-    }
-
-    // --- Import, Auth, and other functions from original file ---
-    document.addEventListener('DOMContentLoaded', function() {
-        if (sessionStorage.getItem('loggedIn') !== 'true') {
-            window.location.href = 'login.html';
-        }
-        const logoutBtn = document.getElementById('logoutBtn');
-        logoutBtn.addEventListener('click', function() {
-            sessionStorage.removeItem('loggedIn');
-            window.location.href = 'login.html';
-        });
-    });
-    function handleFileImport(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array', cellDates:true });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            
+    
+        async function downloadPerformaPDF(id) {
             try {
-                const invoiceData = parseExcelData(worksheet);
-                if (invoiceData) { // Check if parsing was successful
-                    saveImportedInvoice(invoiceData);
+                const doc = await db.collection('performaInvoices').doc(id).get();
+                if (doc.exists) {
+                    generatePerformaPDF(doc.data());
+                } else {
+                    alert('Error: Performa Invoice not found.');
                 }
             } catch (error) {
-                alert('Critical error parsing Excel file. Please ensure it matches the template format.\n\nError: ' + error.message);
+                alert('Could not fetch Performa Invoice data.');
                 console.error(error);
             }
-        };
-        reader.readAsArrayBuffer(file);
-        event.target.value = '';
-    }
-
-    // ===== NEW: Helper function to safely parse numbers =====
-    function safeParseFloat(value) {
-        if (typeof value === 'number') return value;
-        if (typeof value === 'string') {
-            // Remove currency symbols, commas, and trim whitespace
-            const cleanedValue = value.replace(/[^0-9.-]+/g,"");
-            return parseFloat(cleanedValue) || 0;
         }
-        return 0;
-    }
-
-    // ===== NEW: Helper function to safely parse dates =====
-    function parseDate(excelDate) {
-        if (!excelDate) return new Date().toISOString().split('T')[0]; // Default to today if empty
-        if (excelDate instanceof Date) {
-            return excelDate.toISOString().split('T')[0];
-        }
-        // If it's a number (Excel's date format), SheetJS with cellDates:true should handle it.
-        // If it's a string, try parsing it.
-        const d = new Date(excelDate);
-        if (!isNaN(d.getTime())) {
-            return d.toISOString().split('T')[0];
-        }
-        // Fallback for unrecognized formats
-        console.warn("Unrecognized date format:", excelDate);
-        return new Date().toISOString().split('T')[0];
-    }
-
-    // ===== UPDATED: More robust parsing logic =====
-    function parseExcelData(ws) {
-        const get = (addr) => ws[addr] ? ws[addr].v : '';
-        
-        const invoiceNo = get('H6');
-        if (!invoiceNo) {
-            alert('Parsing Error: Invoice Number not found in cell H6. Please check your file.');
-            return null;
-        }
-
-        const sellerDetails = [get('A6'), get('A7'), get('A8'), get('A9'), get('A10'), get('A11'), get('A12')].filter(Boolean).join('\n');
-        const buyerDetails = [get('A13'), get('A14'), get('A15'), get('A16')].filter(Boolean).join('\n');
-        const invoiceDate = parseDate(get('H7'));
-
-        const items = [];
-        let totalAmount = 0;
-        for (let i = 19; i < 28; i++) {
-            const sno = get(`A${i}`);
-            if (!sno) break; 
-            
-            const itemAmount = safeParseFloat(get(`H${i}`));
-            items.push({
-                sno: sno,
-                desc: get(`B${i}`),
-                hsn: get(`C${i}`),
-                qty: safeParseFloat(get(`D${i}`)),
-                uom: get(`E${i}`),
-                m3: safeParseFloat(get(`F${i}`)),
-                rate: safeParseFloat(get(`G${i}`)),
-                amount: itemAmount
-            });
-            totalAmount += itemAmount;
-        }
-
-        const invoiceObject = {
-            sellerDetails: sellerDetails,
-            buyerDetails: buyerDetails,
-            invoiceNo: invoiceNo,
-            invoiceDate: invoiceDate,
-            terms: get('H8'),
-            portLoading: get('H9'),
-            portDischarge: get('H10'),
-            countryOrigin: get('H11'),
-            containerNo: get('A28') || '',
-            containerSize: get('A29') || '',
-            totalItems: get('A30') || '',
-            grossWeight: get('A32') || '',
-            netWeight: get('A33') || '',
-            bankDetails: [get('E31'), get('E32'), get('E33'), get('E34')].filter(Boolean).join('\n'),
-            remarks: '',
-            totalAmount: totalAmount,
-            items: items,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        return invoiceObject;
-    }
-
-    async function saveImportedInvoice(invoiceData) {
-        try {
-            await db.collection('invoices').add(invoiceData);
-            await updateInvoiceCounter(invoiceData.invoiceNo);
-            alert(`Invoice ${invoiceData.invoiceNo} imported successfully!`);
-            location.reload();
-        } catch (error) {
-            alert('Error saving the imported invoice.');
-            console.error("Error adding document: ", error);
-        }
-    }
-
-    async function updateInvoiceCounter(importedInvoiceNo) {
-        const match = importedInvoiceNo.match(/EXP\/(\d+)\/\d+/);
-        if (!match) return;
-
-        const importedNumber = parseInt(match[1], 10);
-        const settingsRef = db.collection('settings').doc('invoiceCounter');
-
-        await db.runTransaction(async (transaction) => {
-            const doc = await transaction.get(settingsRef);
-            const nextInvoiceNumber = doc.exists ? doc.data().nextInvoiceNumber : 1;
-            
-            if (importedNumber >= nextInvoiceNumber) {
-                transaction.set(settingsRef, { nextInvoiceNumber: importedNumber + 1 }, { merge: true });
-                console.log(`Invoice counter updated to ${importedNumber + 1}.`);
-            }
-        });
-    }
     
-    function viewInvoice(id) { window.location.href = `view.html?id=${id}`; }
-    function editInvoice(id) { window.location.href = `index.html?id=${id}`; }
-    function deleteInvoice(id) {
-        if (confirm('Are you sure you want to delete this invoice?')) {
-            db.collection('invoices').doc(id).delete().then(() => {
-                alert('Invoice deleted!');
-                location.reload();
-            }).catch(error => console.error("Error removing document: ", error));
+        function generatePerformaPDF(data) {
+             const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const font = 'Helvetica';
+            doc.setFont(font, 'normal');
+            const margin = 15;
+            const pageWidth = doc.internal.pageSize.width;
+            let y = margin + 5;
+    
+          
+            doc.setFontSize(20);
+            doc.setFont(font, 'bold');
+            doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
+            y += 7;
+            doc.setFontSize(11);
+            doc.setFont(font, 'normal');
+            doc.text('SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA', pageWidth / 2, y, { align: 'center' });
+            y += 5;
+            doc.text('E-MAIL: info@oswallumbers.com', pageWidth / 2, y, { align: 'center' });
+    
+            // --- DOC DETAILS ---
+            y += 10;
+    
+            const piDate = new Date(data.performaInvoiceDate).toLocaleDateString('en-GB');
+            doc.setFont(font, 'bold');
+            doc.text(`Sales Contract No: ${data.performaInvoiceNo}`, margin, y);
+            doc.setFont(font, 'normal');
+            doc.text(`Date: ${piDate}`, margin, y + 5);
+    
+            y += 15;
+            doc.setFont(font, 'bold');
+            doc.text('Buyer:', margin, y);
+            y += 5;
+            doc.setFont(font, 'normal');
+            const fullBuyerText = data.buyerName + '\n' + data.buyerDetails;
+            doc.text(fullBuyerText, margin, y, { maxWidth: 100 });
+            y += 25;
+            
+            doc.text('Dear Sir,', margin, y);
+            y += 5;
+            doc.text(`We are pleased to confirm having sold to you ${data.mainItemDesc}`, margin, y, { maxWidth: pageWidth - (margin * 2) });
+            y += 10;
+            
+            const head = [['NO.', 'HSN', 'DIMENSION', 'QUANTITY ABOUT M3', 'CNF PRICE US$/M3', 'AMOUNT US$']];
+            const body = data.items.map(item => [
+                item.sno,
+                item.hsn,
+                item.dimension,
+                parseFloat(item.m3).toFixed(3),
+                `$${parseFloat(item.rate).toFixed(2)}`,
+                `$${parseFloat(item.amount).toFixed(2)}`
+            ]);
+    
+            doc.autoTable({
+                head: head, body: body, startY: y, theme: 'grid',
+                headStyles: { fontStyle: 'bold', halign: 'center' },
+                styles: { fontSize: 9 },
+            });
+            y = doc.autoTable.previous.finalY + 10;
+    
+            const addTerm = (label, value) => {
+                if (value) {
+                    doc.setFont(font, 'bold');
+                    doc.text(label, margin, y, { maxWidth: 40 });
+                    doc.setFont(font, 'normal');
+                    doc.text(value, margin + 45, y, { maxWidth: pageWidth - margin * 2 - 45 });
+                    const textHeight = doc.getTextDimensions(value, { maxWidth: pageWidth - margin * 2 - 45 }).h;
+                    y += textHeight + 4;
+                }
+            };
+    
+            addTerm('Shipment:', data.shipmentDetails);
+            addTerm('Payment:', data.paymentTerms);
+            addTerm('Freight:', data.freight);
+            addTerm('Partial Shipment:', data.partialShipment);
+            
+            y += 5;
+            doc.setFont(font, 'bold');
+            doc.text('Our Bank details:', margin, y);
+            y += 5;
+            doc.setFont(font, 'normal');
+            const bankDetailsDims = doc.getTextDimensions(data.bankDetails, { lineHeightFactor: 1.4 });
+            doc.text(data.bankDetails, margin + 10, y, { lineHeightFactor: 1.4 });
+            y += bankDetailsDims.h + 40;
+    
+            if (data.calculationNote) {
+                doc.text(data.calculationNote, margin, y);
+                y += 30;
+            }
+    
+            doc.text('Best Regards,', margin, y);
+            y += 20;
+    
+            doc.setFont(font, 'bold');
+            doc.text('FOR, OSWAL LUMBERS PVT. LTD.', margin, y);
+            y += 5;
+            doc.text('DEEPAK PAREKH', margin, y);
+            y += 5;
+            doc.text('DIRECTOR', margin, y);
+    
+            doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace('/', '-')}.pdf`);
         }
-    }
-    document.addEventListener('DOMContentLoaded', function() {
-            // Security Check: If not logged in, redirect to login page
+    
+        document.addEventListener('DOMContentLoaded', function() {
             if (sessionStorage.getItem('loggedIn') !== 'true') {
                 window.location.href = 'login.html';
             }
-
             const logoutBtn = document.getElementById('logoutBtn');
             logoutBtn.addEventListener('click', function() {
-                // Remove the login flag
                 sessionStorage.removeItem('loggedIn');
-                // Redirect to the login page
                 window.location.href = 'login.html';
             });
         });
-</script>
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+    
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array', cellDates:true });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                
+                try {
+                    const invoiceData = parseExcelData(worksheet);
+                    if (invoiceData) {
+                        saveImportedInvoice(invoiceData);
+                    }
+                } catch (error) {
+                    alert('Critical error parsing Excel file. Please ensure it matches the template format.\n\nError: ' + error.message);
+                    console.error(error);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
+    
+        function safeParseFloat(value) {
+            if (typeof value === 'number') return value;
+            if (typeof value === 'string') {
+                const cleanedValue = value.replace(/[^0-9.-]+/g,"");
+                return parseFloat(cleanedValue) || 0;
+            }
+            return 0;
+        }
+    
+        function parseDate(excelDate) {
+            if (!excelDate) return new Date().toISOString().split('T')[0];
+            if (excelDate instanceof Date) {
+                return excelDate.toISOString().split('T')[0];
+            }
+            const d = new Date(excelDate);
+            if (!isNaN(d.getTime())) {
+                return d.toISOString().split('T')[0];
+            }
+            console.warn("Unrecognized date format:", excelDate);
+            return new Date().toISOString().split('T')[0];
+        }
+    
+        function parseExcelData(ws) {
+            const get = (addr) => ws[addr] ? ws[addr].v : '';
+            
+            const invoiceNo = get('H6');
+            if (!invoiceNo) {
+                alert('Parsing Error: Invoice Number not found in cell H6. Please check your file.');
+                return null;
+            }
+    
+            const sellerDetails = [get('A6'), get('A7'), get('A8'), get('A9'), get('A10'), get('A11'), get('A12')].filter(Boolean).join('\n');
+            const buyerDetails = [get('A13'), get('A14'), get('A15'), get('A16')].filter(Boolean).join('\n');
+            const invoiceDate = parseDate(get('H7'));
+    
+            const items = [];
+            let totalAmount = 0;
+            for (let i = 19; i < 28; i++) {
+                const sno = get(`A${i}`);
+                if (!sno) break; 
+                
+                const itemAmount = safeParseFloat(get(`H${i}`));
+                items.push({
+                    sno: sno,
+                    desc: get(`B${i}`),
+                    hsn: get(`C${i}`),
+                    qty: safeParseFloat(get(`D${i}`)),
+                    uom: get(`E${i}`),
+                    m3: safeParseFloat(get(`F${i}`)),
+                    rate: safeParseFloat(get(`G${i}`)),
+                    amount: itemAmount
+                });
+                totalAmount += itemAmount;
+            }
+    
+            return {
+                sellerDetails: sellerDetails,
+                buyerDetails: buyerDetails,
+                invoiceNo: invoiceNo,
+                invoiceDate: invoiceDate,
+                terms: get('H8'),
+                portLoading: get('H9'),
+                portDischarge: get('H10'),
+                countryOrigin: get('H11'),
+                containerNo: get('A28') || '',
+                containerSize: get('A29') || '',
+                totalItems: get('A30') || '',
+                grossWeight: get('A32') || '',
+                netWeight: get('A33') || '',
+                bankDetails: [get('E31'), get('E32'), get('E33'), get('E34')].filter(Boolean).join('\n'),
+                remarks: '',
+                totalAmount: totalAmount,
+                items: items,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+        }
+    
+        async function saveImportedInvoice(invoiceData) {
+            try {
+                await db.collection('invoices').add(invoiceData);
+                await updateInvoiceCounter(invoiceData.invoiceNo);
+                alert(`Invoice ${invoiceData.invoiceNo} imported successfully!`);
+                location.reload();
+            } catch (error) {
+                alert('Error saving the imported invoice.');
+                console.error("Error adding document: ", error);
+            }
+        }
+    
+        async function updateInvoiceCounter(importedInvoiceNo) {
+            const match = importedInvoiceNo.match(/EXP\/(\d+)\/\d+/);
+            if (!match) return;
+    
+            const importedNumber = parseInt(match[1], 10);
+            const settingsRef = db.collection('settings').doc('invoiceCounter');
+    
+            await db.runTransaction(async (transaction) => {
+                const doc = await transaction.get(settingsRef);
+                const nextInvoiceNumber = doc.exists ? doc.data().nextInvoiceNumber : 1;
+                
+                if (importedNumber >= nextInvoiceNumber) {
+                    transaction.set(settingsRef, { nextInvoiceNumber: importedNumber + 1 }, { merge: true });
+                }
+            });
+        }
+    </script>
 </body>
 </html>
