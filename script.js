@@ -78,38 +78,33 @@ function populateForm(data) {
     document.getElementById('bank-details').value = data.bankDetails;
     document.getElementById('remarks').value = data.remarks || '';
 
-    // --- NEW CODE START ---
-    // This new block finds and selects the correct buyer in the dropdown.
     const savedBuyerName = data.buyerName;
     if (savedBuyerName) {
         const buyerSelect = document.getElementById('buyer-select');
-        // Loop through all the options in the dropdown
         for (let i = 0; i < buyerSelect.options.length; i++) {
-            // If an option's text matches the saved buyer name...
             if (buyerSelect.options[i].text === savedBuyerName) {
-                buyerSelect.selectedIndex = i; // ...select it.
-                break; // Stop looping once we've found it.
+                buyerSelect.selectedIndex = i;
+                break;
             }
         }
     }
-    // --- NEW CODE END ---
 
     itemsBody.innerHTML = '';
     data.items.forEach(item => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><input type="text" class="item-sno form-control form-control-sm" value="${item.sno}" readonly></td>
-            <td>
-                <input type="text" class="item-desc form-control form-control-sm" value="${item.desc}">
-                <input type="text" class="item-comment form-control form-control-sm" style="font-size: 0.85em; margin-top: 4px;" placeholder="Add comments/details..." value="${item.comment || ''}">
+            <td class="px-2 py-1 align-top"><input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.sno}" readonly></td>
+            <td class="px-2 py-1">
+                <input type="text" class="item-desc w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.desc}">
+                <input type="text" class="item-comment w-full border-gray-300 rounded-md shadow-sm text-sm mt-1 px-2 py-1 text-gray-500" placeholder="Add comments/details..." value="${item.comment || ''}">
             </td>
-            <td><input type="text" class="item-hsn form-control form-control-sm" value="${item.hsn}"></td>
-            <td><input type="number" class="item-qty form-control form-control-sm" value="${item.qty}" min="0"></td>
-            <td><input type="text" class="item-uom form-control form-control-sm" value="${item.uom}"></td>
-            <td><input type="number" class="item-m3 form-control form-control-sm" value="${item.m3}" step="0.001"></td>
-            <td><input type="number" class="item-rate form-control form-control-sm" value="${item.rate}" step="0.01"></td>
-            <td><input type="text" class="item-amount form-control form-control-sm" value="${item.amount.toFixed(2)}" readonly></td>
-            <td><button type="button" class="delete-row-btn btn btn-danger btn-sm">X</button></td>
+            <td class="px-2 py-1 align-top"><input type="text" class="item-hsn w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.hsn}"></td>
+            <td class="px-2 py-1 align-top"><input type="number" class="item-qty w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.qty}" min="0"></td>
+            <td class="px-2 py-1 align-top"><input type="text" class="item-uom w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.uom}"></td>
+            <td class="px-2 py-1 align-top"><input type="number" class="item-m3 w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.m3}" step="0.001"></td>
+            <td class="px-2 py-1 align-top"><input type="number" class="item-rate w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.rate}" step="0.01"></td>
+            <td class="px-2 py-1 align-top"><input type="text" class="item-amount w-full bg-gray-100 border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.amount.toFixed(2)}" readonly></td>
+            <td class="px-2 py-1 align-top text-center"><button type="button" class="delete-row-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button></td>
         `;
         itemsBody.appendChild(row);
     });
@@ -250,10 +245,11 @@ function populateForm(data) {
         }).catch(error => console.error("Error fetching buyer details: ", error));
     }
 
-    // This block is unchanged.
-    addBuyerBtn.addEventListener('click', () => { addBuyerModal.style.display = 'block'; });
-    closeModalBtn.addEventListener('click', () => { addBuyerModal.style.display = 'none'; });
-    window.addEventListener('click', (event) => { if (event.target == addBuyerModal) { addBuyerModal.style.display = 'none'; } });
+   
+// --- Existing Event Listeners ---
+        addBuyerBtn.addEventListener('click', () => { addBuyerModal.classList.remove('hidden'); });
+        closeModalBtn.addEventListener('click', () => { addBuyerModal.classList.add('hidden'); });
+        window.addEventListener('click', (event) => { if (event.target == addBuyerModal) { addBuyerModal.classList.add('hidden'); } });
 
     // This block is unchanged.
     newBuyerForm.addEventListener('submit', (e) => {
@@ -310,26 +306,24 @@ function populateForm(data) {
      * Adds a new row with both a description input and a comment input.
      */
     function addRow() {
-        itemCounter++;
-        const row = document.createElement('tr');
-        // **MODIFICATION START**: Added the comment input field below the description.
-        row.innerHTML = `
-            <td><input type="text" class="item-sno form-control form-control-sm" value="${itemCounter}" readonly></td>
-            <td>
-                <input type="text" class="item-desc form-control form-control-sm" placeholder="8 INCHES X 8 INCHES X 12 FEET">
-                <input type="text" class="item-comment form-control form-control-sm" style="font-size: 0.85em; margin-top: 4px;" placeholder="Add comments/details...">
-            </td>
-            <td><input type="text" class="item-hsn form-control form-control-sm" value="44071100"></td>
-            <td><input type="number" class="item-qty form-control form-control-sm" value="1" min="0"></td>
-            <td><input type="text" class="item-uom form-control form-control-sm" value="PCS"></td>
-            <td><input type="number" class="item-m3 form-control form-control-sm" value="0" step="0.001"></td>
-            <td><input type="number" class="item-rate form-control form-control-sm" value="0" step="0.01"></td>
-            <td><input type="text" class="item-amount form-control form-control-sm" readonly></td>
-            <td><button type="button" class="delete-row-btn btn btn-danger btn-sm">X</button></td>
-        `;
-        // **MODIFICATION END**
-        itemsBody.appendChild(row);
-    }
+    itemCounter++;
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td class="px-2 py-1 align-top"><input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemCounter}" readonly></td>
+        <td class="px-2 py-1">
+            <input type="text" class="item-desc w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" placeholder="8 INCHES X 8 INCHES X 12 FEET">
+            <input type="text" class="item-comment w-full border-gray-300 rounded-md shadow-sm text-sm mt-1 px-2 py-1 text-gray-500" placeholder="Add comments/details...">
+        </td>
+        <td class="px-2 py-1 align-top"><input type="text" class="item-hsn w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="44071100"></td>
+        <td class="px-2 py-1 align-top"><input type="number" class="item-qty w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="1" min="0"></td>
+        <td class="px-2 py-1 align-top"><input type="text" class="item-uom w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="PCS"></td>
+        <td class="px-2 py-1 align-top"><input type="number" class="item-m3 w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="0" step="0.001"></td>
+        <td class="px-2 py-1 align-top"><input type="number" class="item-rate w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="0" step="0.01"></td>
+        <td class="px-2 py-1 align-top"><input type="text" class="item-amount w-full bg-gray-100 border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" readonly></td>
+        <td class="px-2 py-1 align-top text-center"><button type="button" class="delete-row-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button></td>
+    `;
+    itemsBody.appendChild(row);
+}
 
     function updateTotals() {
         // This function is unchanged.
@@ -371,54 +365,58 @@ function populateForm(data) {
         }).catch(error => console.error("Error fetching performa invoice:", error));
     }
 
-    function populateFormFromPerforma(data) {
-        // Populate buyer and shipment details
-        document.getElementById('buyer-details').value = data.buyerDetails || '';
-        document.getElementById('terms').value = data.terms || '';
-        
-        // Find and select the buyer in the dropdown
-        if (data.buyerName) {
-            for (let i = 0; i < buyerSelect.options.length; i++) {
-                if (buyerSelect.options[i].text === data.buyerName) {
-                    buyerSelect.selectedIndex = i;
-                    break;
-                }
+    // In script.js, replace the entire populateFormFromPerforma function
+
+function populateFormFromPerforma(data) {
+    // Populate buyer and shipment details
+    document.getElementById('buyer-details').value = data.buyerDetails || '';
+    document.getElementById('terms').value = data.terms || '';
+    
+    // Find and select the buyer in the dropdown
+    if (data.buyerName) {
+        for (let i = 0; i < buyerSelect.options.length; i++) {
+            if (buyerSelect.options[i].text === data.buyerName) {
+                buyerSelect.selectedIndex = i;
+                break;
             }
         }
-        // Trigger change to load port of discharge if available
-        buyerSelect.dispatchEvent(new Event('change'));
-
-        // Clear existing items and populate from performa
-        itemsBody.innerHTML = '';
-        itemCounter = 0; // Reset counter
-        data.items.forEach(itemData => {
-            itemCounter++;
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><input type="text" class="item-sno form-control form-control-sm" value="${itemCounter}" readonly></td>
-                <td>
-                    <input type="text" class="item-desc form-control form-control-sm" value="${data.mainItemDesc || 'PINE WOOD SAWN TIMBER (AD WITH ANTI STAIN):'}">
-                    <input type="text" class="item-comment form-control form-control-sm" style="font-size: 0.85em; margin-top: 4px;" placeholder="Add comments/details..." value="${itemData.dimension || ''}">
-                </td>
-                <td><input type="text" class="item-hsn form-control form-control-sm" value="${itemData.hsn || ''}"></td>
-                <td><input type="number" class="item-qty form-control form-control-sm" value="" min="0" placeholder="Enter Qty"></td>
-                <td><input type="text" class="item-uom form-control form-control-sm" value="PCS"></td>
-                <td><input type="number" class="item-m3 form-control form-control-sm" value="${itemData.m3 || 0}" step="0.001"></td>
-                <td><input type="number" class="item-rate form-control form-control-sm" value="${itemData.rate || 0}" step="0.01"></td>
-                <td><input type="text" class="item-amount form-control form-control-sm" value="${(itemData.m3 * itemData.rate).toFixed(2)}" readonly></td>
-                <td><button type="button" class="delete-row-btn btn btn-danger btn-sm">X</button></td>
-            `;
-            itemsBody.appendChild(row);
-        });
-
-        // Clear fields that need manual input
-        document.getElementById('container-no').value = '';
-        document.getElementById('gross-weight').value = '';
-        document.getElementById('net-weight').value = '';
-        
-        updateTotals();
-        alert('Form populated from Performa Invoice. Please enter Quantity, Container, and Weight details.');
     }
+    // Trigger change to load port of discharge if available
+    buyerSelect.dispatchEvent(new Event('change'));
+
+    // Clear existing items and populate from performa
+    itemsBody.innerHTML = '';
+    itemCounter = 0; // Reset counter
+    data.items.forEach(itemData => {
+        itemCounter++;
+        const row = document.createElement('tr');
+        
+        // --- THIS IS THE CORRECTED HTML BLOCK ---
+        row.innerHTML = `
+            <td class="px-2 py-1 align-top"><input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemCounter}" readonly></td>
+            <td class="px-2 py-1">
+                <input type="text" class="item-desc w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${data.mainItemDesc || 'PINE WOOD SAWN TIMBER (AD WITH ANTI STAIN):'}">
+                <input type="text" class="item-comment w-full border-gray-300 rounded-md shadow-sm text-sm mt-1 px-2 py-1 text-gray-500" placeholder="Add comments/details..." value="${itemData.dimension || ''}">
+            </td>
+            <td class="px-2 py-1 align-top"><input type="text" class="item-hsn w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemData.hsn || ''}"></td>
+            <td class="px-2 py-1 align-top"><input type="number" class="item-qty w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="" min="0" placeholder="Enter Qty"></td>
+            <td class="px-2 py-1 align-top"><input type="text" class="item-uom w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="PCS"></td>
+            <td class="px-2 py-1 align-top"><input type="number" class="item-m3 w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemData.m3 || 0}" step="0.001"></td>
+            <td class="px-2 py-1 align-top"><input type="number" class="item-rate w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemData.rate || 0}" step="0.01"></td>
+            <td class="px-2 py-1 align-top"><input type="text" class="item-amount w-full bg-gray-100 border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${(itemData.m3 * itemData.rate).toFixed(2)}" readonly></td>
+            <td class="px-2 py-1 align-top text-center"><button type="button" class="delete-row-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button></td>
+        `;
+        itemsBody.appendChild(row);
+    });
+
+    // Clear fields that need manual input
+    document.getElementById('container-no').value = '';
+    document.getElementById('gross-weight').value = '';
+    document.getElementById('net-weight').value = '';
+    
+    updateTotals();
+    alert('Form populated from Performa Invoice. Please enter Quantity, Container, and Weight details.');
+}
 
     // This is the closing of the main DOMContentLoaded function
     form.addEventListener('submit', function (e) {
@@ -444,7 +442,7 @@ function populateForm(data) {
         let y = margin + 5;
 
         // --- HEADER --- (unchanged)
-        doc.setFontSize(16);
+        doc.setFontSize(30);
         doc.setFont(font, 'bold');
         doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
         y += 6;
