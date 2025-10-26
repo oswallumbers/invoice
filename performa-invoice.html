@@ -4,151 +4,147 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Performa Invoice</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="form-style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
         #add-buyer-modal .modal-content {
             background-color:#fefefe; margin:5% auto; padding:20px; border:1px solid #888; width:80%; max-width:600px; border-radius: 8px;
         }
     </style>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="bg-pink-50">
 
-    <div class="container form-container">
-        <h1 class="text-center">PERFORMA INVOICE</h1>
-        <div style="text-align: center;"> <a href="dashboard.html" class="btn btn-primary">Back to Dashboard</a></div>
-        <br>
+    <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-pink-800">PERFORMA INVOICE</h1>
+            <a href="dashboard.html" class="text-pink-600 hover:text-pink-800 font-medium">Back to Dashboard</a>
+        </header>
 
         <form id="performa-invoice-form">
-            <div class="card mb-4">
-                <div class="card-header">Party Details</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="seller-details" class="form-label"><strong>Seller / Shipper</strong></label>
-                            <textarea id="seller-details" rows="6" class="form-control">OSWAL LUMBERS PVT LTD
+            <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                 <h3 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">Party Details</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="seller-details" class="block text-sm font-medium text-gray-700">Seller / Shipper</label>
+                        <textarea id="seller-details" rows="6" class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500">OSWAL LUMBERS PVT LTD
 SURVEY NO. 262, 263, 261/2, 261/3
 P.O. BOX 181, NATIONAL HIGHWAY 8A
 GANDHIDHAM - 370 201 - KUTCH - GUJARAT - INDIA
 EMAIL: INFO@OSWALLUMBERS.COM
 GSTIN: 24AAACO3558Q1Z0
 IEC NO. 2089000104</textarea>
+                    </div>
+                    <div>
+                        <label for="buyer-select" class="block text-sm font-medium text-gray-700">Buyer / Consignee</label>
+                        <div class="mt-1 flex rounded-md shadow-sm">
+                            <select id="buyer-select" class="block w-full px-4 py-3 bg-white border border-gray-300 rounded-l-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
+                                <option value="">-- Select or Add New Buyer --</option>
+                            </select>
+                            <button type="button" id="add-buyer-btn" class="inline-flex items-center px-3 rounded-r-lg border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">+</button>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="buyer-select" class="form-label"><strong>Buyer / Consignee</strong></label>
-                            <div class="input-group mb-2">
-                                <select id="buyer-select" class="form-select">
-                                    <option value="">-- Select or Add New Buyer --</option>
-                                </select>
-                                <button type="button" id="add-buyer-btn" class="btn btn-outline-secondary">+</button>
-                            </div>
-                            <textarea id="buyer-details" rows="4" class="form-control"></textarea>
-                        </div>
+                        <textarea id="buyer-details" rows="4" class="mt-2 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500"></textarea>
                     </div>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">Performa Invoice Details</div>
-                        <div class="card-body">
-                            <div class="mb-3"><label for="performa-invoice-no" class="form-label">Performa Invoice No:</label><input type="text" id="performa-invoice-no" class="form-control" readonly></div>
-                            <div class="mb-3"><label for="performa-invoice-date" class="form-label">Date:</label><input type="date" id="performa-invoice-date" class="form-control" required></div>
-                        </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">Performa Invoice Details</h3>
+                    <div class="space-y-4">
+                        <div><label for="performa-invoice-no" class="block text-sm font-medium text-gray-700">Performa Invoice No:</label><input type="text" id="performa-invoice-no" class="mt-1 block w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg" readonly></div>
+                        <div><label for="performa-invoice-date" class="block text-sm font-medium text-gray-700">Date:</label><input type="date" id="performa-invoice-date" class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500" required></div>
                     </div>
                 </div>
-                 <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">Shipment & Payment</div>
-                        <div class="card-body">
-                            <div class="mb-2"><label class="form-label">Terms of Shipment:</label><input type="text" id="terms" class="form-control"></div>
-                            <div class="mb-2"><label class="form-label">Shipment:</label><input type="text" id="shipment-details" class="form-control" placeholder="e.g., CNF Doha, Qatar basis..."></div>
-                            <div class="mb-2"><label class="form-label">Payment:</label><input type="text" id="payment-terms" class="form-control" value="30% advance payment..."></div>
-                            <div class="mb-2"><label class="form-label">Freight:</label><input type="text" id="freight" class="form-control" value="Prepaid."></div>
-                            <div class="mb-2"><label class="form-label">Partial Shipment:</label><input type="text" id="partial-shipment" class="form-control" value="Allowed"></div>
-                        </div>
+                 <div class="bg-white rounded-2xl shadow-xl p-6">
+                     <h3 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">Shipment & Payment</h3>
+                    <div class="space-y-2">
+                        <div><label class="block text-sm font-medium text-gray-700">Terms of Shipment:</label><input type="text" id="terms" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm"></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Shipment:</label><input type="text" id="shipment-details" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm" placeholder="e.g., CNF Doha, Qatar basis..."></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Payment:</label><input type="text" id="payment-terms" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm" value="30% advance payment..."></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Freight:</label><input type="text" id="freight" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm" value="Prepaid."></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Partial Shipment:</label><input type="text" id="partial-shipment" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm" value="Allowed"></div>
                     </div>
                 </div>
             </div>
             
-            <div class="card mb-3">
-                <div class="card-header">Item Details</div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label for="main-item-desc" class="form-label"><strong>Main Item Description (for all items below)</strong></label>
-                        <input type="text" id="main-item-desc" class="form-control" value="PINE WOOD SAWN TIMBER (AD WITH ANTI STAIN):">
-                    </div>
-                    <div class="table-responsive">
-                        <table id="items-table" class="table table-bordered">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>S. No.</th>
-                                    <th>HSN</th>
-                                    <th>Dimension</th>
-                                    <th>Quantity (M3)</th>
-                                    <th>Rate (US$/M3)</th>
-                                    <th>Amount (US$)</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="items-body"></tbody>
-                        </table>
-                    </div>
-                    <button type="button" id="add-row-btn" class="btn btn-primary">Add Item Row</button>
+            <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                <h3 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">Item Details</h3>
+                <div class="mb-4">
+                    <label for="main-item-desc" class="block text-sm font-medium text-gray-700">Main Item Description (for all items below)</label>
+                    <input type="text" id="main-item-desc" class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500" value="PINE WOOD SAWN TIMBER (AD WITH ANTI STAIN):">
                 </div>
+                <div class="overflow-x-auto">
+                    <table id="items-table" class="min-w-full divide-y divide-gray-200 table-fixed">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="w-16 px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">S. No.</th>
+                                <th class="w-24 px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">HSN</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Dimension</th>
+                                <th class="w-28 px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qty (M3)</th>
+                                <th class="w-28 px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rate (US$/M3)</th>
+                                <th class="w-28 px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount (US$)</th>
+                                <th class="w-16 px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-body" class="bg-white divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+                <button type="button" id="add-row-btn" class="mt-4 w-full md:w-auto bg-pink-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-pink-700">Add Item Row</button>
             </div>
 
-            <div class="row">
-                <div class="col-lg-8">
-                     <div class="card mb-3">
-                         <div class="card-header">Bank & Calculation Details</div>
-                         <div class="card-body">
-                            <label class="form-label">Bank Details:</label>
-                             <textarea id="bank-details" rows="6" class="form-control">Beneficiary: Oswal Lumbers Pvt Ltd
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl p-6">
+                     <h3 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">Bank & Calculation Details</h3>
+                    <label class="block text-sm font-medium text-gray-700">Bank Details:</label>
+                     <textarea id="bank-details" rows="6" class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500">Beneficiary: Oswal Lumbers Pvt Ltd
 Account No: 560101000092024
 Beneficiary Bank: Union Bank of India
 SWIFT: UBININBBGAN
 Intermediary Bank: Citi Bank NA, New York, USA.
 SWIFT: CITIUS33
 Account No: 10929227</textarea>
-                            <label class="form-label mt-3">Calculation Note:</label>
-                            <input type="text" id="calculation-note" class="form-control" placeholder="e.g., Calculation as 30.294 Pcs = 1.00 M3">
-                         </div>
-                    </div>
+                    <label class="mt-4 block text-sm font-medium text-gray-700">Calculation Note:</label>
+                    <input type="text" id="calculation-note" class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500" placeholder="e.g., Calculation as 30.294 Pcs = 1.00 M3">
                 </div>
-                <div class="col-lg-4">
-                    <div class="card mb-3">
-                        <div class="card-header">Total</div>
-                        <div class="card-body">
-                            <div class="total-field"><h5>Total Amount:</h5><h5 id="total-amount">$0.00</h5></div>
-                        </div>
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">Total</h3>
+                    <div class="flex justify-between items-center">
+                        <h5 class="text-lg font-medium text-gray-700">Total Amount:</h5>
+                        <h5 id="total-amount" class="text-3xl font-bold text-pink-700">$0.00</h5>
                     </div>
                 </div>
             </div>
             
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end border-top pt-3 mt-3">
-                <button type="button" class="btn btn-info" id="save-btn">Save Performa Invoice</button>
-                <button type="submit" class="btn btn-success">Generate Performa PDF</button>
+            <div class="mt-8 flex justify-end gap-3">
+                <button type="button" class="bg-blue-600 text-white font-bold py-3 px-5 rounded-lg shadow-lg hover:bg-blue-700 transition-all" id="save-btn">Save Performa Invoice</button>
+                <button type="submit" class="bg-green-600 text-white font-bold py-3 px-5 rounded-lg shadow-lg hover:bg-green-700 transition-all">Generate Performa PDF</button>
             </div>
         </form>
     </div>
 
-    <div id="add-buyer-modal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
-        <div class="modal-content">
-            <span class="close-btn" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
-            <h2>Add New Buyer</h2>
-            <form id="new-buyer-form">
-                <div class="mb-3"><label for="new-buyer-name" class="form-label">Buyer Name:</label><input type="text" id="new-buyer-name" class="form-control" required></div>
-                <div class="mb-3"><label for="new-buyer-address" class="form-label">Buyer Address:</label><textarea id="new-buyer-address" rows="4" class="form-control" required></textarea></div>
-                <div class="mb-3"><label for="new-buyer-terms" class="form-label">Terms of Shipment:</label><input type="text" id="new-buyer-terms" class="form-control" required></div>
-                <div class="mb-3"><label for="new-buyer-port" class="form-label">Port of Discharge:</label><input type="text" id="new-buyer-port" class="form-control" required></div>
-                <button type="submit" class="btn btn-primary">Save Buyer</button>
+     <div id="add-buyer-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="modal-content bg-white w-full max-w-md p-6 rounded-2xl shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">Add New Buyer</h3>
+                <button class="close-btn p-2 rounded-full text-gray-500 hover:bg-gray-200">
+                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <form id="new-buyer-form" class="space-y-4">
+                <div><label for="new-buyer-name" class="block text-sm font-medium text-gray-700">Buyer Name:</label><input type="text" id="new-buyer-name" class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm" required></div>
+                <div><label for="new-buyer-address" class="block text-sm font-medium text-gray-700">Buyer Address:</label><textarea id="new-buyer-address" rows="4" class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm" required></textarea></div>
+                <div><label for="new-buyer-terms" class="block text-sm font-medium text-gray-700">Terms of Shipment:</label><input type="text" id="new-buyer-terms" class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm" required></div>
+                <div><label for="new-buyer-port" class="block text-sm font-medium text-gray-700">Port of Discharge:</label><input type="text" id="new-buyer-port" class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm" required></div>
+                <button type="submit" class="w-full bg-pink-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-pink-700">Save Buyer</button>
             </form>
         </div>
     </div>
     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
