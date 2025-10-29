@@ -102,7 +102,7 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
@@ -136,7 +136,7 @@
                         ...doc.data(),
                         id: doc.id,
                         invoicedM3: 0,
-                        linkedInvoices: [] // **NEW**: Array to hold linked invoices
+                        linkedInvoices: []
                     });
                 });
 
@@ -145,11 +145,11 @@
                     if (commercialData.sourcePerformaId && performaDataMap.has(commercialData.sourcePerformaId)) {
                         const performaEntry = performaDataMap.get(commercialData.sourcePerformaId);
                         performaEntry.invoicedM3 += (commercialData.totalM3 || 0);
-                        performaEntry.linkedInvoices.push(commercialData); // **NEW**: Add the invoice to the list
+                        performaEntry.linkedInvoices.push(commercialData);
                     }
                 });
 
-                // --- 1. Populate Proforma Invoices List (No change) ---
+                // Populate Proforma Invoices List
                 performaList.innerHTML = '';
                 if(performaSnapshot.empty) {
                     performaList.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">No Proforma Invoices.</td></tr>';
@@ -170,7 +170,7 @@
                     });
                 }
                
-                // --- 2. Populate Commercial Invoices List (No change) ---
+                // Populate Commercial Invoices List
                 commercialList.innerHTML = '';
                 if(commercialSnapshot.empty) {
                     commercialList.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-500">No Commercial Invoices.</td></tr>';
@@ -191,7 +191,7 @@
                     });
                 }
 
-                // --- 3. **MODIFIED**: Populate Balance Tracking List ---
+                // Populate Balance Tracking List
                 balanceList.innerHTML = '';
                 if (performaDataMap.size === 0) {
                     balanceList.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500">No Proforma Invoices to track.</td></tr>';
@@ -203,7 +203,6 @@
                         
                         let balanceColor = balanceQty > 0.001 ? 'text-green-600' : (balanceQty < -0.001 ? 'text-red-600' : 'text-gray-800');
                         
-                        // Create the hidden details row content
                         let detailsHtml = '<div class="p-4 bg-gray-50 text-sm"><ul>';
                         if (data.linkedInvoices.length > 0) {
                             data.linkedInvoices.forEach(inv => {
@@ -215,7 +214,6 @@
                         }
                         detailsHtml += '</ul></div>';
                         
-                        // Create the main row and the hidden details row
                         const rowHtml = `
                             <tr class="main-row" onclick="toggleDetails('${data.id}')">
                                 <td class="px-6 py-4 text-gray-500"><i id="icon-${data.id}" class="fas fa-chevron-right"></i></td>
@@ -235,11 +233,13 @@
 
             } catch (error) {
                 console.error("Error loading dashboard data:", error);
-                // Error handling remains the same
+                performaList.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-red-500">Error loading data.</td></tr>';
+                commercialList.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-red-500">Error loading data.</td></tr>';
+                balanceList.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-red-500">Error loading data.</td></tr>';
             }
         }
     
-        // **NEW**: Function to toggle the visibility of the details row
+        // Function to toggle the visibility of the details row
         function toggleDetails(proformaId) {
             const detailsRow = document.getElementById(`details-${proformaId}`);
             const icon = document.getElementById(`icon-${proformaId}`);
@@ -252,7 +252,7 @@
             }
         }
 
-        // --- Action Functions (No change) ---
+        // --- Action Functions ---
         window.viewInvoice = (id) => { window.location.href = `view.html?id=${id}`; }
         window.editInvoice = (id) => { window.location.href = `create-invoice.html?id=${id}`; }
         window.editPerformaInvoice = (id) => { window.location.href = `performa-invoice.html?id=${id}`; }
@@ -278,153 +278,141 @@
             }
         }
     
+        // **CORRECTED PDF GENERATION FUNCTION FOR DASHBOARD**
         function generatePerformaPDF(data) {
+            const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-    const data = getFormData();
-    const font = 'Helvetica';
-    doc.setFont(font, 'normal');
-    const margin = 15;
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
-    let y = margin + 5;
-
-    doc.setFontSize(30);
-    doc.setFont(font, 'bold');
-    doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
-    y += 7;
-    doc.setFontSize(11);
-    doc.setFont(font, 'normal');
-    doc.text('SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA', pageWidth / 2, y, { align: 'center' });
-    y += 5;
-    doc.text('E-MAIL: info@oswallumbers.com', pageWidth / 2, y, { align: 'center' });
-
-    y += 10;
-    const piDate = new Date(data.performaInvoiceDate).toLocaleDateString('en-GB');
-    doc.setFont(font, 'bold');
-    doc.text(`Sales Contract No: ${data.performaInvoiceNo}`, margin, y);
-    doc.setFont(font, 'normal');
-    doc.text(`Date: ${piDate}`, margin, y + 5);
-    y += 20;
-
-    doc.setFont(font, 'bold');
-    doc.text('Buyer:', margin, y);
-    y += 5;
-    doc.setFont(font, 'normal');
-    const fullBuyerText = data.buyerName + '\n' + data.buyerDetails;
-    doc.text(fullBuyerText, margin, y, { maxWidth: 100 });
-    y += (doc.getTextDimensions(fullBuyerText, { maxWidth: 100 }).h) + 10;
-    
-    doc.text('Dear Sir,', margin, y);
-    y += 5;
-    doc.text(`We are pleased to confirm having sold to you ${data.mainItemDesc}`, margin, y, { maxWidth: pageWidth - (margin * 2) });
-    y += 10;
-    
-    const head = [['NO.', 'HSN', 'DIMENSION', 'QUANTITY ABOUT M3', 'CNF PRICE US$/M3', 'AMOUNT US$']];
-    let body;
-
-    if (data.groupItems && data.items.length > 0) {
-        body = [];
-        const totalM3 = data.items.reduce((sum, item) => sum + (parseFloat(item.m3) || 0), 0);
-        const totalAmount = data.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-        const avgRate = totalM3 > 0 ? totalAmount / totalM3 : 0;
-        const numItems = data.items.length;
-        data.items.forEach((item, index) => {
-            const row = [item.sno, item.hsn, item.dimension];
-            if (index === 0) {
-                row.push({ content: totalM3.toFixed(3), rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
-                row.push({ content: `$${avgRate.toFixed(2)}`, rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
-                row.push({ content: `$${totalAmount.toFixed(2)}`, rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
-            }
-            body.push(row);
-        });
-    } else {
-        body = data.items.map(item => [
-            item.sno,
-            item.hsn,
-            item.dimension,
-            parseFloat(item.m3).toFixed(3),
-            `$${parseFloat(item.rate).toFixed(2)}`,
-            `$${parseFloat(item.amount).toFixed(2)}`
-        ]);
-    }
-
-    doc.autoTable({
-        head: head, body: body, startY: y, theme: 'grid',
-        headStyles: { fontStyle: 'bold', halign: 'center' },
-        styles: { fontSize: 9 },
-    });
-    y = doc.autoTable.previous.finalY + 10;
-
-    const addTerm = (label, value) => {
-        if (value) {
-            doc.setFont(font, 'bold');
-            doc.text(label, margin, y, { maxWidth: 40 });
+            const font = 'Helvetica';
             doc.setFont(font, 'normal');
-            doc.text(value, margin + 45, y, { maxWidth: pageWidth - margin * 2 - 45 });
-            const textHeight = doc.getTextDimensions(value, { maxWidth: pageWidth - margin * 2 - 45 }).h;
-            y += textHeight + 4;
+            const margin = 15;
+            const pageWidth = doc.internal.pageSize.width;
+            const pageHeight = doc.internal.pageSize.height;
+            let y = margin + 5;
+
+            doc.setFontSize(30);
+            doc.setFont(font, 'bold');
+            doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
+            y += 7;
+            doc.setFontSize(11);
+            doc.setFont(font, 'normal');
+            doc.text('SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA', pageWidth / 2, y, { align: 'center' });
+            y += 5;
+            doc.text('E-MAIL: info@oswallumbers.com', pageWidth / 2, y, { align: 'center' });
+
+            y += 10;
+            const piDate = new Date(data.performaInvoiceDate).toLocaleDateString('en-GB');
+            doc.setFont(font, 'bold');
+            doc.text(`Sales Contract No: ${data.performaInvoiceNo}`, margin, y);
+            doc.setFont(font, 'normal');
+            doc.text(`Date: ${piDate}`, margin, y + 5);
+            y += 20;
+
+            doc.setFont(font, 'bold');
+            doc.text('Buyer:', margin, y);
+            y += 5;
+            doc.setFont(font, 'normal');
+            const fullBuyerText = data.buyerName + '\n' + data.buyerDetails;
+            doc.text(fullBuyerText, margin, y, { maxWidth: 100 });
+            y += (doc.getTextDimensions(fullBuyerText, { maxWidth: 100 }).h) + 10;
+            
+            doc.text('Dear Sir,', margin, y);
+            y += 5;
+            doc.text(`We are pleased to confirm having sold to you ${data.mainItemDesc}`, margin, y, { maxWidth: pageWidth - (margin * 2) });
+            y += 10;
+            
+            const head = [['NO.', 'HSN', 'DIMENSION', 'QUANTITY ABOUT M3', 'CNF PRICE US$/M3', 'AMOUNT US$']];
+            let body;
+
+            if (data.groupItems && data.items.length > 0) {
+                body = [];
+                const totalM3 = data.items.reduce((sum, item) => sum + (parseFloat(item.m3) || 0), 0);
+                const totalAmount = data.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+                const avgRate = totalM3 > 0 ? totalAmount / totalM3 : 0;
+                const numItems = data.items.length;
+                data.items.forEach((item, index) => {
+                    const row = [item.sno, item.hsn, item.dimension];
+                    if (index === 0) {
+                        row.push({ content: totalM3.toFixed(3), rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
+                        row.push({ content: `$${avgRate.toFixed(2)}`, rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
+                        row.push({ content: `$${totalAmount.toFixed(2)}`, rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
+                    }
+                    body.push(row);
+                });
+            } else {
+                body = data.items.map(item => [
+                    item.sno,
+                    item.hsn,
+                    item.dimension,
+                    parseFloat(item.m3).toFixed(3),
+                    `$${parseFloat(item.rate).toFixed(2)}`,
+                    `$${parseFloat(item.amount).toFixed(2)}`
+                ]);
+            }
+
+            doc.autoTable({
+                head: head, body: body, startY: y, theme: 'grid',
+                headStyles: { fontStyle: 'bold', halign: 'center' },
+                styles: { fontSize: 9 },
+            });
+            y = doc.autoTable.previous.finalY + 10;
+
+            const addTerm = (label, value) => {
+                if (value) {
+                    doc.setFont(font, 'bold');
+                    doc.text(label, margin, y, { maxWidth: 40 });
+                    doc.setFont(font, 'normal');
+                    doc.text(value, margin + 45, y, { maxWidth: pageWidth - margin * 2 - 45 });
+                    const textHeight = doc.getTextDimensions(value, { maxWidth: pageWidth - margin * 2 - 45 }).h;
+                    y += textHeight + 4;
+                }
+            };
+
+            addTerm('Shipment:', data.shipmentDetails);
+            addTerm('Payment:', data.paymentTerms);
+            addTerm('Freight:', data.freight);
+            addTerm('Partial Shipment:', data.partialShipment);
+            addTerm('Other Terms:', 'Invoice Packing List, BL & COO will be provided');
+            
+            y += 8;
+            doc.setFont(font, 'bold');
+            doc.text('Our Bank details:', margin, y);
+            y += 5;
+            doc.setFont(font, 'normal');
+            
+            const bankDetailsText = data.bankDetails;
+            const bankDetailsDims = doc.getTextDimensions(bankDetailsText, { lineHeightFactor: 1.4, maxWidth: pageWidth - margin * 2 });
+            doc.text(bankDetailsText, margin + 5, y, { lineHeightFactor: 1.4, maxWidth: pageWidth - margin * 2 });
+            y += bankDetailsDims.h;
+
+            if (data.calculationNote) {
+                y += 10;
+                doc.text(data.calculationNote, margin, y);
+            }
+            
+            const signatureBlockHeight = 60; 
+            if (y + signatureBlockHeight < pageHeight) {
+                y = pageHeight - signatureBlockHeight - margin;
+            } else {
+                y += 15;
+            }
+
+            doc.setFont(font, 'normal');
+            doc.text('Kindly stamp / Sign and return a copy as your acceptance.', margin, y);
+            y += 10;
+
+            doc.text('Best Regards,', margin, y);
+            y += 15;
+
+            doc.setFont(font, 'bold');
+            doc.text('FOR, OSWAL LUMBERS PVT. LTD.', margin, y);
+            y += 5;
+            doc.text('DEEPAK PAREKH', margin, y);
+            y += 5;
+            doc.text('DIRECTOR', margin, y);
+
+            doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
         }
-    };
-
-    addTerm('Shipment:', data.shipmentDetails);
-    addTerm('Payment:', data.paymentTerms);
-    addTerm('Freight:', data.freight);
-    addTerm('Partial Shipment:', data.partialShipment);
-    addTerm('Other Terms:', 'Invoice Packing List, BL & COO will be provided');
-    
-    // =========================================================================
-    // MODIFICATION START: Corrected dynamic spacing logic
-    // =========================================================================
-    
-    y += 5; // Add space before "Our Bank details"
-    doc.setFont(font, 'bold');
-    doc.text('Our Bank details:', margin, y);
-    y += 5;
-    doc.setFont(font, 'normal');
-    
-    const bankDetailsText = data.bankDetails;
-    const bankDetailsDims = doc.getTextDimensions(bankDetailsText, { lineHeightFactor: 1.4, maxWidth: pageWidth - margin * 2 });
-    doc.text(bankDetailsText, margin + 5, y, { lineHeightFactor: 1.4, maxWidth: pageWidth - margin * 2 });
-    y += bankDetailsDims.h; // Move y to the position immediately after the bank details block
-
-    if (data.calculationNote) {
-        y += 10;
-        doc.text(data.calculationNote, margin, y);
-        y += 10;
-    }
-    
-    // --- Signature Block ---
-    // Calculate the space needed for the entire signature block
-    const signatureBlockHeight = 30; 
-    // If the content + signature block fits on the page, just add space.
-    // Otherwise, push the signature block to the bottom.
-    if (y + signatureBlockHeight < pageHeight) {
-        y = pageHeight - signatureBlockHeight - margin;
-    } else {
-        y += 10; // Not enough space to push down, just add a gap
-    }
-
-    doc.setFont(font, 'normal');
-    doc.text('Kindly stamp / Sign and return a copy as your acceptance.', margin, y);
-    y += 10;
-
-    doc.text('Best Regards,', margin, y);
-    y += 15;
-
-    doc.setFont(font, 'bold');
-    doc.text('FOR, OSWAL LUMBERS PVT. LTD.', margin, y);
-    y += 5;
-    doc.text('DEEPAK PAREKH', margin, y);
-    y += 5;
-    doc.text('DIRECTOR', margin, y);
-    // =========================================================================
-    // MODIFICATION END
-    // =========================================================================
-
-    doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
-}
-    
-        document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function() {
             if (sessionStorage.getItem('loggedIn') !== 'true') {
                 window.location.href = 'login.html';
             }
@@ -568,4 +556,5 @@
     </script>
 </body>
 </html>
+
 
