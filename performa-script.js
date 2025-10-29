@@ -400,34 +400,42 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     // --- Signature Block ---
-    // Calculate the space needed for the entire signature block
-    const signatureBlockHeight = 30; 
-    // If the content + signature block fits on the page, just add space.
-    // Otherwise, push the signature block to the bottom.
+    const signatureBlockHeight = 80; 
     if (y + signatureBlockHeight < pageHeight) {
         y = pageHeight - signatureBlockHeight - margin;
     } else {
-        y += 10; // Not enough space to push down, just add a gap
+        y += 15;
     }
 
     doc.setFont(font, 'normal');
     doc.text('Kindly stamp / Sign and return a copy as your acceptance.', margin, y);
-    y += 10;
+    y += 7;
 
     doc.text('Best Regards,', margin, y);
-    y += 15;
+    y += 20;
 
+    // --- Signature Texts and Lines ---
+    const signatureY = y; // Save the starting Y position for vertical alignment
+
+    // Left Side: Company Signature
     doc.setFont(font, 'bold');
-    doc.text('FOR, OSWAL LUMBERS PVT. LTD.', margin, y);
-    y += 5;
-    doc.text('DEEPAK PAREKH', margin, y);
-    y += 5;
-    doc.text('DIRECTOR', margin, y);
-    // =========================================================================
-    // MODIFICATION END
-    // =========================================================================
+    doc.text('FOR, OSWAL LUMBERS PVT. LTD.', margin, signatureY);
+    doc.text('DEEPAK PAREKH', margin, signatureY + 5);
+    doc.text('DIRECTOR', margin, signatureY + 10);
+    
+    // Right Side: Buyer Acceptance Signature Line
+    const lineX1 = pageWidth - margin - 70; // Start of the line
+    const lineX2 = pageWidth - margin;     // End of the line
+    
+    doc.setDrawColor(0); // Set line color to black
+    doc.line(lineX1, signatureY, lineX2, signatureY); // Draw the line
+    
+    doc.setFont(font, 'bold');
+    doc.setFontSize(9);
+    doc.text('BUYER ACCEPTANCE', (lineX1 + lineX2) / 2, signatureY + 5, { align: 'center' });
 
     doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
 }
 });
+
 
