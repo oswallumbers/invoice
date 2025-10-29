@@ -376,7 +376,7 @@ document.addEventListener('DOMContentLoaded', function () {
     addTerm('Payment:', data.paymentTerms);
     addTerm('Freight:', data.freight);
     addTerm('Partial Shipment:', data.partialShipment);
-    addTerm('Other Terms:', 'Invoice Packing List, BL & COO will be provided');
+    addTerm('Other Terms:', 'Invoice, Packing List, BL & COO will be provided');
     
     // =========================================================================
     // MODIFICATION START: Corrected dynamic spacing logic
@@ -408,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     doc.setFont(font, 'normal');
-    doc.text('Kindly stamp / Sign and return a copy as your acceptance.', margin, y);
+    doc.text('Kindly Stamp / Sign and return a copy as your acceptance.', margin, y);
     y += 7;
 
     doc.text('Best Regards,', margin, y);
@@ -437,5 +437,6 @@ document.addEventListener('DOMContentLoaded', function () {
     doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
 }
 });
+
 
 
