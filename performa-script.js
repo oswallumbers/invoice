@@ -284,133 +284,150 @@ document.addEventListener('DOMContentLoaded', function () {
     // =========================================================================
     // MODIFICATION START: Updated generatePDF function with conditional logic
     // =========================================================================
-    function generatePDF() {
-        const doc = new jsPDF();
-        const data = getFormData();
-        const font = 'Helvetica';
-        doc.setFont(font, 'normal');
-        const margin = 15;
-        const pageWidth = doc.internal.pageSize.width;
-        let y = margin + 5;
+   function generatePDF() {
+    const doc = new jsPDF();
+    const data = getFormData();
+    const font = 'Helvetica';
+    doc.setFont(font, 'normal');
+    const margin = 15;
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    let y = margin + 5;
 
-        doc.setFontSize(30);
-        doc.setFont(font, 'bold');
-        doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
-        y += 7;
-        doc.setFontSize(11);
-        doc.setFont(font, 'normal');
-        doc.text('SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA', pageWidth / 2, y, { align: 'center' });
-        y += 5;
-        doc.text('E-MAIL: info@oswallumbers.com', pageWidth / 2, y, { align: 'center' });
+    doc.setFontSize(30);
+    doc.setFont(font, 'bold');
+    doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
+    y += 7;
+    doc.setFontSize(11);
+    doc.setFont(font, 'normal');
+    doc.text('SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA', pageWidth / 2, y, { align: 'center' });
+    y += 5;
+    doc.text('E-MAIL: info@oswallumbers.com', pageWidth / 2, y, { align: 'center' });
 
-        y += 10;
-        const piDate = new Date(data.performaInvoiceDate).toLocaleDateString('en-GB');
-        doc.setFont(font, 'bold');
-        doc.text(`Sales Contract No: ${data.performaInvoiceNo}`, margin, y);
-        doc.setFont(font, 'normal');
-        doc.text(`Date: ${piDate}`, margin, y + 5);
-        y += 20;
+    y += 10;
+    const piDate = new Date(data.performaInvoiceDate).toLocaleDateString('en-GB');
+    doc.setFont(font, 'bold');
+    doc.text(`Sales Contract No: ${data.performaInvoiceNo}`, margin, y);
+    doc.setFont(font, 'normal');
+    doc.text(`Date: ${piDate}`, margin, y + 5);
+    y += 20;
 
-        doc.setFont(font, 'bold');
-        doc.text('Buyer:', margin, y);
-        y += 5;
-        doc.setFont(font, 'normal');
-        const fullBuyerText = data.buyerName + '\n' + data.buyerDetails;
-        doc.text(fullBuyerText, margin, y, { maxWidth: 100 });
-        y += (doc.getTextDimensions(fullBuyerText, { maxWidth: 100 }).h) + 10;
-        
-        doc.text('Dear Sir,', margin, y);
-        y += 5;
-        doc.text(`We are pleased to confirm having sold to you ${data.mainItemDesc}`, margin, y, { maxWidth: pageWidth - (margin * 2) });
-        y += 10;
-        
-        const head = [['NO.', 'HSN', 'DIMENSION', 'QUANTITY ABOUT M3', 'CNF PRICE US$/M3', 'AMOUNT US$']];
-        let body;
+    doc.setFont(font, 'bold');
+    doc.text('Buyer:', margin, y);
+    y += 5;
+    doc.setFont(font, 'normal');
+    const fullBuyerText = data.buyerName + '\n' + data.buyerDetails;
+    doc.text(fullBuyerText, margin, y, { maxWidth: 100 });
+    y += (doc.getTextDimensions(fullBuyerText, { maxWidth: 100 }).h) + 10;
+    
+    doc.text('Dear Sir,', margin, y);
+    y += 5;
+    doc.text(`We are pleased to confirm having sold to you ${data.mainItemDesc}`, margin, y, { maxWidth: pageWidth - (margin * 2) });
+    y += 10;
+    
+    const head = [['NO.', 'HSN', 'DIMENSION', 'QUANTITY ABOUT M3', 'CNF PRICE US$/M3', 'AMOUNT US$']];
+    let body;
 
-        // --- Conditional Table Generation Logic ---
-        if (data.groupItems && data.items.length > 0) {
-            // NEW: Logic for grouped items using rowspan
-            body = [];
-            const totalM3 = data.items.reduce((sum, item) => sum + (parseFloat(item.m3) || 0), 0);
-            const totalAmount = data.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-            const avgRate = totalM3 > 0 ? totalAmount / totalM3 : 0;
-            const numItems = data.items.length;
-
-            data.items.forEach((item, index) => {
-                const row = [item.sno, item.hsn, item.dimension];
-                if (index === 0) {
-                    // Add the merged cells only for the first row
-                    row.push({ content: totalM3.toFixed(3), rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
-                    row.push({ content: `$${avgRate.toFixed(2)}`, rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
-                    row.push({ content: `$${totalAmount.toFixed(2)}`, rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
-                }
-                body.push(row);
-            });
-        } else {
-            // ORIGINAL: Logic for separate items
-            body = data.items.map(item => [
-                item.sno,
-                item.hsn,
-                item.dimension,
-                parseFloat(item.m3).toFixed(3),
-                `$${parseFloat(item.rate).toFixed(2)}`,
-                `$${parseFloat(item.amount).toFixed(2)}`
-            ]);
-        }
-        // --- End of Conditional Logic ---
-
-        doc.autoTable({
-            head: head, body: body, startY: y, theme: 'grid',
-            headStyles: { fontStyle: 'bold', halign: 'center' },
-            styles: { fontSize: 9 },
-        });
-        y = doc.autoTable.previous.finalY + 10;
-
-        const addTerm = (label, value) => {
-            if (value) {
-                doc.setFont(font, 'bold');
-                doc.text(label, margin, y, { maxWidth: 40 });
-                doc.setFont(font, 'normal');
-                doc.text(value, margin + 45, y, { maxWidth: pageWidth - margin * 2 - 45 });
-                const textHeight = doc.getTextDimensions(value, { maxWidth: pageWidth - margin * 2 - 45 }).h;
-                y += textHeight + 4;
+    if (data.groupItems && data.items.length > 0) {
+        body = [];
+        const totalM3 = data.items.reduce((sum, item) => sum + (parseFloat(item.m3) || 0), 0);
+        const totalAmount = data.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+        const avgRate = totalM3 > 0 ? totalAmount / totalM3 : 0;
+        const numItems = data.items.length;
+        data.items.forEach((item, index) => {
+            const row = [item.sno, item.hsn, item.dimension];
+            if (index === 0) {
+                row.push({ content: totalM3.toFixed(3), rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
+                row.push({ content: `$${avgRate.toFixed(2)}`, rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
+                row.push({ content: `$${totalAmount.toFixed(2)}`, rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
             }
-        };
-
-        addTerm('Shipment:', data.shipmentDetails);
-        addTerm('Payment:', data.paymentTerms);
-        addTerm('Freight:', data.freight);
-        addTerm('Partial Shipment:', data.partialShipment);
-        
-        y += 5;
-        doc.setFont(font, 'bold');
-        doc.text('Our Bank details:', margin, y);
-        y += 5;
-        doc.setFont(font, 'normal');
-        const bankDetailsDims = doc.getTextDimensions(data.bankDetails, { lineHeightFactor: 1.4 });
-        doc.text(data.bankDetails, margin + 10, y, { lineHeightFactor: 1.4 });
-        y += bankDetailsDims.h + 10;
-
-        if (data.calculationNote) {
-            y += 10;
-            doc.text(data.calculationNote, margin, y);
-            y += 10;
-        }
-
-        y = Math.max(y, 240); // Ensure signature part is near the bottom
-        doc.text('Best Regards,', margin, y);
-        y += 20;
-
-        doc.setFont(font, 'bold');
-        doc.text('FOR, OSWAL LUMBERS PVT. LTD.', margin, y);
-        y += 5;
-        doc.text('DEEPAK PAREKH', margin, y);
-        y += 5;
-        doc.text('DIRECTOR', margin, y);
-
-        doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
+            body.push(row);
+        });
+    } else {
+        body = data.items.map(item => [
+            item.sno,
+            item.hsn,
+            item.dimension,
+            parseFloat(item.m3).toFixed(3),
+            `$${parseFloat(item.rate).toFixed(2)}`,
+            `$${parseFloat(item.amount).toFixed(2)}`
+        ]);
     }
+
+    doc.autoTable({
+        head: head, body: body, startY: y, theme: 'grid',
+        headStyles: { fontStyle: 'bold', halign: 'center' },
+        styles: { fontSize: 9 },
+    });
+    y = doc.autoTable.previous.finalY + 10;
+
+    const addTerm = (label, value) => {
+        if (value) {
+            doc.setFont(font, 'bold');
+            doc.text(label, margin, y, { maxWidth: 40 });
+            doc.setFont(font, 'normal');
+            doc.text(value, margin + 45, y, { maxWidth: pageWidth - margin * 2 - 45 });
+            const textHeight = doc.getTextDimensions(value, { maxWidth: pageWidth - margin * 2 - 45 }).h;
+            y += textHeight + 4;
+        }
+    };
+
+    addTerm('Shipment:', data.shipmentDetails);
+    addTerm('Payment:', data.paymentTerms);
+    addTerm('Freight:', data.freight);
+    addTerm('Partial Shipment:', data.partialShipment);
+    addTerm('Other Terms:', 'Invoice Packing List, BL & COO will be provided');
+    
+    // =========================================================================
+    // MODIFICATION START: Corrected dynamic spacing logic
+    // =========================================================================
+    
+    y += 5; // Add space before "Our Bank details"
+    doc.setFont(font, 'bold');
+    doc.text('Our Bank details:', margin, y);
+    y += 5;
+    doc.setFont(font, 'normal');
+    
+    const bankDetailsText = data.bankDetails;
+    const bankDetailsDims = doc.getTextDimensions(bankDetailsText, { lineHeightFactor: 1.4, maxWidth: pageWidth - margin * 2 });
+    doc.text(bankDetailsText, margin + 5, y, { lineHeightFactor: 1.4, maxWidth: pageWidth - margin * 2 });
+    y += bankDetailsDims.h; // Move y to the position immediately after the bank details block
+
+    if (data.calculationNote) {
+        y += 10;
+        doc.text(data.calculationNote, margin, y);
+        y += 10;
+    }
+    
+    // --- Signature Block ---
+    // Calculate the space needed for the entire signature block
+    const signatureBlockHeight = 30; 
+    // If the content + signature block fits on the page, just add space.
+    // Otherwise, push the signature block to the bottom.
+    if (y + signatureBlockHeight < pageHeight) {
+        y = pageHeight - signatureBlockHeight - margin;
+    } else {
+        y += 10; // Not enough space to push down, just add a gap
+    }
+
+    doc.setFont(font, 'normal');
+    doc.text('Kindly stamp / Sign and return a copy as your acceptance.', margin, y);
+    y += 10;
+
+    doc.text('Best Regards,', margin, y);
+    y += 15;
+
+    doc.setFont(font, 'bold');
+    doc.text('FOR, OSWAL LUMBERS PVT. LTD.', margin, y);
+    y += 5;
+    doc.text('DEEPAK PAREKH', margin, y);
+    y += 5;
+    doc.text('DIRECTOR', margin, y);
     // =========================================================================
     // MODIFICATION END
     // =========================================================================
+
+    doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
+}
 });
+
