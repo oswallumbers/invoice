@@ -4,21 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Export Management System</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <style>
         :root {
             --primary-color: #2c3e50;
-            --secondary-color: #3498db;
+            --secondary-color: #3498db; /* This is the blue color we'll use */
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 900;
+  font-style: bold;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             background: linear-gradient(135deg, #1a2980, #26d0ce);
+            margin: 0;
         }
         .login-card {
             background: white;
@@ -27,12 +35,16 @@
             overflow: hidden;
             width: 100%;
             max-width: 400px;
+            margin-top: auto;
         }
         .login-header {
             background-color: var(--primary-color);
             color: white;
             padding: 20px;
             text-align: center;
+        }
+        .login-header h2 {
+            font-weight: 600;
         }
         .login-body { padding: 30px; }
         .form-group { margin-bottom: 20px; }
@@ -41,6 +53,7 @@
             padding: 12px;
             border: 1px solid #ddd;
             width: 100%;
+            font-family: 'Poppins', sans-serif;
         }
         .btn-login {
             background-color: var(--secondary-color);
@@ -51,10 +64,41 @@
             width: 100%;
             font-weight: bold;
             cursor: pointer;
+            font-family: 'Poppins', sans-serif;
         }
+        
+        .footer {
+            width: 100%;
+            text-align: center;
+            padding: 20px 0;
+            color: #d0f724;
+            font-size: 1.3em;
+            margin-top: auto;
+        }
+        .footer a {
+            /* --- THIS LINE WAS CHANGED --- */
+            color: #5b15df;
+            font-weight: bold;
+            text-decoration: none;
+            transition: color 0.3s ease; /* Smooth color transition */
+        }
+        .footer a:hover {
+            /* --- HOVER EFFECT ADDED --- */
+            color: #f0f0ef; /* Changes back to white on hover */
+        }
+.header{
+     color: #c7f012;
+    font-size: 2.9em;
+    text-align: center;
+            font-weight: bold;
+            text-decoration: none;
+            transition: color 0.3s ease; /* Smooth color transition */
+        }
+}
     </style>
 </head>
 <body>
+    <header class="header">OSWAL LUMBERS PVT LTD</header>
     <div class="login-card">
         <div class="login-header">
             <h2>Export Data Management</h2>
@@ -75,9 +119,13 @@
         </div>
     </div>
     
+    <footer class="footer">
+        Copyright 2025 OSWAL LUMBERS PVT LTD<br>
+        Developed By <a href="https://dhartee.in" target="_blank">DharTee</a>
+    </footer>
+    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // If the user is already logged in, redirect them to the dashboard
             if (sessionStorage.getItem('loggedIn') === 'true') {
                 window.location.href = 'dashboard.html';
             }
@@ -90,9 +138,7 @@
                 const pinInput = document.getElementById('pin').value;
 
                 if (usernameInput === 'admin' && pinInput === '12345') {
-                    // Set a flag in session storage to indicate login
                     sessionStorage.setItem('loggedIn', 'true');
-                    // Redirect to the main dashboard
                     window.location.href = 'dashboard.html';
                 } else {
                     alert('Invalid username or PIN. Please try again.');
