@@ -52,6 +52,10 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('main-item-desc').value = data.mainItemDesc;
         document.getElementById('bank-details').value = data.bankDetails;
         document.getElementById('calculation-note').value = data.calculationNote || '';
+        
+        // MODIFICATION START: Populate checkbox state
+        document.getElementById('group-items-checkbox').checked = data.groupItems || false;
+        // MODIFICATION END
 
         if (data.buyerName) {
             for (let i = 0; i < buyerSelect.options.length; i++) {
@@ -133,9 +137,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function getFormData() {
         const items = [];
-        let totalM3 = 0; // Add this line
+        let totalM3 = 0;
         itemsBody.querySelectorAll('tr').forEach(row => {
-            const m3 = parseFloat(row.querySelector('.item-m3').value) || 0; // Get m3 value
+            const m3 = parseFloat(row.querySelector('.item-m3').value) || 0;
             items.push({
                 sno: row.querySelector('.item-sno').value,
                 hsn: row.querySelector('.item-hsn').value,
@@ -144,12 +148,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 rate: parseFloat(row.querySelector('.item-rate').value) || 0,
                 amount: parseFloat(row.querySelector('.item-amount').value) || 0
             });
-            totalM3 += m3; // Add to total
+            totalM3 += m3;
         });
 
         const selectedBuyerName = buyerSelect.options[buyerSelect.selectedIndex].text;
 
         return {
+            // MODIFICATION START: Get checkbox state
+            groupItems: document.getElementById('group-items-checkbox').checked,
+            // MODIFICATION END
             buyerName: (buyerSelect.value && selectedBuyerName !== '-- Select or Add New Buyer --') ? selectedBuyerName : '',
             sellerDetails: document.getElementById('seller-details').value,
             buyerDetails: document.getElementById('buyer-details').value,
@@ -164,12 +171,11 @@ document.addEventListener('DOMContentLoaded', function () {
             bankDetails: document.getElementById('bank-details').value,
             calculationNote: document.getElementById('calculation-note').value,
             totalAmount: parseFloat(document.getElementById('total-amount').textContent.replace('$', '')) || 0,
-            totalM3: totalM3, // Add totalM3 to the returned object
+            totalM3: totalM3,
             items: items
         };
     }
 
-    // --- Buyer Management Functions (unchanged from script.js) ---
     async function loadBuyers() {
         return db.collection('buyers').orderBy('name').get().then(querySnapshot => {
             while (buyerSelect.options.length > 1) { buyerSelect.remove(1); }
@@ -199,10 +205,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }).catch(error => console.error("Error fetching buyer details: ", error));
     }
     
-            // --- Event Listeners for Modal ---
-        addBuyerBtn.addEventListener('click', () => { addBuyerModal.classList.remove('hidden'); });
-        closeModalBtn.addEventListener('click', () => { addBuyerModal.classList.add('hidden'); });
-        window.addEventListener('click', (event) => { if (event.target == addBuyerModal) { addBuyerModal.classList.add('hidden'); } });
+    addBuyerBtn.addEventListener('click', () => { addBuyerModal.classList.remove('hidden'); });
+    closeModalBtn.addEventListener('click', () => { addBuyerModal.classList.add('hidden'); });
+    window.addEventListener('click', (event) => { if (event.target == addBuyerModal) { addBuyerModal.classList.add('hidden'); } });
 
     newBuyerForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -220,11 +225,10 @@ document.addEventListener('DOMContentLoaded', function () {
             option.selected = true;
             buyerSelect.appendChild(option);
             buyerSelect.dispatchEvent(new Event('change'));
-            addBuyerModal.style.display = 'none';
+            addBuyerModal.classList.add('hidden');
             newBuyerForm.reset();
         }).catch(error => console.error("Error adding new buyer: ", error));
     });
-    // --- End Buyer Management Functions ---
 
     addRowBtn.addEventListener('click', addRow);
     saveBtn.addEventListener('click', savePerformaInvoice);
@@ -250,19 +254,19 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function addRow() {
-    itemCounter++;
-    const row = document.createElement('tr');
-    row.innerHTML = `
-        <td class="px-2 py-1"><input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemCounter}" readonly></td>
-        <td class="px-2 py-1"><input type="text" class="item-hsn w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="44071100"></td>
-        <td class="px-2 py-1"><input type="text" class="item-dimension w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" placeholder="e.g., 92 MM X 92 MM X 3.9 METER"></td>
-        <td class="px-2 py-1"><input type="number" class="item-m3 w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="0" step="0.001"></td>
-        <td class="px-2 py-1"><input type="number" class="item-rate w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="0" step="0.01"></td>
-        <td class="px-2 py-1"><input type="text" class="item-amount w-full bg-gray-100 border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" readonly></td>
-        <td class="px-2 py-1 text-center"><button type="button" class="delete-row-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button></td>
-    `;
-    itemsBody.appendChild(row);
-}
+        itemCounter++;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="px-2 py-1"><input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemCounter}" readonly></td>
+            <td class="px-2 py-1"><input type="text" class="item-hsn w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="44071100"></td>
+            <td class="px-2 py-1"><input type="text" class="item-dimension w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" placeholder="e.g., 92 MM X 92 MM X 3.9 METER"></td>
+            <td class="px-2 py-1"><input type="number" class="item-m3 w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="0" step="0.001"></td>
+            <td class="px-2 py-1"><input type="number" class="item-rate w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="0" step="0.01"></td>
+            <td class="px-2 py-1"><input type="text" class="item-amount w-full bg-gray-100 border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" readonly></td>
+            <td class="px-2 py-1 text-center"><button type="button" class="delete-row-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button></td>
+        `;
+        itemsBody.appendChild(row);
+    }
 
     function updateTotals() {
         let totalAmount = 0;
@@ -277,6 +281,9 @@ document.addEventListener('DOMContentLoaded', function () {
         generatePDF();
     });
     
+    // =========================================================================
+    // MODIFICATION START: Updated generatePDF function with conditional logic
+    // =========================================================================
     function generatePDF() {
         const doc = new jsPDF();
         const data = getFormData();
@@ -286,7 +293,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const pageWidth = doc.internal.pageSize.width;
         let y = margin + 5;
 
-      
         doc.setFontSize(30);
         doc.setFont(font, 'bold');
         doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
@@ -297,43 +303,61 @@ document.addEventListener('DOMContentLoaded', function () {
         y += 5;
         doc.text('E-MAIL: info@oswallumbers.com', pageWidth / 2, y, { align: 'center' });
 
-        // --- DOC DETAILS ---
-        y += 10; // Add space after the header
-
-        // --- DOC DETAILS (New Position) ---
+        y += 10;
         const piDate = new Date(data.performaInvoiceDate).toLocaleDateString('en-GB');
         doc.setFont(font, 'bold');
         doc.text(`Sales Contract No: ${data.performaInvoiceNo}`, margin, y);
         doc.setFont(font, 'normal');
         doc.text(`Date: ${piDate}`, margin, y + 5);
+        y += 20;
 
-        y += 5; // Add space before the buyer details
-
-        y += 15;
-        // --- BUYER ---
         doc.setFont(font, 'bold');
         doc.text('Buyer:', margin, y);
         y += 5;
         doc.setFont(font, 'normal');
         const fullBuyerText = data.buyerName + '\n' + data.buyerDetails;
         doc.text(fullBuyerText, margin, y, { maxWidth: 100 });
-        y += 25;
+        y += (doc.getTextDimensions(fullBuyerText, { maxWidth: 100 }).h) + 10;
         
         doc.text('Dear Sir,', margin, y);
         y += 5;
         doc.text(`We are pleased to confirm having sold to you ${data.mainItemDesc}`, margin, y, { maxWidth: pageWidth - (margin * 2) });
         y += 10;
         
-        // --- ITEMS TABLE ---
         const head = [['NO.', 'HSN', 'DIMENSION', 'QUANTITY ABOUT M3', 'CNF PRICE US$/M3', 'AMOUNT US$']];
-        const body = data.items.map(item => [
-            item.sno,
-            item.hsn,
-            item.dimension,
-            parseFloat(item.m3).toFixed(3),
-            `$${parseFloat(item.rate).toFixed(2)}`,
-            `$${parseFloat(item.amount).toFixed(2)}`
-        ]);
+        let body;
+
+        // --- Conditional Table Generation Logic ---
+        if (data.groupItems && data.items.length > 0) {
+            // NEW: Logic for grouped items using rowspan
+            body = [];
+            const totalM3 = data.items.reduce((sum, item) => sum + (parseFloat(item.m3) || 0), 0);
+            const totalAmount = data.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+            const avgRate = totalM3 > 0 ? totalAmount / totalM3 : 0;
+            const numItems = data.items.length;
+
+            data.items.forEach((item, index) => {
+                const row = [item.sno, item.hsn, item.dimension];
+                if (index === 0) {
+                    // Add the merged cells only for the first row
+                    row.push({ content: totalM3.toFixed(3), rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
+                    row.push({ content: `$${avgRate.toFixed(2)}`, rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
+                    row.push({ content: `$${totalAmount.toFixed(2)}`, rowSpan: numItems, styles: { valign: 'middle', halign: 'center' } });
+                }
+                body.push(row);
+            });
+        } else {
+            // ORIGINAL: Logic for separate items
+            body = data.items.map(item => [
+                item.sno,
+                item.hsn,
+                item.dimension,
+                parseFloat(item.m3).toFixed(3),
+                `$${parseFloat(item.rate).toFixed(2)}`,
+                `$${parseFloat(item.amount).toFixed(2)}`
+            ]);
+        }
+        // --- End of Conditional Logic ---
 
         doc.autoTable({
             head: head, body: body, startY: y, theme: 'grid',
@@ -342,7 +366,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         y = doc.autoTable.previous.finalY + 10;
 
-        // --- TERMS ---
         const addTerm = (label, value) => {
             if (value) {
                 doc.setFont(font, 'bold');
@@ -366,13 +389,15 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.setFont(font, 'normal');
         const bankDetailsDims = doc.getTextDimensions(data.bankDetails, { lineHeightFactor: 1.4 });
         doc.text(data.bankDetails, margin + 10, y, { lineHeightFactor: 1.4 });
-        y += bankDetailsDims.h + 40; // Dynamically calculate height and add a 10px gap
+        y += bankDetailsDims.h + 10;
 
         if (data.calculationNote) {
+            y += 10;
             doc.text(data.calculationNote, margin, y);
-            y += 30;
+            y += 10;
         }
 
+        y = Math.max(y, 240); // Ensure signature part is near the bottom
         doc.text('Best Regards,', margin, y);
         y += 20;
 
@@ -383,6 +408,9 @@ document.addEventListener('DOMContentLoaded', function () {
         y += 5;
         doc.text('DIRECTOR', margin, y);
 
-        doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace('/', '-')}.pdf`);
+        doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
+    // =========================================================================
+    // MODIFICATION END
+    // =========================================================================
 });
