@@ -1,1 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oswal Lumbers Pvt Ltd Portal</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        /* Custom class for the card entrance animation */
+        .card-enter {
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeIn 0.5s forwards;
+        }
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-cyan-100 via-purple-200 to-rose-200 min-h-screen">
 
+    <div class="container mx-auto p-4 md:p-8">
+        
+        <header class="text-center my-8 md:my-12">
+            <h1 class="text-4xl md:text-6xl font-bold text-slate-800 tracking-tight" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.1);">
+                OSWAL LUMBERS PVT LTD PORTAL
+            </h1>
+        </header>
+
+        <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="portal-grid">
+
+            <div class="department-card bg-white/60 backdrop-blur-md rounded-2xl shadow-lg p-6 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                <h2 class="text-2xl font-bold text-blue-800 border-b-2 border-blue-300 pb-2 mb-4">Export Department</h2>
+                <div class="space-y-3 mt-auto">
+                    <a href="login.html" class="block text-center w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-blue-700 hover:scale-105 active:scale-95">Export Invoice</a>
+                    <a href="#" class="block text-center w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-blue-700 hover:scale-105 active:scale-95">Export Management</a>
+                </div>
+            </div>
+
+            <div class="department-card bg-white/60 backdrop-blur-md rounded-2xl shadow-lg p-6 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                <h2 class="text-2xl font-bold text-emerald-800 border-b-2 border-emerald-300 pb-2 mb-4">Import Department</h2>
+                <div class="space-y-3 mt-auto">
+                    <a href="#" class="block text-center w-full bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-emerald-700 hover:scale-105 active:scale-95">Import Management</a>
+                    <a href="#" class="block text-center w-full bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-emerald-700 hover:scale-105 active:scale-95">Import Working</a>
+                </div>
+            </div>
+            
+            <div class="department-card bg-white/60 backdrop-blur-md rounded-2xl shadow-lg p-6 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                <h2 class="text-2xl font-bold text-amber-800 border-b-2 border-amber-300 pb-2 mb-4">Stock Department</h2>
+                <div class="space-y-3 mt-auto">
+                    <a href="#" class="block text-center w-full bg-amber-500 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-amber-600 hover:scale-105 active:scale-95">Stock Report</a>
+                    <a href="#" class="block text-center w-full bg-amber-500 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-amber-600 hover:scale-105 active:scale-95">Stock Entry</a>
+                    <a href="#" class="block text-center w-full bg-amber-500 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-amber-600 hover:scale-105 active:scale-95">Stock Details</a>
+                </div>
+            </div>
+
+            <div class="department-card bg-white/60 backdrop-blur-md rounded-2xl shadow-lg p-6 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                <h2 class="text-2xl font-bold text-indigo-800 border-b-2 border-indigo-300 pb-2 mb-4">Manufacturing Dept</h2>
+                <div class="space-y-3 mt-auto">
+                    <a href="https://test.mksoftservice.com/OSWAL/login.php" class="block text-center w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-indigo-700 hover:scale-105 active:scale-95">Loading List</a>
+                    <a href="#" class="block text-center w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-indigo-700 hover:scale-105 active:scale-95">Loading Database</a>
+                    <a href="#" class="block text-center w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-indigo-700 hover:scale-105 active:scale-95">Loading Parties</a>
+                </div>
+            </div>
+
+            <div class="department-card bg-white/60 backdrop-blur-md rounded-2xl shadow-lg p-6 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                <h2 class="text-2xl font-bold text-purple-800 border-b-2 border-purple-300 pb-2 mb-4">Direct Selling Dept</h2>
+                <div class="space-y-3 mt-auto">
+                    <a href="#" class="block text-center w-full bg-purple-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-purple-700 hover:scale-105 active:scale-95" target="blank">Loading List</a>
+                    <a href="#" class="block text-center w-full bg-purple-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-purple-700 hover:scale-105 active:scale-95">Loading Database</a>
+                    <a href="#" class="block text-center w-full bg-purple-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-purple-700 hover:scale-105 active:scale-95">Loading Parties</a>
+                </div>
+            </div>
+            
+            <div class="department-card bg-white/60 backdrop-blur-md rounded-2xl shadow-lg p-6 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                <h2 class="text-2xl font-bold text-slate-800 border-b-2 border-slate-300 pb-2 mb-4">Accounts Department</h2>
+                <div class="space-y-3 mt-auto">
+                    <a href="#" class="block text-center w-full bg-slate-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-slate-800 hover:scale-105 active:scale-95">Reports</a>
+                    <a href="#" class="block text-center w-full bg-slate-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-slate-800 hover:scale-105 active:scale-95">Query</a>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.department-card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 100}ms`;
+                card.classList.add('card-enter');
+            });
+        });
+    </script>
+
+</body>
+</html>
