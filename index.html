@@ -29,6 +29,10 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        html, body {
+  overflow-x: hidden !important;
+  width: 100% !important;
+}
         /* Simple transition for mobile menu */
         #mobile-menu {
             transition: transform 0.3s ease-in-out;
@@ -143,6 +147,32 @@
             opacity: 1;
             transform: translateX(0) rotate(0);
         }
+        #mobile-menu,
+#hero-slider-container,
+.hero-slide,
+iframe {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* Fix potential container overflow on small screens */
+.container {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+  box-sizing: border-box;
+}
+
+/* Ensure hero section fits perfectly */
+#home {
+  width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Optional: in case the footer auto-fixes the layout */
+footer {
+  max-width: 100%;
+  overflow-x: hidden;
+}
     </style>
 </head>
 <body class="font-sans text-dark overflow-x-hidden">
@@ -794,6 +824,7 @@
     </script>
 </body>
 </html>
+
 
 
 
