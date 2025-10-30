@@ -1,115 +1,659 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oswal Lumbers Pvt Ltd Portal</title>
-    
+    <title>Oswal Lumbers Pvt Ltd - Premium Core Veneer & Imported Logs</title>
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#006400', // Dark Green
+                        secondary: '#8b4513', // Brown (Accent)
+                        light: '#f0f8ff', // Alice Blue (Light BG)
+                        dark: '#333333',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
         }
-        /* Custom class for the card entrance animation */
-        .card-enter {
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Simple transition for mobile menu */
+        #mobile-menu {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        /* Header Load-in Animation */
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        header {
+            animation: slideDown 0.6s ease-out;
+        }
+
+        /* Desktop Nav Link Underline */
+        .nav-link {
+            position: relative;
+            padding-bottom: 4px; /* Add space for underline */
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #006400; /* primary color */
+            transform: scaleX(0);
+            transform-origin: center;
+            transition: transform 0.3s ease-out;
+        }
+        .nav-link:hover::after {
+            transform: scaleX(1);
+        }
+
+        /* On-Scroll Fade-Up Animation */
+        .js-fade-in-up {
             opacity: 0;
             transform: translateY(30px);
-            animation: fadeIn 0.5s forwards;
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
         }
-        @keyframes fadeIn {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .js-fade-in-up.is-visible {
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-cyan-100 via-purple-200 to-rose-200 min-h-screen">
+<body class="font-sans text-dark">
 
-    <div class="container mx-auto p-4 md:p-8">
+    <!-- Header -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <!-- Top Bar -->
+        <div class="bg-primary text-white py-2 px-4 text-xs md:text-sm">
+            <div class="container mx-auto flex flex-col md:flex-row justify-between items-center max-w-7xl px-4">
+                <div class="flex flex-wrap justify-center gap-x-4 gap-y-1">
+                    <a href="tel:+919978555000" class="hover:text-gray-200">
+                        <i class="fas fa-phone mr-1"></i> +91 9978555000
+                    </a>
+                    <a href="mailto:info@oswallumbers.com" class="hover:text-gray-200">
+                        <i class="fas fa-envelope mr-1"></i> info@oswallumbers.com
+                    </a>
+                </div>
+                <div class="hidden md:flex items-center gap-4">
+                    <a href="#" class="hover:text-gray-200"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="hover:text-gray-200"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="hover:text-gray-200"><i class="fab fa-linkedin-in"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Navigation -->
+        <nav class="container mx-auto max-w-7xl px-4 py-4 flex justify-between items-center">
+            <!-- Logo -->
+            <a href="#" class="flex items-center gap-3">
+                <img src="https://i.ibb.co/VWCxPSqc/OLPLLOGO.jpg" alt="Oswal Lumbers Logo" class="h-12 md:h-14 w-auto">
+                <div class="flex flex-col">
+                    <span class="text-lg md:text-xl font-bold text-primary leading-tight">Oswal Lumbers</span>
+                    <span class="text-sm md:text-base font-medium text-secondary -mt-1">Pvt Ltd</span>
+                </div>
+            </a>
+
+            <!-- Desktop Menu -->
+            <div class="hidden lg:flex items-center gap-6">
+                <a href="#home" class="font-medium text-gray-700 hover:text-primary nav-link">Home</a>
+                <a href="#about" class="font-medium text-gray-700 hover:text-primary nav-link">About Us</a>
+                <a href="#products" class="font-medium text-gray-700 hover:text-primary nav-link">Products</a>
+                <a href="#quote" class="font-medium text-gray-700 hover:text-primary nav-link">Get Price</a>
+                <a href="#group" class="font-medium text-gray-700 hover:text-primary nav-link">Our Group</a>
+                <a href="#contact" class="font-medium text-gray-700 hover:text-primary nav-link">Contact</a>
+                <a href="#" class="font-medium text-gray-700 hover:text-primary nav-link">Purchase Order</a>
+                <a href="#" class="font-medium text-gray-700 hover:text-primary nav-link">Sales Order</a>
+                <a href="#" class="bg-secondary text-white font-medium px-5 py-2.5 rounded-full hover:bg-opacity-90 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg transform">
+                    Portal
+                </a>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <div class="lg:hidden">
+                <button id="menu-btn" class="text-2xl text-primary">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="lg:hidden bg-white w-full absolute left-0 top-full shadow-lg -translate-x-full">
+            <a href="#home" class="block py-3 px-6 text-gray-700 hover:bg-light">Home</a>
+            <a href="#about" class="block py-3 px-6 text-gray-700 hover:bg-light">About Us</a>
+            <a href="#products" class="block py-3 px-6 text-gray-700 hover:bg-light">Products</a>
+            <a href="#quote" class="block py-3 px-6 text-gray-700 hover:bg-light">Get Price</a>
+            <a href="#group" class="block py-3 px-6 text-gray-700 hover:bg-light">Our Group</a>
+            <a href="#contact" class="block py-3 px-6 text-gray-700 hover:bg-light">Contact</a>
+            <a href="#" class="block py-3 px-6 text-gray-700 hover:bg-light">Purchase Order</a>
+            <a href="#" class="block py-3 px-6 text-gray-700 hover:bg-light">Sales Order</a>
+            <a href="#" class="block py-3 px-6 text-secondary font-medium hover:bg-light">Portal</a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+
+        <!-- Hero Section -->
+        <section id="home" class="relative h-[70vh] min-h-[450px] w-full bg-cover bg-center text-white" style="background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://placehold.co/1920x1080/556B2F/FFFFFF?text=Premium+Wood+Logs');">
+            <div class="container mx-auto max-w-7xl h-full flex flex-col justify-center items-start px-4 text-left">
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight max-w-3xl">
+                    Premium Core Veneer &<br> Imported Round Logs
+                </h1>
+                <p class="text-lg lg:text-xl mt-4 max-w-2xl text-gray-200">
+                    Your trusted partner for high-quality, sustainably sourced timber products for every industrial need.
+                </p>
+                <div class="mt-8 flex flex-col sm:flex-row gap-4">
+                    <a href="#products" class="bg-primary text-white font-medium px-8 py-3 rounded-full hover:bg-opacity-90 shadow-lg transition-all text-center">
+                        Our Products
+                    </a>
+                    <a href="#quote" class="bg-white text-primary font-medium px-8 py-3 rounded-full hover:bg-gray-100 shadow-lg transition-all text-center">
+                        Get a Quote
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Products Section -->
+        <section id="products" class="py-16 lg:py-24 bg-light">
+            <div class="container mx-auto max-w-7xl px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl lg:text-4xl font-bold text-primary">Our Core Products</h2>
+                    <p class="text-lg text-gray-600 mt-3 max-w-2xl mx-auto">Specializing in high-grade core veneer and imported round logs.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Product Card: Core Veneer -->
+                    <div class="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col js-fade-in-up transition-all duration-300 ease-in-out hover:-translate-y-2 hover:shadow-2xl">
+                        <img src="https://placehold.co/600x400/D2B48C/333333?text=Core+Veneer+Stack" alt="Core Veneer" class="w-full h-64 object-cover">
+                        <div class="p-6 flex-grow">
+                            <h3 class="text-2xl font-bold text-secondary mb-3">Core Veneer</h3>
+                            <p class="text-gray-600 mb-4">
+                                High-quality core veneer for plywood manufacturing, available in two types:
+                            </p>
+                            <ul class="space-y-3">
+                                <li class="flex items-start">
+                                    <i class="fas fa-leaf text-primary mt-1 mr-3"></i>
+                                    <div>
+                                        <strong class="text-dark">Euca Core (Eucalyptus)</strong>
+                                        <p class_="text-gray-500 text-sm">Thickness: 1.20mm, 1.80mm, 2.20mm, 2.50mm</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-tree text-primary mt-1 mr-3"></i>
+                                    <div>
+                                        <strong class="text-dark">Pine Core</strong>
+                                        <p class_="text-gray-500 text-sm">Thickness: 1.20mm, 1.80mm, 2.20mm, 2.50mm</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="p-6 bg-gray-50">
+                            <a href="#quote" class="text-primary font-medium hover:underline">Get Price for Veneer &rarr;</a>
+                        </div>
+                    </div>
+
+                    <!-- Product Card: Imported Logs -->
+                    <div class="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col js-fade-in-up transition-all duration-300 ease-in-out hover:-translate-y-2 hover:shadow-2xl" style="transition-delay: 0.1s;">
+                        <img src="https://placehold.co/600x400/8B4513/FFFFFF?text=Imported+Round+Logs" alt="Imported Logs" class="w-full h-64 object-cover">
+                        <div class="p-6 flex-grow">
+                            <h3 class="text-2xl font-bold text-secondary mb-3">Imported Round Logs</h3>
+                            <p class="text-gray-600 mb-4">
+                                Directly imported Pine and Eucalypts round logs sourced from trusted global partners.
+                            </p>
+                            <ul class="space-y-3">
+                                <li class="flex items-start">
+                                    <i class="fas fa-globe-americas text-primary mt-1 mr-3"></i>
+                                    <div>
+                                        <strong class="text-dark">Sourcing Origins</strong>
+                                        <p class_="text-gray-500 text-sm">New Zealand, Australia, Uruguay, South Africa</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-primary mt-1 mr-3"></i>
+                                    <div>
+                                        <strong class="text-dark">Quality Assured</strong>
+                                        <p class_="text-gray-500 text-sm">Graded for superior quality and consistency.</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="p-6 bg-gray-50">
+                            <a href="#quote" class="text-primary font-medium hover:underline">Get Price for Logs &rarr;</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Get a Quote Section (Price Filter) -->
+        <section id="quote" class="py-16 lg:py-24 bg-white">
+            <div class="container mx-auto max-w-7xl px-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    <!-- Form -->
+                    <div class="bg-light p-8 rounded-lg shadow-lg js-fade-in-up">
+                        <h3 class="text-2xl lg:text-3xl font-bold text-primary mb-6">Get a Price Quote</h3>
+                        <form id="quote-form">
+                            <!-- Product Selection -->
+                            <div class="mb-4">
+                                <label for="product-type" class="block text-sm font-medium text-gray-700 mb-1">Select Product *</label>
+                                <select id="product-type" name="product-type" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary">
+                                    <option value="">-- Choose a product --</option>
+                                    <option value="veneer">Core Veneer</option>
+                                    <option value="logs">Imported Round Logs</option>
+                                </select>
+                            </div>
+
+                            <!-- Conditional Fields for Veneer -->
+                            <div id="veneer-options" class="hidden space-y-4 mb-4">
+                                <div>
+                                    <label for="veneer-type" class="block text-sm font-medium text-gray-700 mb-1">Veneer Type *</label>
+                                    <select id="veneer-type" name="veneer-type" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary">
+                                        <option value="">-- Select type --</option>
+                                        <option value="Euca Core">Euca Core</option>
+                                        <option value="Pine Core">Pine Core</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="veneer-thickness" class="block text-sm font-medium text-gray-700 mb-1">Thickness (mm) *</label>
+                                    <select id="veneer-thickness" name="veneer-thickness" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary">
+                                        <option value="">-- Select thickness --</option>
+                                        <option value="1.20">1.20 mm</option>
+                                        <option value="1.80">1.80 mm</option>
+                                        <option value="2.20">2.20 mm</option>
+                                        <option value="2.50">2.50 mm</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Conditional Fields for Logs -->
+                            <div id="logs-options" class="hidden mb-4">
+                                <div>
+                                    <label for="log-origin" class="block text-sm font-medium text-gray-700 mb-1">Log Origin *</label>
+                                    <select id="log-origin" name="log-origin" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary">
+                                        <option value="">-- Select origin --</option>
+                                        <option value="New Zealand">New Zealand</option>
+                                        <option value="Australia">Australia</option>
+                                        <option value="Uruguay">Uruguay</option>
+                                        <option value="South Africa">South Africa</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Common Fields -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Quantity (CBM)</label>
+                                    <input type="number" id="quantity" name="quantity" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary" placeholder="e.g., 50">
+                                </div>
+                                <div>
+                                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Your Name *</label>
+                                    <input type="text" id="name" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary">
+                                </div>
+                                <div>
+                                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                                    <input type="email" id="email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary">
+                                </div>
+                                <div>
+                                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                                    <input type="tel" id="phone" name="phone" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="message" class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                                <textarea id="message" name="message" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary" placeholder="Any specific requirements..."></textarea>
+                            </div>
+
+                            <button type="submit" class="w-full bg-primary text-white font-medium px-6 py-3 rounded-md shadow-md hover:bg-opacity-90 transition-all text-lg">
+                                Request Price
+                            </button>
+                            <p id="form-success" class="text-green-600 mt-4 hidden">Thank you! Your quote request has been sent.</p>
+                        </form>
+                    </div>
+                    
+                    <!-- Text -->
+                    <div class="text-left js-fade-in-up" style="transition-delay: 0.2s;">
+                        <h2 class="text-3xl lg:text-4xl font-bold text-primary">Why Choose Us?</h2>
+                        <p class="text-lg text-gray-600 mt-4 mb-6">
+                            Our commitment to quality, sustainability, and customer satisfaction sets us apart in the industry.
+                        </p>
+                        <div class="space-y-6">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center">
+                                    <i class="fas fa-award text-2xl"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="text-lg font-bold text-dark">Premium Quality</h4>
+                                    <p class="text-gray-600">Rigorous quality control ensures our products meet the highest industry standards.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center">
+                                    <i class="fas fa-leaf text-2xl"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="text-lg font-bold text-dark">Sustainable Sourcing</h4>
+                                    <p class="text-gray-600">Committed to sustainable forestry practices and responsible wood sourcing.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center">
+                                    <i class="fas fa-truck text-2xl"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="text-lg font-bold text-dark">Reliable Logistics</h4>
+                                    <p class="text-gray-600">Our efficient logistics network ensures your orders are delivered on time.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
         
-        <header class="text-center my-8 md:my-12">
-            <h1 class="text-4xl md:text-6xl font-bold text-slate-800 tracking-tight" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.1);">
-                OSWAL LUMBERS PVT LTD PORTAL
-            </h1>
-        </header>
+        <!-- About Section -->
+        <section id="about" class="py-16 lg:py-24 bg-light">
+            <div class="container mx-auto max-w-7xl px-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    <div class="js-fade-in-up">
+                        <img src="https://placehold.co/600x500/A0522D/FFFFFF?text=Oswal+Lumbers+Facility" alt="Oswal Lumbers Facility" class="rounded-lg shadow-2xl w-full h-auto object-cover">
+                    </div>
+                    <div class="js-fade-in-up" style="transition-delay: 0.1s;">
+                        <h2 class="text-3xl lg:text-4xl font-bold text-primary mb-4">Our Legacy in Timber Excellence</h2>
+                        <p class="text-gray-600 text-lg mb-4">
+                            Oswal Lumbers Pvt Ltd has been a trusted name in the timber industry since 1985. What started as a small sawmill has grown into one of the leading wood product manufacturers in the region.
+                        </p>
+                        <p class="text-gray-600 mb-4">
+                            We specialize in sourcing, processing, and supplying premium quality core veneer and imported logs to clients across various industries including plywood manufacturing, construction, and furniture making.
+                        </p>
+                        <p class="text-gray-600 mb-8">
+                            Our commitment to sustainable forestry practices and stringent quality control has earned us a reputation for reliability and excellence in the market.
+                        </p>
+                        <a href="#contact" class="bg-secondary text-white font-medium px-8 py-3 rounded-full hover:bg-opacity-90 shadow-lg transition-all">
+                            Get In Touch
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-        <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="portal-grid">
+        <!-- Group of Companies Section -->
+        <section id="group" class="py-16 lg:py-24 bg-white">
+            <div class="container mx-auto max-w-7xl px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl lg:text-4xl font-bold text-primary">Our Group of Companies</h2>
+                    <p class="text-lg text-gray-600 mt-3 max-w-3xl mx-auto">Part of a diversified business conglomerate with expertise in multiple industries, ensuring a strong and stable foundation.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Company Card -->
+                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow js-fade-in-up">
+                        <h3 class="text-xl font-bold text-secondary mb-2"><i class="fas fa-industry mr-2"></i> Oswal Agrimpex</h3>
+                        <p class="text-gray-600 text-sm">Manufactures Castor Oil and is a Government Recognized Export House exporting BSS Grade & Commercial Grade Castor Oil.</p>
+                    </div>
+                    <!-- Company Card -->
+                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow js-fade-in-up" style="transition-delay: 0.1s;">
+                        <h3 class="text-xl font-bold text-secondary mb-2"><i class="fas fa-ship mr-2"></i> Agencies & Cargo Care Ltd.</h3>
+                        <p class="text-gray-600 text-sm">30 years in the Port industry, with 36 Storage Tanks having a capacity of 80,000 KL at Kandla.</p>
+                    </div>
+                    <!-- Company Card -->
+                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow js-fade-in-up" style="transition-delay: 0.2s;">
+                        <h3 class="text-xl font-bold text-secondary mb-2"><i class="fas fa-recycle mr-2"></i> Plastene India Limited</h3>
+                        <p class="text-gray-600 text-sm">A top 5 plastic manufacturing company in India, importing and reprocessing plastic scrap into agglomerates.</p>
+                    </div>
+                    <!-- Company Card -->
+                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow js-fade-in-up">
+                        <h3 class="text-xl font-bold text-secondary mb-2"><i class="fas fa-leaf mr-2"></i> Oswal Agricom Pvt. Ltd.</h3>
+                        <p class="text-gray-600 text-sm">Recycling plastics into agglomerates with specialized quality control, known for its commitments in the industry.</p>
+                    </div>
+                    <!-- Company Card -->
+                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow js-fade-in-up" style="transition-delay: 0.1s;">
+                        <h3 class="text-xl font-bold text-secondary mb-2"><i class="fas fa-oil-can mr-2"></i> Oswal Agriimpex Pvt. Ltd.</h3>
+                        <p class="text-gray-600 text-sm">Imports Oil and is a leading global supplier of sustainable castor-based products.</p>
+                    </div>
+                    <!-- Company Card -->
+                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow js-fade-in-up" style="transition-delay: 0.2s;">
+                        <h3 class="text-xl font-bold text-secondary mb-2"><i class="fas fa-mortar-pestle mr-2"></i> Ankur Chemfood Limited</h3>
+                        <p class="text-gray-600 text-sm">Engaged in manufacturing, marketing & exporting of Free Flow Refined Iodised Salt, Karkach salt, and industrial salt.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-            <div class="department-card bg-white/60 backdrop-blur-md rounded-2xl shadow-lg p-6 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                <h2 class="text-2xl font-bold text-blue-800 border-b-2 border-blue-300 pb-2 mb-4">Export Department</h2>
-                <div class="space-y-3 mt-auto">
-                    <a href="login.html" class="block text-center w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-blue-700 hover:scale-105 active:scale-95">Export Invoice</a>
-                    <a href="#" class="block text-center w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-blue-700 hover:scale-105 active:scale-95">Export Management</a>
+        <!-- Contact Section -->
+        <section id="contact" class="py-16 lg:py-24 bg-light">
+            <div class="container mx-auto max-w-7xl px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl lg:text-4xl font-bold text-primary">Contact Us</h2>
+                    <p class="text-lg text-gray-600 mt-3 max-w-2xl mx-auto">Get in touch with our team for inquiries, quotes, or to discuss your specific requirements.</p>
+                </div>
+                <div class="bg-white p-8 rounded-lg shadow-xl grid grid-cols-1 md:grid-cols-2 gap-8 js-fade-in-up">
+                    <!-- Contact Info -->
+                    <div>
+                        <h3 class="text-2xl font-bold text-secondary mb-6">Our Address</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-map-marker-alt text-primary text-xl mt-1 w-6"></i>
+                                <div class="ml-3">
+                                    <h4 class="font-semibold text-dark">Oswal Lumbers Pvt Ltd</h4>
+                                    <p class="text-gray-600">Survey NO 262, PO Box 181<br>Mithi Rohar, Gandhidham<br>Gujarat-370201, India</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-phone-alt text-primary text-xl mt-1 w-6"></i>
+                                <div class="ml-3">
+                                    <h4 class="font-semibold text-dark">Phone</h4>
+                                    <p class="text-gray-600">+91 9978555000</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-envelope text-primary text-xl mt-1 w-6"></i>
+                                <div class="ml-3">
+                                    <h4 class="font-semibold text-dark">Email</h4>
+                                    <p class="text-gray-600">info@oswallumbers.com</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-clock text-primary text-xl mt-1 w-6"></i>
+                                <div class="ml-3">
+                                    <h4 class="font-semibold text-dark">Business Hours</h4>
+                                    <p class="text-gray-600">Monday - Saturday: 8:00 AM - 8:00 PM</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Map -->
+                    <div class="w-full h-64 md:h-full rounded-lg overflow-hidden shadow-md">
+                        <iframe 
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3656.096898155981!2d70.07635661497858!3d23.09340598488219!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3950b55555555555%3A0x6a2c28f3b20e0d5!2sOswal%20Lumbers%20Pvt.%20Ltd.!5e0!3m2!1sen!2sin!4v1678888888888" 
+                            class="w-full h-full border-0" 
+                            allowfullscreen="" 
+                            loading="lazy" 
+                            referrerpolicy="no-referrer-when-downgrade">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-gray-300 pt-16 pb-8">
+        <div class="container mx-auto max-w-7xl px-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Column 1: About -->
+                <div class="md:col-span-2 lg:col-span-1">
+                    <h3 class="text-xl font-bold text-white mb-4">Oswal Lumbers Pvt Ltd</h3>
+                    <p class="text-sm text-gray-400 mb-4">
+                        Leading manufacturer and supplier of premium quality core veneer and imported round logs.
+                    </p>
+                    <div class="flex gap-4">
+                        <a href="#" class="w-10 h-10 bg-gray-700 hover:bg-primary rounded-full flex items-center justify-center transition-all"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="w-10 h-10 bg-gray-700 hover:bg-primary rounded-full flex items-center justify-center transition-all"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="w-10 h-10 bg-gray-700 hover:bg-primary rounded-full flex items-center justify-center transition-all"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+
+                <!-- Column 2: Quick Links -->
+                <div>
+                    <h3 class="text-xl font-bold text-white mb-4">Quick Links</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#home" class="text-gray-400 hover:text-white">Home</a></li>
+                        <li><a href="#about" class="text-gray-400 hover:text-white">About Us</a></li>
+                        <li><a href="#products" class="text-gray-400 hover:text-white">Products</a></li>
+                        <li><a href="#quote" class="text-gray-400 hover:text-white">Get Price</a></li>
+                        <li><a href="#contact" class="text-gray-400 hover:text-white">Contact</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Site Nav -->
+                <div>
+                    <h3 class="text-xl font-bold text-white mb-4">Portal</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="text-gray-400 hover:text-white">Employee Portal</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Purchase Order</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Sales Order</a></li>
+                        <li><a href="#group" class="text-gray-400 hover:text-white">Our Group</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 4: Contact -->
+                <div>
+                    <h3 class="text-xl font-bold text-white mb-4">Contact Info</h3>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex items-start">
+                            <i class="fas fa-map-marker-alt text-primary w-4 mt-1"></i>
+                            <span class="ml-2 text-gray-400">Survey NO 262, Mithi Rohar, Gandhidham, Gujarat-370201</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-phone-alt text-primary w-4 mt-1"></i>
+                            <span class="ml-2 text-gray-400">+91 9978555000</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-envelope text-primary w-4 mt-1"></i>
+                            <span class="ml-2 text-gray-400">info@oswallumbers.com</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
 
-            <div class="department-card bg-white/60 backdrop-blur-md rounded-2xl shadow-lg p-6 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                <h2 class="text-2xl font-bold text-emerald-800 border-b-2 border-emerald-300 pb-2 mb-4">Import Department</h2>
-                <div class="space-y-3 mt-auto">
-                    <a href="#" class="block text-center w-full bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-emerald-700 hover:scale-105 active:scale-95">Import Management</a>
-                    <a href="#" class="block text-center w-full bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-emerald-700 hover:scale-105 active:scale-95">Import Working</a>
-                </div>
+            <!-- Bottom Bar -->
+            <div class="mt-12 border-t border-gray-700 pt-6 text-center text-sm text-gray-500">
+                <p>&copy; <span id="current-year"></span> Oswal Lumbers Pvt Ltd. All Rights Reserved.</p>
             </div>
-            
-            <div class="department-card bg-white/60 backdrop-blur-md rounded-2xl shadow-lg p-6 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                <h2 class="text-2xl font-bold text-amber-800 border-b-2 border-amber-300 pb-2 mb-4">Stock Department</h2>
-                <div class="space-y-3 mt-auto">
-                    <a href="#" class="block text-center w-full bg-amber-500 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-amber-600 hover:scale-105 active:scale-95">Stock Report</a>
-                    <a href="#" class="block text-center w-full bg-amber-500 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-amber-600 hover:scale-105 active:scale-95">Stock Entry</a>
-                    <a href="#" class="block text-center w-full bg-amber-500 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-amber-600 hover:scale-105 active:scale-95">Stock Details</a>
-                </div>
-            </div>
-
-            <div class="department-card bg-white/60 backdrop-blur-md rounded-2xl shadow-lg p-6 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                <h2 class="text-2xl font-bold text-indigo-800 border-b-2 border-indigo-300 pb-2 mb-4">Manufacturing Dept</h2>
-                <div class="space-y-3 mt-auto">
-                    <a href="https://test.mksoftservice.com/OSWAL/login.php" class="block text-center w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-indigo-700 hover:scale-105 active:scale-95">Loading List</a>
-                    <a href="#" class="block text-center w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-indigo-700 hover:scale-105 active:scale-95">Loading Database</a>
-                    <a href="#" class="block text-center w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-indigo-700 hover:scale-105 active:scale-95">Loading Parties</a>
-                </div>
-            </div>
-
-            <div class="department-card bg-white/60 backdrop-blur-md rounded-2xl shadow-lg p-6 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                <h2 class="text-2xl font-bold text-purple-800 border-b-2 border-purple-300 pb-2 mb-4">Direct Selling Dept</h2>
-                <div class="space-y-3 mt-auto">
-                    <a href="#" class="block text-center w-full bg-purple-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-purple-700 hover:scale-105 active:scale-95" target="blank">Loading List</a>
-                    <a href="#" class="block text-center w-full bg-purple-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-purple-700 hover:scale-105 active:scale-95">Loading Database</a>
-                    <a href="#" class="block text-center w-full bg-purple-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-purple-700 hover:scale-105 active:scale-95">Loading Parties</a>
-                </div>
-            </div>
-            
-            <div class="department-card bg-white/60 backdrop-blur-md rounded-2xl shadow-lg p-6 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                <h2 class="text-2xl font-bold text-slate-800 border-b-2 border-slate-300 pb-2 mb-4">Accounts Department</h2>
-                <div class="space-y-3 mt-auto">
-                    <a href="#" class="block text-center w-full bg-slate-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-slate-800 hover:scale-105 active:scale-95">Reports</a>
-                    <a href="#" class="block text-center w-full bg-slate-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-transform duration-200 hover:bg-slate-800 hover:scale-105 active:scale-95">Query</a>
-                </div>
-            </div>
-
-        </main>
-    </div>
+        </div>
+    </footer>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const cards = document.querySelectorAll('.department-card');
-            cards.forEach((card, index) => {
-                card.style.animationDelay = `${index * 100}ms`;
-                card.classList.add('card-enter');
+        // Mobile Menu Toggle
+        const menuBtn = document.getElementById('menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        menuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('translate-x-full');
+            mobileMenu.classList.toggle('-translate-x-full');
+            // Toggle icon
+            if (mobileMenu.classList.contains('-translate-x-full')) {
+                menuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+            } else {
+                menuBtn.innerHTML = '<i class="fas fa-times"></i>';
+            }
+        });
+
+        // Close mobile menu when a link is clicked
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('-translate-x-full');
+                mobileMenu.classList.remove('translate-x-full');
+                menuBtn.innerHTML = '<i class="fas fa-bars"></i>';
             });
         });
-    </script>
 
+        // Set current year in footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        // Get a Quote Form Logic
+        const productType = document.getElementById('product-type');
+        const veneerOptions = document.getElementById('veneer-options');
+        const logsOptions = document.getElementById('logs-options');
+        const quoteForm = document.getElementById('quote-form');
+        const formSuccess = document.getElementById('form-success');
+
+        productType.addEventListener('change', (e) => {
+            const selectedProduct = e.target.value;
+            if (selectedProduct === 'veneer') {
+                veneerOptions.classList.remove('hidden');
+                logsOptions.classList.add('hidden');
+            } else if (selectedProduct === 'logs') {
+                veneerOptions.classList.add('hidden');
+                logsOptions.classList.remove('hidden');
+            } else {
+                veneerOptions.classList.add('hidden');
+                logsOptions.classList.add('hidden');
+            }
+        });
+
+        // Handle form submission
+        quoteForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            // In a real application, you would send this data to a server
+            console.log('Form submitted');
+            formSuccess.classList.remove('hidden');
+            quoteForm.reset();
+            
+            // Hide conditional fields again
+            veneerOptions.classList.add('hidden');
+            logsOptions.classList.add('hidden');
+            
+            // Hide success message after 5 seconds
+            setTimeout(() => {
+                formSuccess.classList.add('hidden');
+            }, 5000);
+        });
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1 // 10% of the element is visible
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        // Observe elements
+        const fadeElements = document.querySelectorAll('.js-fade-in-up');
+        fadeElements.forEach(el => observer.observe(el));
+
+    </script>
 </body>
 </html>
-
-
-
-
-
 
