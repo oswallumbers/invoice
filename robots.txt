@@ -1,0 +1,9 @@
+# robots.txt for oswallumbers.in
+# This file tells search engine crawlers which pages or files the crawler can or can't request from your site.
+
+# Allow all web crawlers to access the entire site.
+User-agent: *
+Allow: /
+
+# Provide the location of the sitemap file to help search engines index the site better.
+Sitemap: https://www.oswallumbers.in/sitemap.xml
