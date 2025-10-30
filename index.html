@@ -15,9 +15,9 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#006400', // Dark Green
-                        secondary: '#8b4513', // Brown (Accent)
-                        light: '#f0f8ff', // Alice Blue (Light BG)
+                        primary: '#db2777', // Pink-600 (was #006400)
+                        secondary: '#9f1239', // Rose-800 (was #8b4513)
+                        light: '#fdf2f8', // Pink-50 (was #f0f8ff)
                         dark: '#333333',
                     },
                     fontFamily: {
@@ -61,7 +61,7 @@
             left: 0;
             width: 100%;
             height: 2px;
-            background-color: #006400; /* primary color */
+            background-color: #db2777; /* primary color (was #006400) */
             transform: scaleX(0);
             transform-origin: center;
             transition: transform 0.3s ease-out;
@@ -70,10 +70,51 @@
             transform: scaleX(1);
         }
 
+        /* Hero Content Load Animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        /* Apply animations with delays */
+        .hero-animate-h1 { animation: fadeInUp 0.7s 0.2s ease-out backwards; }
+        .hero-animate-p { animation: fadeInUp 0.7s 0.4s ease-out backwards; }
+        .hero-animate-btns { animation: fadeInUp 0.7s 0.6s ease-out backwards; }
+        
+        /* Remove Ken Burns Effect */
+        /* @keyframes kenBurns ... (removed) */
+        /* .ken-burns-animation ... (removed) */
+
+        /* Hero Slider Styles */
+        .hero-slide {
+            transition: opacity 1.5s ease-in-out, transform 8s ease-in-out; /* Long transition for slow pan */
+            transform: scale(1.1); /* Start slightly zoomed in */
+        }
+        .hero-slide.active {
+            opacity: 1;
+            transform: scale(1); /* Zoom out to normal */
+        }
+        .slider-dot {
+            width: 10px;
+            height: 10px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .slider-dot.active {
+            background-color: white;
+        }
+
         /* On-Scroll Fade-Up Animation */
         .js-fade-in-up {
             opacity: 0;
-            transform: translateY(30px);
+            transform: translateY(40px); /* Increased from 30px */
             transition: opacity 0.6s ease-out, transform 0.6s ease-out;
         }
         .js-fade-in-up.is-visible {
@@ -126,7 +167,7 @@
                 <a href="#contact" class="font-medium text-gray-700 hover:text-primary nav-link">Contact</a>
                 <a href="#" class="font-medium text-gray-700 hover:text-primary nav-link">Purchase Order</a>
                 <a href="#" class="font-medium text-gray-700 hover:text-primary nav-link">Sales Order</a>
-                <a href="portal.html" class="bg-secondary text-white font-medium px-5 py-2.5 rounded-full hover:bg-opacity-90 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg transform">
+                <a href="#" class="bg-secondary text-white font-medium px-5 py-2.5 rounded-full hover:bg-opacity-90 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg transform">
                     Portal
                 </a>
             </div>
@@ -149,7 +190,7 @@
             <a href="#contact" class="block py-3 px-6 text-gray-700 hover:bg-light">Contact</a>
             <a href="#" class="block py-3 px-6 text-gray-700 hover:bg-light">Purchase Order</a>
             <a href="#" class="block py-3 px-6 text-gray-700 hover:bg-light">Sales Order</a>
-            <a href="portal.html" class="block py-3 px-6 text-secondary font-medium hover:bg-light">Portal</a>
+            <a href="#" class="block py-3 px-6 text-secondary font-medium hover:bg-light">Portal</a>
         </div>
     </header>
 
@@ -157,15 +198,29 @@
     <main>
 
         <!-- Hero Section -->
-        <section id="home" class="relative h-[70vh] min-h-[450px] w-full bg-cover bg-center text-white" style="background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://content.jdmagicbox.com/comp/def_content/timber-dealers/1-timber-dealers-1-2d140.jpg');">
-            <div class="container mx-auto max-w-7xl h-full flex flex-col justify-center items-start px-4 text-left">
-                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight max-w-3xl">
+        <section id="home" class="relative h-[70vh] min-h-[450px] w-full text-white overflow-hidden">
+            <!-- Slider Container -->
+            <div id="hero-slider-container" class="absolute inset-0 z-0 w-full h-full">
+                <!-- Slide 1 -->
+                <div class="hero-slide absolute inset-0 bg-cover bg-center opacity-0" style="background-image: url('https://placehold.co/1920x1080/E91E63/FFFFFF?text=Premium+Wood+Logs');"></div>
+                <!-- Slide 2 -->
+                <div class="hero-slide absolute inset-0 bg-cover bg-center opacity-0" style="background-image: url('https://placehold.co/1920x1080/C2185B/FFFFFF?text=Core+Veneer+Stack');"></div>
+                <!-- Slide 3 -->
+                <div class="hero-slide absolute inset-0 bg-cover bg-center opacity-0" style="background-image: url('https://placehold.co/1920x1080/AD1457/FFFFFF?text=Global+Sourcing');"></div>
+                <!-- Slide 4 -->
+                <div class="hero-slide absolute inset-0 bg-cover bg-center opacity-0" style="background-image: url('https://placehold.co/1920x1080/880E4F/FFFFFF?text=Oswal+Lumbers');"></div>
+            </div>
+            <!-- Gradient Overlay -->
+            <div class="absolute inset-0 z-10 bg-gradient-to-r from-black/70 to-black/50"></div>
+            <!-- Content -->
+            <div class="container relative z-20 mx-auto max-w-7xl h-full flex flex-col justify-center items-start px-4 text-left">
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight max-w-3xl hero-animate-h1">
                     Premium Core Veneer &<br> Imported Round Logs
                 </h1>
-                <p class="text-lg lg:text-xl mt-4 max-w-2xl text-gray-200">
+                <p class="text-lg lg:text-xl mt-4 max-w-2xl text-gray-200 hero-animate-p">
                     Your trusted partner for high-quality, sustainably sourced timber products for every industrial need.
                 </p>
-                <div class="mt-8 flex flex-col sm:flex-row gap-4">
+                <div class="mt-8 flex flex-col sm:flex-row gap-4 hero-animate-btns">
                     <a href="#products" class="bg-primary text-white font-medium px-8 py-3 rounded-full hover:bg-opacity-90 shadow-lg transition-all text-center">
                         Our Products
                     </a>
@@ -174,20 +229,24 @@
                     </a>
                 </div>
             </div>
+            <!-- Slider Dots/Indicators (New) -->
+            <div id="slider-dots" class="absolute z-30 bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
+                <!-- Dots will be added by JS -->
+            </div>
         </section>
 
         <!-- Products Section -->
         <section id="products" class="py-16 lg:py-24 bg-light">
             <div class="container mx-auto max-w-7xl px-4">
-                <div class="text-center mb-12">
+                <div class="text-center mb-12 js-fade-in-up">
                     <h2 class="text-3xl lg:text-4xl font-bold text-primary">Our Core Products</h2>
                     <p class="text-lg text-gray-600 mt-3 max-w-2xl mx-auto">Specializing in high-grade core veneer and imported round logs.</p>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <!-- Product Card: Core Veneer -->
-                    <div class="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col js-fade-in-up transition-all duration-300 ease-in-out hover:-translate-y-2 hover:shadow-2xl">
-                        <img src="https://placehold.co/600x400/D2B48C/333333?text=Core+Veneer+Stack" alt="Core Veneer" class="w-full h-64 object-cover">
+                    <div class="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col js-fade-in-up transition-all duration-300 ease-in-out hover:-translate-y-2 hover:shadow-2xl group">
+                        <img src="https://placehold.co/600x400/D2B48C/333333?text=Core+Veneer+Stack" alt="Core Veneer" class="w-full h-64 object-cover transition-transform duration-300 ease-in-out group-hover:scale-110">
                         <div class="p-6 flex-grow">
                             <h3 class="text-2xl font-bold text-secondary mb-3">Core Veneer</h3>
                             <p class="text-gray-600 mb-4">
@@ -216,8 +275,8 @@
                     </div>
 
                     <!-- Product Card: Imported Logs -->
-                    <div class="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col js-fade-in-up transition-all duration-300 ease-in-out hover:-translate-y-2 hover:shadow-2xl" style="transition-delay: 0.1s;">
-                        <img src="https://placehold.co/600x400/8B4513/FFFFFF?text=Imported+Round+Logs" alt="Imported Logs" class="w-full h-64 object-cover">
+                    <div class="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col js-fade-in-up transition-all duration-300 ease-in-out hover:-translate-y-2 hover:shadow-2xl group" style="transition-delay: 0.1s;">
+                        <img src="https://placehold.co/600x400/8B4513/FFFFFF?text=Imported+Round+Logs" alt="Imported Logs" class="w-full h-64 object-cover transition-transform duration-300 ease-in-out group-hover:scale-110">
                         <div class="p-6 flex-grow">
                             <h3 class="text-2xl font-bold text-secondary mb-3">Imported Round Logs</h3>
                             <p class="text-gray-600 mb-4">
@@ -341,7 +400,7 @@
                             Our commitment to quality, sustainability, and customer satisfaction sets us apart in the industry.
                         </p>
                         <div class="space-y-6">
-                            <div class="flex items-start">
+                            <div class="flex items-start p-4 rounded-lg transition-all duration-300 hover:bg-white hover:shadow-lg hover:scale-105 transform">
                                 <div class="flex-shrink-0 w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center">
                                     <i class="fas fa-award text-2xl"></i>
                                 </div>
@@ -350,7 +409,7 @@
                                     <p class="text-gray-600">Rigorous quality control ensures our products meet the highest industry standards.</p>
                                 </div>
                             </div>
-                            <div class="flex items-start">
+                            <div class="flex items-start p-4 rounded-lg transition-all duration-300 hover:bg-white hover:shadow-lg hover:scale-105 transform">
                                 <div class="flex-shrink-0 w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center">
                                     <i class="fas fa-leaf text-2xl"></i>
                                 </div>
@@ -359,7 +418,7 @@
                                     <p class="text-gray-600">Committed to sustainable forestry practices and responsible wood sourcing.</p>
                                 </div>
                             </div>
-                            <div class="flex items-start">
+                            <div class="flex items-start p-4 rounded-lg transition-all duration-300 hover:bg-white hover:shadow-lg hover:scale-105 transform">
                                 <div class="flex-shrink-0 w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center">
                                     <i class="fas fa-truck text-2xl"></i>
                                 </div>
@@ -403,38 +462,38 @@
         <!-- Group of Companies Section -->
         <section id="group" class="py-16 lg:py-24 bg-white">
             <div class="container mx-auto max-w-7xl px-4">
-                <div class="text-center mb-12">
+                <div class="text-center mb-12 js-fade-in-up">
                     <h2 class="text-3xl lg:text-4xl font-bold text-primary">Our Group of Companies</h2>
                     <p class="text-lg text-gray-600 mt-3 max-w-3xl mx-auto">Part of a diversified business conglomerate with expertise in multiple industries, ensuring a strong and stable foundation.</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <!-- Company Card -->
-                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow js-fade-in-up">
+                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 js-fade-in-up">
                         <h3 class="text-xl font-bold text-secondary mb-2"><i class="fas fa-industry mr-2"></i> Oswal Agrimpex</h3>
                         <p class="text-gray-600 text-sm">Manufactures Castor Oil and is a Government Recognized Export House exporting BSS Grade & Commercial Grade Castor Oil.</p>
                     </div>
                     <!-- Company Card -->
-                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow js-fade-in-up" style="transition-delay: 0.1s;">
+                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 js-fade-in-up" style="transition-delay: 0.1s;">
                         <h3 class="text-xl font-bold text-secondary mb-2"><i class="fas fa-ship mr-2"></i> Agencies & Cargo Care Ltd.</h3>
                         <p class="text-gray-600 text-sm">30 years in the Port industry, with 36 Storage Tanks having a capacity of 80,000 KL at Kandla.</p>
                     </div>
                     <!-- Company Card -->
-                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow js-fade-in-up" style="transition-delay: 0.2s;">
+                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 js-fade-in-up" style="transition-delay: 0.2s;">
                         <h3 class="text-xl font-bold text-secondary mb-2"><i class="fas fa-recycle mr-2"></i> Plastene India Limited</h3>
                         <p class="text-gray-600 text-sm">A top 5 plastic manufacturing company in India, importing and reprocessing plastic scrap into agglomerates.</p>
                     </div>
                     <!-- Company Card -->
-                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow js-fade-in-up">
+                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 js-fade-in-up">
                         <h3 class="text-xl font-bold text-secondary mb-2"><i class="fas fa-leaf mr-2"></i> Oswal Agricom Pvt. Ltd.</h3>
                         <p class="text-gray-600 text-sm">Recycling plastics into agglomerates with specialized quality control, known for its commitments in the industry.</p>
                     </div>
                     <!-- Company Card -->
-                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow js-fade-in-up" style="transition-delay: 0.1s;">
+                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 js-fade-in-up" style="transition-delay: 0.1s;">
                         <h3 class="text-xl font-bold text-secondary mb-2"><i class="fas fa-oil-can mr-2"></i> Oswal Agriimpex Pvt. Ltd.</h3>
                         <p class="text-gray-600 text-sm">Imports Oil and is a leading global supplier of sustainable castor-based products.</p>
                     </div>
                     <!-- Company Card -->
-                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow js-fade-in-up" style="transition-delay: 0.2s;">
+                    <div class="bg-light p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 js-fade-in-up" style="transition-delay: 0.2s;">
                         <h3 class="text-xl font-bold text-secondary mb-2"><i class="fas fa-mortar-pestle mr-2"></i> Ankur Chemfood Limited</h3>
                         <p class="text-gray-600 text-sm">Engaged in manufacturing, marketing & exporting of Free Flow Refined Iodised Salt, Karkach salt, and industrial salt.</p>
                     </div>
@@ -445,7 +504,7 @@
         <!-- Contact Section -->
         <section id="contact" class="py-16 lg:py-24 bg-light">
             <div class="container mx-auto max-w-7xl px-4">
-                <div class="text-center mb-12">
+                <div class="text-center mb-12 js-fade-in-up">
                     <h2 class="text-3xl lg:text-4xl font-bold text-primary">Contact Us</h2>
                     <p class="text-lg text-gray-600 mt-3 max-w-2xl mx-auto">Get in touch with our team for inquiries, quotes, or to discuss your specific requirements.</p>
                 </div>
@@ -653,9 +712,64 @@
         const fadeElements = document.querySelectorAll('.js-fade-in-up');
         fadeElements.forEach(el => observer.observe(el));
 
+        // --- NEW HERO SLIDER SCRIPT ---
+        const slides = document.querySelectorAll('.hero-slide');
+        const dotsContainer = document.getElementById('slider-dots');
+        let currentSlide = 0;
+        const slideInterval = 5000; // 5 seconds
+        let slideTimer;
+
+        if (slides.length > 0) {
+            // Create dots
+            slides.forEach((slide, index) => {
+                const dot = document.createElement('button');
+                dot.classList.add('slider-dot');
+                dot.setAttribute('aria-label', `Go to slide ${index + 1}`);
+                dot.addEventListener('click', () => {
+                    showSlide(index);
+                    resetTimer();
+                });
+                dotsContainer.appendChild(dot);
+            });
+
+            const dots = document.querySelectorAll('.slider-dot');
+
+            function showSlide(n) {
+                // Remove active class from all
+                slides.forEach(slide => slide.classList.remove('active'));
+                dots.forEach(dot => dot.classList.remove('active'));
+
+                // Loop back
+                currentSlide = n;
+                if (n >= slides.length) { currentSlide = 0; }
+                if (n < 0) { currentSlide = slides.length - 1; }
+                
+                // Add active class to current
+                if (slides[currentSlide]) {
+                    slides[currentSlide].classList.add('active');
+                }
+                if (dots[currentSlide]) {
+                    dots[currentSlide].classList.add('active');
+                }
+            }
+
+            function nextSlide() {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+            
+            function resetTimer() {
+                clearInterval(slideTimer);
+                slideTimer = setInterval(nextSlide, slideInterval);
+            }
+
+            // Initial setup
+            showSlide(currentSlide);
+            slideTimer = setInterval(nextSlide, slideInterval);
+        }
+        // --- END HERO SLIDER SCRIPT ---
+
     </script>
 </body>
 </html>
-
-
 
