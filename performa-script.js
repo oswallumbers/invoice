@@ -407,10 +407,7 @@ document.addEventListener('DOMContentLoaded', function () {
         y += 15;
     }
 
-    doc.setFont(font, 'normal');
-    doc.text('Kindly Stamp / Sign and return a copy as your acceptance.', margin, y);
-    y += 7;
-
+   
     doc.text('Best Regards,', margin, y);
     y += 20;
 
@@ -432,11 +429,12 @@ document.addEventListener('DOMContentLoaded', function () {
     
     doc.setFont(font, 'bold');
     doc.setFontSize(9);
-    doc.text('BUYER ACCEPTANCE', (lineX1 + lineX2) / 2, signatureY + 5, { align: 'center' });
+    doc.text('BUYER', (lineX1 + lineX2) / 2, signatureY + 5, { align: 'center' });
 
     doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
 }
 });
+
 
 
 
