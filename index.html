@@ -121,6 +121,28 @@
             opacity: 1;
             transform: translateY(0);
         }
+
+        /* NEW: Product Card Leaf Animation (Left) */
+        .js-fade-in-leaf-left {
+            opacity: 0;
+            transform: translateX(-100px) rotate(-15deg);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        .js-fade-in-leaf-left.is-visible {
+            opacity: 1;
+            transform: translateX(0) rotate(0);
+        }
+
+        /* NEW: Product Card Leaf Animation (Right) */
+        .js-fade-in-leaf-right {
+            opacity: 0;
+            transform: translateX(100px) rotate(15deg);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        .js-fade-in-leaf-right.is-visible {
+            opacity: 1;
+            transform: translateX(0) rotate(0);
+        }
     </style>
 </head>
 <body class="font-sans text-dark overflow-x-hidden">
@@ -167,7 +189,7 @@
                 <a href="#contact" class="font-medium text-gray-700 hover:text-primary nav-link">Contact</a>
                 <a href="#" class="font-medium text-gray-700 hover:text-primary nav-link">Purchase Order</a>
                 <a href="#" class="font-medium text-gray-700 hover:text-primary nav-link">Sales Order</a>
-                <a href="Portal.html" class="bg-secondary text-white font-medium px-5 py-2.5 rounded-full hover:bg-opacity-90 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg transform">
+                <a href="portal.html" class="bg-secondary text-white font-medium px-5 py-2.5 rounded-full hover:bg-opacity-90 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg transform">
                     Portal
                 </a>
             </div>
@@ -190,7 +212,7 @@
             <a href="#contact" class="block py-3 px-6 text-gray-700 hover:bg-light">Contact</a>
             <a href="#" class="block py-3 px-6 text-gray-700 hover:bg-light">Purchase Order</a>
             <a href="#" class="block py-3 px-6 text-gray-700 hover:bg-light">Sales Order</a>
-            <a href=Portal.html" class="block py-3 px-6 text-secondary font-medium hover:bg-light">Portal</a>
+            <a href="portal.html" class="block py-3 px-6 text-secondary font-medium hover:bg-light">Portal</a>
         </div>
     </header>
 
@@ -202,18 +224,18 @@
             <!-- Slider Container -->
             <div id="hero-slider-container" class="absolute inset-0 z-0 w-full h-full">
                 <!-- Slide 1 -->
-                <div class="hero-slide absolute inset-0 bg-cover bg-center opacity-0" style="background-image: url('https://bizweb.dktcdn.net/100/350/821/articles/anh-co-vien-2-1-72c42d24-802e-4963-9beb-bf9895ae39df.jpg?v=1694165574840');"></div>
+                <div class="hero-slide absolute inset-0 bg-cover bg-center opacity-0" style="background-image: url('https://placehold.co/1920x1080/E91E63/FFFFFF?text=Premium+Wood+Logs');"></div>
                 <!-- Slide 2 -->
-                <div class="hero-slide absolute inset-0 bg-cover bg-center opacity-0" style="background-image: url('https://plyreporter.com/myuploads/20250602235504_Imported_Core_Veneers_Bring_Relief-_Plywood_Units.jpg');"></div>
+                <div class="hero-slide absolute inset-0 bg-cover bg-center opacity-0" style="background-image: url('https://placehold.co/1920x1080/C2185B/FFFFFF?text=Core+Veneer+Stack');"></div>
                 <!-- Slide 3 -->
-                <div class="hero-slide absolute inset-0 bg-cover bg-center opacity-0" style="background-image: url('https://www.maritimegateway.com/wp-content/uploads/2020/03/Wood-imports-Variety-is-the-spice.jpg');"></div>
+                <div class="hero-slide absolute inset-0 bg-cover bg-center opacity-0" style="background-image: url('https://placehold.co/1920x1080/AD1457/FFFFFF?text=Global+Sourcing');"></div>
                 <!-- Slide 4 -->
-                <div class="hero-slide absolute inset-0 bg-cover bg-center opacity-0" style="background-image: url('https://www.itto.int/files/topics/6786_ext_06_0.png');"></div>
+                <div class="hero-slide absolute inset-0 bg-cover bg-center opacity-0" style="background-image: url('https://placehold.co/1920x1080/880E4F/FFFFFF?text=Oswal+Lumbers');"></div>
             </div>
             <!-- Gradient Overlay -->
             <div class="absolute inset-0 z-10 bg-gradient-to-r from-black/70 to-black/50"></div>
             <!-- Content -->
-        <div class="container relative z-20 mx-auto max-w-7xl h-full flex flex-col justify-center items-center px-4 text-center">
+            <div class="container relative z-20 mx-auto max-w-7xl h-full flex flex-col justify-center items-center px-4 text-center">
                 <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight max-w-3xl hero-animate-h1">
                     Premium <br> Core Veneer & Round Logs
                 </h1>
@@ -245,7 +267,7 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <!-- Product Card: Core Veneer -->
-                    <div class="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col js-fade-in-up transition-all duration-300 ease-in-out hover:-translate-y-2 hover:shadow-2xl group">
+                    <div class="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col js-fade-in-leaf-left transition-all duration-300 ease-in-out hover:-translate-y-2 hover:shadow-2xl group">
                         <img src="https://placehold.co/600x400/D2B48C/333333?text=Core+Veneer+Stack" alt="Core Veneer" class="w-full h-64 object-cover transition-transform duration-300 ease-in-out group-hover:scale-110">
                         <div class="p-6 flex-grow">
                             <h3 class="text-2xl font-bold text-secondary mb-3">Core Veneer</h3>
@@ -275,7 +297,7 @@
                     </div>
 
                     <!-- Product Card: Imported Logs -->
-                    <div class="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col js-fade-in-up transition-all duration-300 ease-in-out hover:-translate-y-2 hover:shadow-2xl group" style="transition-delay: 0.1s;">
+                    <div class="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col js-fade-in-leaf-right transition-all duration-300 ease-in-out hover:-translate-y-2 hover:shadow-2xl group" style="transition-delay: 0.1s;">
                         <img src="https://placehold.co/600x400/8B4513/FFFFFF?text=Imported+Round+Logs" alt="Imported Logs" class="w-full h-64 object-cover transition-transform duration-300 ease-in-out group-hover:scale-110">
                         <div class="p-6 flex-grow">
                             <h3 class="text-2xl font-bold text-secondary mb-3">Imported Round Logs</h3>
@@ -709,7 +731,7 @@
         }, observerOptions);
 
         // Observe elements
-        const fadeElements = document.querySelectorAll('.js-fade-in-up');
+        const fadeElements = document.querySelectorAll('.js-fade-in-up, .js-fade-in-leaf-left, .js-fade-in-leaf-right');
         fadeElements.forEach(el => observer.observe(el));
 
         // --- NEW HERO SLIDER SCRIPT ---
@@ -772,6 +794,4 @@
     </script>
 </body>
 </html>
-
-
 
