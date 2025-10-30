@@ -167,7 +167,7 @@
                 <a href="#contact" class="font-medium text-gray-700 hover:text-primary nav-link">Contact</a>
                 <a href="#" class="font-medium text-gray-700 hover:text-primary nav-link">Purchase Order</a>
                 <a href="#" class="font-medium text-gray-700 hover:text-primary nav-link">Sales Order</a>
-                <a href="#" class="bg-secondary text-white font-medium px-5 py-2.5 rounded-full hover:bg-opacity-90 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg transform">
+                <a href="Portal.html" class="bg-secondary text-white font-medium px-5 py-2.5 rounded-full hover:bg-opacity-90 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg transform">
                     Portal
                 </a>
             </div>
@@ -190,7 +190,7 @@
             <a href="#contact" class="block py-3 px-6 text-gray-700 hover:bg-light">Contact</a>
             <a href="#" class="block py-3 px-6 text-gray-700 hover:bg-light">Purchase Order</a>
             <a href="#" class="block py-3 px-6 text-gray-700 hover:bg-light">Sales Order</a>
-            <a href="#" class="block py-3 px-6 text-secondary font-medium hover:bg-light">Portal</a>
+            <a href=Portal.html" class="block py-3 px-6 text-secondary font-medium hover:bg-light">Portal</a>
         </div>
     </header>
 
@@ -631,13 +631,13 @@
         const menuBtn = document.getElementById('menu-btn');
         const mobileMenu = document.getElementById('mobile-menu');
         menuBtn.addEventListener('click', () => {
-            mobileMenu.classList.toggle('translate-x-full');
             mobileMenu.classList.toggle('-translate-x-full');
+            mobileMenu.classList.toggle('translate-x-0'); // Use translate-x-0 for visible state
             // Toggle icon
-            if (mobileMenu.classList.contains('-translate-x-full')) {
-                menuBtn.innerHTML = '<i class="fas fa-bars"></i>';
-            } else {
+            if (mobileMenu.classList.contains('translate-x-0')) {
                 menuBtn.innerHTML = '<i class="fas fa-times"></i>';
+            } else {
+                menuBtn.innerHTML = '<i class="fas fa-bars"></i>';
             }
         });
 
@@ -645,7 +645,7 @@
         document.querySelectorAll('#mobile-menu a').forEach(link => {
             link.addEventListener('click', () => {
                 mobileMenu.classList.add('-translate-x-full');
-                mobileMenu.classList.remove('translate-x-full');
+                mobileMenu.classList.remove('translate-x-0'); // Remove visible class
                 menuBtn.innerHTML = '<i class="fas fa-bars"></i>';
             });
         });
