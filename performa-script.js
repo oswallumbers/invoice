@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function () {
         addTerm('Payment:', data.paymentTerms);
         addTerm('Freight:', data.freight);
         addTerm('Partial Shipment:', data.partialShipment);
-        addTerm('Docuements:', 'Invoice, Packing List, BL & COO');
+        addTerm('Documents:', 'Invoice, Packing List, BL & COO');
         
         y += 3;
         doc.setFont(font, 'bold');
@@ -440,3 +440,4 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
