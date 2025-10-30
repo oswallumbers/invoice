@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Purchase Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-pink-50 flex items-center justify-center h-screen">
+
+    <div class="w-full max-w-md">
+        <form id="login-form" class="bg-white shadow-2xl rounded-2xl px-8 pt-6 pb-8 mb-4">
+            <header class="text-center mb-8">
+                <h1 class="text-2xl font-bold text-pink-800">LOCAL PURCHASE MANAGEMENT</h1>
+                <p class="text-gray-500">Please enter your PIN to continue</p>
+            </header>
+            <div class="mb-4">
+                <label for="pin-input" class="block text-gray-700 text-sm font-bold mb-2">
+                    PIN Code
+                </label>
+                <input id="pin-input" class="shadow-sm appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-pink-500 text-center tracking-[.5em]" type="password" placeholder="••••" maxlength="4" required>
+            </div>
+            <div class="mb-6">
+                 <p id="error-message" class="text-red-500 text-xs italic text-center h-4"></p>
+            </div>
+            <div class="flex items-center justify-center">
+                <button class="bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-8 rounded-lg focus:outline-none focus:shadow-outline w-full" type="submit">
+                    Login
+                </button>
+            </div>
+        </form>
+        <p class="text-center text-gray-500 text-xs">
+            &copy;2025 OSWAL LUMBERS PVT LTD. All rights reserved.
+        </p>
+    </div>
+
+    <script src="login.js"></script>
+</body>
+</html>
