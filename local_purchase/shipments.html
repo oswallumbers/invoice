@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipment Profit Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        #shipment-modal .modal-content {
+            margin: 5% auto;
+            max-width: 900px; /* Wider modal */
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-blue-50">
+
+    <div class="max-w-full mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-800">SHIPMENT & PROFIT MANAGEMENT</h1>
+            <a href="https://oswallumbers.in/dashboard.html" class="text-blue-600 hover:text-blue-800 font-medium">Back to Dashboard</a>
+        </header>
+
+        <div class="mb-6 flex justify-between items-center">
+            <a href="local-purchase.html" class="bg-pink-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:bg-pink-700">
+                &larr; Manage Local Purchases
+            </a>
+            <button id="add-shipment-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300">
+                + Create New Shipment
+            </button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl p-6">
+            <h3 class="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">Shipment Records</h3>
+            <div class="overflow-x-auto">
+                <table id="shipment-table" class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shipment / Job No.</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Buyer / Comm. Invoice</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Sale (INR)</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Purchase (INR)</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Expenses (INR)</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit/Loss (INR)</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shipment-table-body" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="shipment-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="modal-content bg-white w-full p-6 rounded-2xl shadow-2xl overflow-y-auto max-h-screen">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" class="text-xl font-bold text-gray-800">Create New Shipment</h3>
+                <button class="close-btn p-2 rounded-full text-gray-500 hover:bg-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <form id="shipment-form" class="space-y-4">
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    <div class="space-y-4 bg-gray-50 p-4 rounded-lg border">
+                         <h4 class="font-semibold text-gray-700 border-b pb-2">1. Shipment Details</h4>
+                        <div>
+                            <label for="shipment-no" class="block text-sm font-medium text-gray-700">Shipment / Job No.:</label>
+                            <input type="text" id="shipment-no" class="mt-1 block w-full px-4 py-2 bg-white border-gray-300 rounded-lg shadow-sm" required placeholder="e.g., JOB-001">
+                        </div>
+                        <div>
+                            <label for="export-buyer" class="block text-sm font-medium text-gray-700">Export Buyer:</label>
+                            <select id="export-buyer" class="mt-1 block w-full px-4 py-2 bg-white border-gray-300 rounded-lg shadow-sm">
+                                <option value="">-- Select Buyer --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="commercial-invoice" class="block text-sm font-medium text-gray-700">Commercial Invoice:</label>
+                            <select id="commercial-invoice" class="mt-1 block w-full px-4 py-2 bg-white border-gray-300 rounded-lg shadow-sm">
+                                <option value="">-- Select Commercial Invoice --</option>
+                            </select>
+                        </div>
+                         <div>
+                            <label for="exchange-rate" class="block text-sm font-medium text-gray-700">Exchange Rate (USD to INR):</label>
+                            <input type="number" id="exchange-rate" step="0.01" class="mt-1 block w-full px-4 py-2 bg-white border-gray-300 rounded-lg shadow-sm">
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4 bg-red-50 p-4 rounded-lg border border-red-200">
+                        <h4 class="font-semibold text-gray-700 border-b pb-2">2. Expenses</h4>
+                        <div>
+                            <label for="freight-exp" class="block text-sm font-medium text-gray-700">Freight Exp (INR):</label>
+                            <input type="number" id="freight-exp" step="0.01" class="mt-1 block w-full px-4 py-2 bg-white border-gray-300 rounded-lg shadow-sm" value="0">
+                        </div>
+                        <div>
+                            <label for="clearing-exp" class="block text-sm font-medium text-gray-700">Clearing Exp (INR):</label>
+                            <input type="number" id="clearing-exp" step="0.01" class="mt-1 block w-full px-4 py-2 bg-white border-gray-300 rounded-lg shadow-sm" value="0">
+                        </div>
+                        <div>
+                            <label for="loading-exp" class="block text-sm font-medium text-gray-700">Loading/Unloading Exp (INR):</label>
+                            <input type="number" id="loading-exp" step="0.01" class="mt-1 block w-full px-4 py-2 bg-white border-gray-300 rounded-lg shadow-sm" value="0">
+                        </div>
+                         <div>
+                            <label for="other-exp" class="block text-sm font-medium text-gray-700">Other Expenses (INR):</Mabel>
+                            <input type="number" id="other-exp" step="0.01" class="mt-1 block w-full px-4 py-2 bg-white border-gray-300 rounded-lg shadow-sm" value="0">
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <h4 class="font-semibold text-gray-700 border-b pb-2">3. Calculated Summary</h4>
+                         <div class="pt-2">
+                             <label class="block text-sm font-medium text-gray-700">Total Sale Amount (USD):</label>
+                             <p id="calc-sale-usd" class="mt-1 text-lg font-bold text-gray-800">$ 0.00</p>
+                         </div>
+                         <div class="pt-2">
+                             <label class="block text-sm font-medium text-gray-700">Calculated Total Sale (INR):</label>
+                             <p id="calc-sale-inr" class="mt-1 text-lg font-bold text-green-700">₹ 0.00</p>
+                         </div>
+                          <div class="pt-2">
+                             <label class="block text-sm font-medium text-gray-700">Total Expenses (INR):</label>
+                             <p id="calc-total-exp" class="mt-1 text-lg font-bold text-red-700">₹ 0.00</p>
+                         </div>
+                         <hr>
+                         <p class="text-xs text-gray-500">Purchase amounts and final profit are calculated after saving and are shown on the main table.</p>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" class="close-btn bg-gray-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-gray-600">Cancel</button>
+                    <button type="submit" class="w-auto bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:bg-blue-700">Save Shipment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://oswallumbers.in/firebase-init.js"></script>
+<script src="shipments.js"></script> 
+</body>
+</html>
