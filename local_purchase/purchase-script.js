@@ -30,10 +30,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const calculatedSaleInrEl = document.getElementById('calculated-sale-inr');
     const calculatedProfitEl = document.getElementById('calculated-profit');
 
+    // Store loaded dropdown data globally for easy lookup during edit
+    let buyersData = [];
+    let performaInvoicesData = [];
+    let commercialInvoicesData = [];
+    
     // --- Main Initializer ---
     async function initializePage() {
+        await loadDropdowns(); // Load dropdowns first
         await loadPurchaseRecords();
-        await loadDropdowns();
     }
     initializePage();
 
@@ -86,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td class="px-3 py-4 whitespace-nowrap text-sm text-green-700 font-semibold">${formatCurrency(saleInr, 'INR')}</td>
                 <td class="px-3 py-4 whitespace-nowrap text-sm font-bold ${profit >= 0 ? 'text-green-700' : 'text-red-700'}">${formatCurrency(profit, 'INR')}</td>
                 <td class="px-3 py-4 whitespace-nowrap text-sm font-medium">
-                    <a href="#" class="text-pink-600 hover:text-pink-900" data-id="${rec.id}">Edit</a>
+                    <a href="#" class="text-pink-600 hover:text-pink-900 edit-record-btn" data-id="${rec.id}">Edit</a>
                 </td>
             `;
             purchaseTableBody.appendChild(row);
@@ -96,10 +101,10 @@ document.addEventListener('DOMContentLoaded', function () {
     /**
      * Orchestrates loading data for all dropdowns in the modal.
      */
-    function loadDropdowns() {
-        loadCollectionIntoSelect('buyers', 'name', exportBuyerSelect, 'name');
-        loadCollectionIntoSelect('performaInvoices', 'createdAt', performaInvoiceSelect, 'performaInvoiceNo');
-        loadCollectionIntoSelect('invoices', 'createdAt', commercialInvoiceSelect, 'invoiceNo');
+    async function loadDropdowns() {
+        buyersData = await loadCollectionIntoSelect('buyers', 'name', exportBuyerSelect, 'name');
+        performaInvoicesData = await loadCollectionIntoSelect('performaInvoices', 'createdAt', performaInvoiceSelect, 'performaInvoiceNo');
+        commercialInvoicesData = await loadCollectionIntoSelect('invoices', 'createdAt', commercialInvoiceSelect, 'invoiceNo');
     }
 
     /**
@@ -108,20 +113,26 @@ document.addEventListener('DOMContentLoaded', function () {
      * @param {string} orderByField - The field to order the results by.
      * @param {HTMLElement} selectElement - The <select> DOM element.
      * @param {string} textField - The field from the document to use as the option text.
+     * @returns {Array} An array of fetched records.
      */
     async function loadCollectionIntoSelect(collectionName, orderByField, selectElement, textField) {
+        const records = [];
         try {
             const snapshot = await db.collection(collectionName).orderBy(orderByField, 'desc').get();
             snapshot.forEach(doc => {
+                const data = { id: doc.id, ...doc.data() };
+                records.push(data);
+                
                 const option = document.createElement('option');
-                option.value = doc.id;
-                option.textContent = doc.data()[textField];
-                option.dataset.extra = JSON.stringify(doc.data()); // Store full data
+                option.value = doc.id; // Store Firebase ID as value
+                option.textContent = data[textField];
+                option.dataset.extra = JSON.stringify(data); // Store full data
                 selectElement.appendChild(option);
             });
         } catch (error) {
             console.error(`Error loading ${collectionName}: `, error);
         }
+        return records;
     }
 
 
@@ -136,24 +147,38 @@ document.addEventListener('DOMContentLoaded', function () {
         const selectedBuyerOption = exportBuyerSelect.options[exportBuyerSelect.selectedIndex];
         const selectedPiOption = performaInvoiceSelect.options[performaInvoiceSelect.selectedIndex];
         const selectedCiOption = commercialInvoiceSelect.options[commercialInvoiceSelect.selectedIndex];
+        const editId = purchaseForm.dataset.editId; // Check for the ID
 
+        // Data object preparation
         const purchaseData = {
             supplierName: supplierNameInput.value,
             localInvoiceNo: localInvoiceNoInput.value,
             localInvoiceDate: localInvoiceDateInput.value,
             purchaseCbm: parseFloat(purchaseCbmInput.value) || 0,
             purchaseAmountInr: parseFloat(purchaseAmountInrInput.value) || 0,
-            exportBuyer: selectedBuyerOption.value ? selectedBuyerOption.textContent : '',
+            // Store display text for easy table rendering
+            exportBuyer: selectedBuyerOption.value ? selectedBuyerOption.textContent : '', 
             performaInvoice: selectedPiOption.value ? selectedPiOption.textContent : '',
             commercialInvoice: selectedCiOption.value ? selectedCiOption.textContent : '',
             saleAmountUsd: parseFloat(saleAmountUsdInput.value) || 0,
             exchangeRate: parseFloat(exchangeRateInput.value) || 0,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
         try {
-            await db.collection('localPurchases').add(purchaseData);
-            alert('Purchase record saved successfully!');
+            if (editId) {
+                // Update existing record
+                await db.collection('localPurchases').doc(editId).update(purchaseData);
+                alert('Purchase record updated successfully!');
+                delete purchaseForm.dataset.editId; // Clear the ID after update
+            } else {
+                // Add new record
+                await db.collection('localPurchases').add({
+                    ...purchaseData,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert('Purchase record saved successfully!');
+            }
+            
             closeModal();
             loadPurchaseRecords(); // Refresh the table
         } catch (error) {
@@ -192,23 +217,88 @@ document.addEventListener('DOMContentLoaded', function () {
         const selectedOption = commercialInvoiceSelect.options[commercialInvoiceSelect.selectedIndex];
         if (selectedOption.value && selectedOption.dataset.extra) {
             const invoiceData = JSON.parse(selectedOption.dataset.extra);
-            saleAmountUsdInput.value = invoiceData.totalAmount.toFixed(2);
+            saleAmountUsdInput.value = invoiceData.totalAmount ? invoiceData.totalAmount.toFixed(2) : '0.00';
             calculateFinancials(); // Recalculate after auto-filling
+        } else {
+             saleAmountUsdInput.value = '0.00';
+             calculateFinancials();
         }
+    }
+
+    // --- Edit Logic ---
+    
+    /**
+     * Fetches a record and prepares the modal for editing.
+     * @param {string} id - The Firebase document ID of the purchase record.
+     */
+    async function loadRecordForEdit(id) {
+        try {
+            const doc = await db.collection('localPurchases').doc(id).get();
+            if (!doc.exists) {
+                alert("Record not found!");
+                return;
+            }
+
+            const data = doc.data();
+            
+            // 1. Store the ID on the form for submission handler
+            purchaseForm.dataset.editId = id; 
+
+            // 2. Populate form fields
+            supplierNameInput.value = data.supplierName || '';
+            localInvoiceNoInput.value = data.localInvoiceNo || '';
+            localInvoiceDateInput.value = data.localInvoiceDate || '';
+            purchaseCbmInput.value = data.purchaseCbm || 0;
+            purchaseAmountInrInput.value = data.purchaseAmountInr || 0;
+            saleAmountUsdInput.value = data.saleAmountUsd || 0;
+            exchangeRateInput.value = data.exchangeRate || 0;
+
+            // 3. Select correct dropdown options by matching text content
+            selectOptionByText(exportBuyerSelect, data.exportBuyer);
+            selectOptionByText(performaInvoiceSelect, data.performaInvoice);
+            selectOptionByText(commercialInvoiceSelect, data.commercialInvoice);
+            
+            // 4. Update financials and open modal
+            calculateFinancials();
+            modalTitle.textContent = "Edit Purchase Record";
+            openModal();
+
+        } catch (error) {
+            console.error("Error loading record for edit: ", error);
+            alert('Failed to load record for editing.');
+        }
+    }
+
+    /**
+     * Helper function to select an option in a select element based on its text content.
+     */
+    function selectOptionByText(selectElement, text) {
+        for (let i = 0; i < selectElement.options.length; i++) {
+            if (selectElement.options[i].textContent === text) {
+                selectElement.selectedIndex = i;
+                // Manually trigger change to update linked fields (like Sale USD)
+                if(selectElement.id === 'commercial-invoice') {
+                     handleCommercialInvoiceChange();
+                }
+                return;
+            }
+        }
+        selectElement.selectedIndex = 0; // Default to first (placeholder) option if no match
     }
 
 
     // --- Modal and Utility Functions ---
 
     function openModal() {
-        purchaseForm.reset(); // Clear the form
-        modalTitle.textContent = "Add New Purchase Record";
-        calculatedSaleInrEl.textContent = formatCurrency(0, 'INR');
-        calculatedProfitEl.textContent = formatCurrency(0, 'INR');
         purchaseModal.classList.remove('hidden');
     }
 
     function closeModal() {
+        purchaseForm.reset(); // Clear the form
+        delete purchaseForm.dataset.editId; // Clear the edit ID on close
+        modalTitle.textContent = "Add New Purchase Record"; // Reset title
+        calculatedSaleInrEl.textContent = formatCurrency(0, 'INR');
+        calculatedProfitEl.textContent = formatCurrency(0, 'INR');
         purchaseModal.classList.add('hidden');
     }
 
@@ -229,6 +319,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // --- Event Listeners ---
+    addPurchaseBtn.addEventListener('click', closeModal); // Use closeModal to reset form then open
     addPurchaseBtn.addEventListener('click', openModal);
     closeBtns.forEach(btn => btn.addEventListener('click', closeModal));
     purchaseForm.addEventListener('submit', handleFormSubmit);
@@ -240,4 +331,17 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // Auto-populate sale amount when a commercial invoice is selected
     commercialInvoiceSelect.addEventListener('change', handleCommercialInvoiceChange);
+
+    // NEW: Event delegation for dynamically added Edit buttons
+    purchaseTableBody.addEventListener('click', function(e) {
+        // Check if the clicked element is an 'Edit' button or a child of it
+        const editLink = e.target.closest('a.edit-record-btn');
+        
+        if (editLink) {
+            e.preventDefault(); // Stop the link from going to '#'
+            const recordId = editLink.getAttribute('data-id');
+            loadRecordForEdit(recordId);
+        }
+    });
+
 });
