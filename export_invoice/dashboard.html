@@ -417,12 +417,12 @@
         }
     document.addEventListener('DOMContentLoaded', function() {
             if (sessionStorage.getItem('loggedIn') !== 'true') {
-                window.location.href = 'index.html';
+                window.location.href = 'login.html';
             }
             const logoutBtn = document.getElementById('logoutBtn');
             logoutBtn.addEventListener('click', function() {
                 sessionStorage.removeItem('loggedIn');
-                window.location.href = 'index.html';
+                window.location.href = 'login.html';
             });
         });
 
@@ -559,6 +559,7 @@
     </script>
 </body>
 </html>
+
 
 
 
