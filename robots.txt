@@ -4,6 +4,7 @@
 # Allow all web crawlers to access the entire site.
 User-agent: *
 Allow: /
-
+Disallow: /export_invoice/
+Disallow: /local_purchase/
 # Provide the location of the sitemap file to help search engines index the site better.
 Sitemap: https://www.oswallumbers.in/sitemap.xml
