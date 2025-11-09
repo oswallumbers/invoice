@@ -1,435 +1,1070 @@
-/***** Timber Measurement System – OCR-enabled script.js *****/
-
-let tableData = [];
+// Global variables
+let currentView = 'entry';
+let logsData = [];
+let savedLists = [];
+let currentListId = null;
+let nextListNumber = 1;
 let currentPage = 1;
-const rowsPerPage = 50;
-let lastFile = null;
+let rowCount = 1;
+const itemsPerPage = 10;
 
-/* ================== Init ================== */
-document.addEventListener("DOMContentLoaded", () => {
-  setupFileUpload();
+// Initialize the application
+document.addEventListener('DOMContentLoaded', function() {
+    initializeApp();
+    setupEventListeners();
+    generateInitialRows(); // Start with just a few rows
+    updateListNumber();
+    setTodayDate();
 });
 
-/* ================== Upload ================== */
-function setupFileUpload() {
-  const uploadArea = document.getElementById("uploadArea");
-  const fileInput = document.getElementById("fileInput");
-
-  uploadArea.addEventListener("click", () => fileInput.click());
-  uploadArea.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    uploadArea.classList.add("dragover");
-  });
-  uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
-  uploadArea.addEventListener("drop", (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove("dragover");
-    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-  });
-  fileInput.addEventListener("change", (e) => {
-    if (e.target.files.length) handleFile(e.target.files[0]);
-  });
+// Initialize the application
+function initializeApp() {
+    // Load saved lists from localStorage
+    const savedListsJSON = localStorage.getItem('savedLists');
+    if (savedListsJSON) {
+        savedLists = JSON.parse(savedListsJSON);
+        
+        // Find the highest list number
+        if (savedLists.length > 0) {
+            const highestListNumber = savedLists.reduce((max, list) => {
+                const listNumber = parseInt(list.listNumber.split('/')[2]);
+                return listNumber > max ? listNumber : max;
+            }, 0);
+            nextListNumber = highestListNumber + 1;
+        }
+    }
+    
+    // Load dashboard data
+    updateDashboard();
 }
 
-function handleFile(file) {
-  if (!file.type.startsWith("image/")) {
-    showNotification("Please upload an image file", "error");
-    return;
-  }
-  lastFile = file;
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    document.getElementById("imagePreview").src = e.target.result;
-    document.getElementById("fileName").textContent = file.name;
-    document.getElementById("fileSize").textContent = formatFileSize(file.size);
-    document.getElementById("imagePreviewContainer").style.display = "block";
-    document.getElementById("processButtonContainer").style.display = "block";
-  };
-  reader.readAsDataURL(file);
-}
-
-function formatFileSize(bytes) {
-  if (bytes < 1024) return bytes + " bytes";
-  if (bytes < 1048576) return (bytes / 1024).toFixed(2) + " KB";
-  return (bytes / 1048576).toFixed(2) + " MB";
-}
-
-/* ================== Main flow ================== */
-async function processImage() {
-  if (!lastFile) {
-    showNotification("Please upload an image first.", "error");
-    return;
-  }
-
-  document.getElementById("documentInfo").style.display = "block";
-  renderSummary();
-  document.getElementById("summaryContainer").style.display = "block";
-  renderTable();
-  document.getElementById("tableContainer").style.display = "block";
-
-  showNotification("Processing image with AI OCR… please wait", "info");
-
-  try {
-    // --- Use Tesseract.js with higher accuracy mode ---
-    const { data } = await Tesseract.recognize(lastFile, "eng", {
-      tessedit_char_whitelist: "0123456789",
-      psm: 6, // Assume a uniform block of text
+// Setup event listeners
+function setupEventListeners() {
+    // Navigation
+    document.getElementById('entryNav').addEventListener('click', function(e) {
+        e.preventDefault();
+        switchView('entry');
     });
+    
+    document.getElementById('dashboardNav').addEventListener('click', function(e) {
+        e.preventDefault();
+        switchView('dashboard');
+    });
+    
+    // Form buttons
+    document.getElementById('saveBtn').addEventListener('click', saveData);
+    document.getElementById('editBtn').addEventListener('click', editData);
+    document.getElementById('printBtn').addEventListener('click', showPrintPreview);
+    
+    // Dashboard search and filter
+    document.getElementById('searchInput').addEventListener('input', filterDashboard);
+    document.getElementById('filterBtn').addEventListener('click', filterDashboard);
+    
+    // Print modal
+    document.getElementById('confirmPrintBtn').addEventListener('click', function() {
+        printCurrentData();
+    });
+}
 
-    // Clean text
-    const raw = data.text.replace(/\s{2,}/g, " ").replace(/\r/g, "").trim();
-    const lines = raw.split(/\n+/).filter(l => /\d{2,}/.test(l));
+// Switch between views
+function switchView(view) {
+    currentView = view;
+    
+    // Update navigation
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    
+    if (view === 'entry') {
+        document.getElementById('entryView').style.display = 'block';
+        document.getElementById('dashboardView').style.display = 'none';
+        document.getElementById('entryNav').classList.add('active');
+    } else if (view === 'dashboard') {
+        document.getElementById('entryView').style.display = 'none';
+        document.getElementById('dashboardView').style.display = 'block';
+        document.getElementById('dashboardNav').classList.add('active');
+        updateDashboard();
+    }
+}
 
-    // --- AI-style parsing logic ---
-    const results = [];
-    let sr = 1;
+// Generate initial rows (start with just a few)
+function generateInitialRows() {
+    const tableBody = document.getElementById('logsTableBody');
+    tableBody.innerHTML = '';
+    rowCount = 1;
+    
+    // Start with 5 rows
+    for (let i = 1; i <= 5; i++) {
+        addTableRow();
+    }
+}
 
-    for (const line of lines) {
-      const nums = (line.match(/\d{2,4}/g) || []).map(n => parseInt(n));
-      if (nums.length < 2) continue;
-
-      // Heuristic: longest 3-digit ≈ length, smaller 2-digit ≈ girth
-      let length = nums.find(n => n >= 480 && n <= 560);
-      if (!length && nums.some(n => n > 400)) length = nums.find(n => n > 400);
-      const girth = nums.filter(n => n >= 30 && n <= 150).pop();
-
-      if (length && girth) {
-        results.push({
-          srNo: sr++,
-          fullLength: length,
-          invLength: length,
-          girth: girth
+// Add a new table row
+function addTableRow() {
+    const tableBody = document.getElementById('logsTableBody');
+    const row = document.createElement('tr');
+    
+    // Use the current row count
+    const currentRowNumber = rowCount;
+    
+    row.innerHTML = `
+        <td>
+            <button class="btn btn-sm btn-danger delete-row-btn" data-row="${currentRowNumber}" title="Delete Row">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>
+        <td>${currentRowNumber}</td>
+        <td><input type="number" class="length-input" data-row="${currentRowNumber}" step="0.01"></td>
+        <td><input type="number" class="allowance-input" data-row="${currentRowNumber}" step="0.01" readonly></td>
+        <td><input type="number" class="girth-input" data-row="${currentRowNumber}" step="0.01"></td>
+        <td><input type="number" class="cft-input" data-row="${currentRowNumber}" step="0.01" readonly></td>
+    `;
+    tableBody.appendChild(row);
+    
+    // Add event listener for delete button
+    const deleteBtn = row.querySelector('.delete-row-btn');
+    deleteBtn.addEventListener('click', function() {
+        deleteRow(currentRowNumber);
+    });
+    
+    // Add event listeners for inputs
+    const lengthInput = row.querySelector('.length-input');
+    const allowanceInput = row.querySelector('.allowance-input');
+    const girthInput = row.querySelector('.girth-input');
+    const cftInput = row.querySelector('.cft-input');
+    
+    // Length input event
+    lengthInput.addEventListener('input', function() {
+        allowanceInput.value = this.value;
+        calculateCFT(currentRowNumber);
+    });
+    
+    // Allowance input event
+    allowanceInput.addEventListener('input', function() {
+        calculateCFT(currentRowNumber);
+    });
+    
+    // Girth input event
+    girthInput.addEventListener('input', function() {
+        calculateCFT(currentRowNumber);
+    });
+    
+    // Add keyboard navigation for all inputs
+    [lengthInput, allowanceInput, girthInput, cftInput].forEach(input => {
+        // Enter key navigation - move to the same column in the row below
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const currentRow = parseInt(this.dataset.row);
+                const allRows = document.querySelectorAll('#logsTableBody tr');
+                const isLastRow = this.closest('tr') === allRows[allRows.length - 1];
+                
+                if (isLastRow) {
+                    // Add a new row and return the new row number
+                    const newRowNumber = addNewRowAndReturnNumber();
+                    
+                    // Focus on the new row's same column
+                    const inputClass = this.className.split(' ')[0];
+                    focusOnInput(inputClass, newRowNumber);
+                } else {
+                    // Move to the next row's same column
+                    const nextRow = currentRow + 1;
+                    const inputClass = this.className.split(' ')[0];
+                    const nextInput = document.querySelector(`.${inputClass}[data-row="${nextRow}"]`);
+                    if (nextInput) {
+                        nextInput.focus();
+                    }
+                }
+            }
+            
+            // Up Arrow key navigation - move to the same column in the row above
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const currentRow = parseInt(this.dataset.row);
+                if (currentRow > 1) {
+                    const prevRow = currentRow - 1;
+                    const inputClass = this.className.split(' ')[0];
+                    const prevInput = document.querySelector(`.${inputClass}[data-row="${prevRow}"]`);
+                    if (prevInput) {
+                        prevInput.focus();
+                    }
+                }
+            }
+            
+            // Down Arrow key navigation - move to the same column in the row below
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const currentRow = parseInt(this.dataset.row);
+                const allRows = document.querySelectorAll('#logsTableBody tr');
+                const isLastRow = this.closest('tr') === allRows[allRows.length - 1];
+                
+                if (isLastRow) {
+                    // Add a new row and return the new row number
+                    const newRowNumber = addNewRowAndReturnNumber();
+                    
+                    // Focus on the new row's same column
+                    const inputClass = this.className.split(' ')[0];
+                    focusOnInput(inputClass, newRowNumber);
+                } else {
+                    // Move to the next row's same column
+                    const nextRow = currentRow + 1;
+                    const inputClass = this.className.split(' ')[0];
+                    const nextInput = document.querySelector(`.${inputClass}[data-row="${nextRow}"]`);
+                    if (nextInput) {
+                        nextInput.focus();
+                    }
+                }
+            }
         });
-      }
-    }
-
-    // --- Post-filter and sort ---
-    const unique = [];
-    const seen = new Set();
-    for (const r of results) {
-      const key = `${r.fullLength}-${r.girth}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        unique.push({ ...r, srNo: unique.length });
-      }
-    }
-
-    // --- Fallback if OCR too short ---
-    if (unique.length < 8) {
-      showNotification("Few rows detected — using AI boost", "info");
-
-      // Approximate grid pattern recognition by repeating detected pattern
-      const avgLen = unique.length ? unique[0].fullLength : 520;
-      const fallback = [
-        70, 56, 54, 49, 44, 45, 48, 60, 66, 48, 58, 46, 42, 54, 49, 47, 55, 56, 43, 52
-      ];
-      unique.length = 0;
-      fallback.forEach((g, i) =>
-        unique.push({ srNo: i + 1, fullLength: avgLen, invLength: avgLen, girth: g })
-      );
-    }
-
-    tableData = unique;
-    currentPage = 1;
-    populateTable();
-    calculateTotals();
-    showNotification(`✅ AI OCR loaded ${tableData.length} rows`, "success");
-  } catch (err) {
-    console.error(err);
-    showNotification("OCR failed — check image clarity or retake photo.", "error");
-  }
-
-  document.getElementById("documentInfo").scrollIntoView({ behavior: "smooth" });
-}
-
-
-/* ================== OCR parsing ================== */
-/**
- * Very forgiving parser for hand-written timber sheets.
- * Strategy:
- *  - Split text by lines.
- *  - For each line, pull numeric tokens.
- *  - Choose a 3-digit "length" (480–560) and a 2–3 digit "girth" (30–140).
- *  - If we find both, create a row.
- */
-function parseOcrText(text) {
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-
-  const rows = [];
-  let sr = 1;
-
-  for (const line of lines) {
-    // Skip headers
-    if (/sr\.?\s*no|length|girth|vehicle|buyer|date/i.test(line)) continue;
-
-    // Extract numbers from the line
-    const nums = (line.match(/\d{1,4}/g) || []).map((n) => parseInt(n, 10)).filter((n) => !Number.isNaN(n));
-    if (!nums.length) continue;
-
-    // Heuristics to find a plausible length and girth from the numbers
-    // Prefer the first 3-digit between 480–560 as length
-    const lengthCand = nums.find((n) => n >= 480 && n <= 560);
-    // Prefer another 2–3 digit 30–140 as girth (not the same as length)
-    const girthCand = nums.find((n) => n !== lengthCand && n >= 30 && n <= 140);
-
-    if (lengthCand && girthCand) {
-      rows.push({
-        srNo: sr++,
-        fullLength: lengthCand,
-        invLength: lengthCand, // if you use allowance, adjust here
-        girth: girthCand,
-      });
-    }
-  }
-
-  // Deduplicate obvious repeats (sometimes OCR reads lines twice)
-  const unique = [];
-  const seen = new Set();
-  for (const r of rows) {
-    const key = `${r.fullLength}-${r.girth}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      unique.push({ ...r, srNo: unique.length + 1 });
-    }
-  }
-
-  return unique;
-}
-
-/* ================== UI: Summary ================== */
-function renderSummary() {
-  const sc = document.getElementById("summaryContainer");
-  if (document.getElementById("totalCFT")) return;
-  sc.innerHTML = `
-    <div class="row">
-      <div class="col-md-3"><div class="summary-card"><div class="summary-item"><span>Total CFT</span><span id="totalCFT">0</span></div></div></div>
-      <div class="col-md-3"><div class="summary-card"><div class="summary-item"><span>Total CBM</span><span id="totalCBM">0</span></div></div></div>
-      <div class="col-md-3"><div class="summary-card"><div class="summary-item"><span>Total Pieces</span><span id="totalPCS">0</span></div></div></div>
-      <div class="col-md-3"><div class="summary-card"><div class="summary-item"><span>Total Records</span><span id="totalRecords">0</span></div></div></div>
-    </div>
-  `;
-}
-
-/* ================== UI: Table ================== */
-function renderTable() {
-  const tc = document.getElementById("tableContainer");
-  tc.innerHTML = `
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-table me-2"></i>Measurement Data</span>
-        <div class="no-print">
-          <button class="btn btn-sm btn-outline-primary" onclick="addNewRow()"><i class="bi bi-plus-circle me-1"></i>Add Row</button>
-          <button class="btn btn-sm btn-outline-danger" onclick="clearAllData()"><i class="bi bi-trash me-1"></i>Clear All</button>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="table-container">
-          <table class="data-table" id="dataTable">
-            <thead>
-              <tr>
-                <th>Sr No</th>
-                <th>Full Length</th>
-                <th>Inv Length</th>
-                <th>Girth</th>
-                <th>CFT</th>
-                <th class="no-print">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="tableBody"></tbody>
-            <tfoot>
-              <tr class="total-row"><td colspan="4">Page Total</td><td id="pageTotal">0</td><td class="no-print"></td></tr>
-              <tr class="grand-total"><td colspan="4">Grand Total</td><td id="grandTotal">0</td><td class="no-print"></td></tr>
-              <tr class="grand-total"><td colspan="4">Grand Total CBM</td><td id="grandTotalCBM">0</td><td class="no-print"></td></tr>
-              <tr class="grand-total"><td colspan="4">Total Pieces</td><td id="totalPieces">0</td><td class="no-print"></td></tr>
-            </tfoot>
-          </table>
-        </div>
-        <div class="pagination-controls no-print" id="paginationControls"></div>
-      </div>
-    </div>
-  `;
-  populateTable();
-}
-
-function populateTable() {
-  const tbody = document.getElementById("tableBody");
-  tbody.innerHTML = "";
-
-  const startIndex = (currentPage - 1) * rowsPerPage;
-  const endIndex = Math.min(startIndex + rowsPerPage, tableData.length);
-
-  for (let i = startIndex; i < endIndex; i++) {
-    tbody.appendChild(createTableRow(tableData[i], i));
-  }
-  updatePagination();
-}
-
-function createTableRow(data, index) {
-  const tr = document.createElement("tr");
-  const cft = calculateCFT(data.invLength, data.girth);
-  tr.innerHTML = `
-    <td>${data.srNo}</td>
-    <td>${data.fullLength}</td>
-    <td><input type="number" class="editable" value="${data.invLength}" data-index="${index}" data-field="invLength"></td>
-    <td><input type="number" class="editable" value="${data.girth}" data-index="${index}" data-field="girth"></td>
-    <td><input type="number" class="editable cft-field" value="${cft.toFixed(2)}" data-index="${index}" data-field="cft" readonly></td>
-    <td class="no-print">
-      <div class="action-buttons">
-        <button class="btn btn-sm btn-outline-primary" onclick="recalculateRow(${index})"><i class="bi bi-arrow-clockwise"></i></button>
-        <button class="btn btn-sm btn-outline-danger" onclick="deleteRow(${index})"><i class="bi bi-trash"></i></button>
-      </div>
-    </td>
-  `;
-
-  tr.querySelectorAll(".editable:not(.cft-field)").forEach((el) => {
-    el.addEventListener("input", function () {
-      const i = parseInt(this.dataset.index, 10);
-      const field = this.dataset.field;
-      tableData[i][field] = parseFloat(this.value) || 0;
-      if (field === "invLength" || field === "girth") recalculateRow(i);
     });
-  });
-
-  return tr;
+    
+    // Increment rowCount after creating the row
+    rowCount++;
 }
 
-function updatePagination() {
-  const totalPages = Math.ceil(tableData.length / rowsPerPage) || 1;
-  const pc = document.getElementById("paginationControls");
-  pc.innerHTML = "";
+// Delete a row
+function deleteRow(rowNumber) {
+    const row = document.querySelector(`tr:has(.delete-row-btn[data-row="${rowNumber}"])`);
+    if (!row) return;
+    
+    // Remove the row
+    row.remove();
+    
+    // Renumber all rows after the deleted row
+    renumberRowsAfterDeletion(rowNumber);
+    
+    // Update totals
+    updateTotals();
+    
+    // Show notification
+    showNotification(`Row ${rowNumber} deleted successfully`, 'success');
+}
 
-  for (let i = 1; i <= totalPages; i++) {
-    const btn = document.createElement("button");
-    btn.className = "page-btn" + (i === currentPage ? " active" : "");
-    btn.textContent = i;
-    btn.onclick = () => {
-      currentPage = i;
-      populateTable();
-      calculateTotals();
+// Renumber rows after deletion
+function renumberRowsAfterDeletion(deletedRowNumber) {
+    const allRows = document.querySelectorAll('#logsTableBody tr');
+    
+    allRows.forEach((row, index) => {
+        const currentRowNumber = index + 1;
+        const oldRowNumber = parseInt(row.querySelector('.delete-row-btn').dataset.row);
+        
+        // Update row number display
+        row.querySelector('td:nth-child(2)').textContent = currentRowNumber;
+        
+        // Update delete button data attribute
+        row.querySelector('.delete-row-btn').dataset.row = currentRowNumber;
+        
+        // Update all input data attributes
+        row.querySelectorAll('input').forEach(input => {
+            input.dataset.row = currentRowNumber;
+        });
+        
+        // If this row was after the deleted row, we need to recalculate CFT
+        if (oldRowNumber > deletedRowNumber) {
+            const lengthInput = row.querySelector('.length-input');
+            const allowanceInput = row.querySelector('.allowance-input');
+            const girthInput = row.querySelector('.girth-input');
+            
+            // Recalculate CFT for this row
+            const allowance = parseFloat(allowanceInput.value) || 0;
+            const girth = parseFloat(girthInput.value) || 0;
+            const cft = (allowance * girth * girth / 16000000 * 35.315).toFixed(2);
+            row.querySelector('.cft-input').value = cft;
+        }
+    });
+    
+    // Update the global row count
+    rowCount = allRows.length + 1;
+}
+
+// Add a new row and return the new row number
+function addNewRowAndReturnNumber() {
+    const newRowNumber = rowCount;
+    addTableRow();
+    return newRowNumber;
+}
+
+// Focus on an input in a specific row
+function focusOnInput(inputClass, rowNumber) {
+    // Use requestAnimationFrame to ensure the DOM is updated
+    requestAnimationFrame(() => {
+        const input = document.querySelector(`.${inputClass}[data-row="${rowNumber}"]`);
+        if (input) {
+            input.focus();
+        }
+    });
+}
+
+// Calculate CFT
+function calculateCFT(row) {
+    const allowanceInput = document.querySelector(`.allowance-input[data-row="${row}"]`);
+    const girthInput = document.querySelector(`.girth-input[data-row="${row}"]`);
+    const cftInput = document.querySelector(`.cft-input[data-row="${row}"]`);
+    
+    if (!allowanceInput || !girthInput || !cftInput) {
+        console.error(`Could not find input elements for row ${row}`);
+        return;
+    }
+    
+    const allowance = parseFloat(allowanceInput.value) || 0;
+    const girth = parseFloat(girthInput.value) || 0;
+    
+    const cft = (allowance * girth * girth / 16000000 * 35.315).toFixed(2);
+    cftInput.value = cft;
+    
+    updateTotals();
+}
+
+// Update totals
+function updateTotals() {
+    let totalCFT = 0;
+    let totalPCS = 0;
+    
+    document.querySelectorAll('.cft-input').forEach(input => {
+        const value = parseFloat(input.value) || 0;
+        totalCFT += value;
+    });
+    
+    document.querySelectorAll('.length-input').forEach(input => {
+        if (input.value) {
+            totalPCS++;
+        }
+    });
+    
+    document.getElementById('totalCFT').textContent = totalCFT.toFixed(2);
+    document.getElementById('grandTotalCFT').textContent = totalCFT.toFixed(2);
+    document.getElementById('grandTotalCBM').textContent = (totalCFT / 27.74).toFixed(2);
+    document.getElementById('totalPCS').textContent = totalPCS;
+}
+
+// Update list number
+function updateListNumber() {
+    const listNumber = `OLPL/LOG/${String(nextListNumber).padStart(3, '0')}`;
+    document.getElementById('listNumber').value = listNumber;
+}
+
+// Set today's date
+function setTodayDate() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').value = today;
+}
+
+// Save data
+function saveData() {
+    showLoadingSpinner();
+    
+    // Validate form
+    const listNumber = document.getElementById('listNumber').value;
+    const date = document.getElementById('date').value;
+    const partyName = document.getElementById('partyName').value;
+    const vehicleNumber = document.getElementById('vehicleNumber').value;
+    const productType = document.getElementById('productType').value;
+    
+    if (!date || !partyName || !vehicleNumber || !productType) {
+        showNotification('Please fill all required fields', 'error');
+        hideLoadingSpinner();
+        return;
+    }
+    
+    // Collect log data
+    const logs = [];
+    let totalCFT = 0;
+    let totalPCS = 0;
+    
+    document.querySelectorAll('.length-input').forEach((input, index) => {
+        const row = index + 1;
+        const length = parseFloat(input.value) || 0;
+        const allowance = parseFloat(document.querySelector(`.allowance-input[data-row="${row}"]`).value) || 0;
+        const girth = parseFloat(document.querySelector(`.girth-input[data-row="${row}"]`).value) || 0;
+        const cft = parseFloat(document.querySelector(`.cft-input[data-row="${row}"]`).value) || 0;
+        
+        if (length > 0 && girth > 0) {
+            logs.push({
+                srNo: row,
+                length: length,
+                allowance: allowance,
+                girth: girth,
+                cft: cft
+            });
+            
+            totalCFT += cft;
+            totalPCS++;
+        }
+    });
+    
+    if (logs.length === 0) {
+        showNotification('Please enter at least one log entry', 'error');
+        hideLoadingSpinner();
+        return;
+    }
+    
+    // Create list object
+    const list = {
+        id: currentListId || Date.now().toString(),
+        listNumber: listNumber,
+        date: date,
+        partyName: partyName,
+        vehicleNumber: vehicleNumber,
+        productType: productType,
+        logs: logs,
+        totalCFT: totalCFT,
+        totalCBM: totalCFT / 27.74,
+        totalPCS: totalPCS,
+        createdAt: new Date().toISOString()
     };
-    pc.appendChild(btn);
-  }
+    
+    // Save to localStorage
+    if (currentListId) {
+        // Update existing list
+        const index = savedLists.findIndex(l => l.id === currentListId);
+        if (index !== -1) {
+            savedLists[index] = list;
+        }
+    } else {
+        // Add new list
+        savedLists.push(list);
+        nextListNumber++;
+        updateListNumber();
+    }
+    
+    localStorage.setItem('savedLists', JSON.stringify(savedLists));
+    
+    // Reset form
+    if (!currentListId) {
+        resetForm();
+    }
+    
+    currentListId = null;
+    
+    hideLoadingSpinner();
+    showNotification('Data saved successfully', 'success');
 }
 
-/* ================== Operations ================== */
-function calculateCFT(invLength, girth) {
-  return (invLength * girth * girth) / 16000000 * 35.315;
+// Edit data
+function editData() {
+    // This would typically load a list for editing
+    // For now, we'll just show a notification
+    showNotification('Select a list from the dashboard to edit', 'info');
+    switchView('dashboard');
 }
 
-function recalculateRow(index) {
-  const row = document.querySelector(`input[data-index="${index}"]`)?.closest("tr");
-  if (!row) return;
-  const inv = parseFloat(row.querySelector('input[data-field="invLength"]').value) || 0;
-  const gir = parseFloat(row.querySelector('input[data-field="girth"]').value) || 0;
-  const cft = calculateCFT(inv, gir);
-  row.querySelector('input[data-field="cft"]').value = cft.toFixed(2);
-  tableData[index].cft = cft;
-  calculateTotals();
-  showNotification("Row recalculated successfully", "success");
+// Show print preview
+function showPrintPreview() {
+    // Validate form
+    const listNumber = document.getElementById('listNumber').value;
+    const date = document.getElementById('date').value;
+    const partyName = document.getElementById('partyName').value;
+    const vehicleNumber = document.getElementById('vehicleNumber').value;
+    const productType = document.getElementById('productType').value;
+    
+    if (!date || !partyName || !vehicleNumber || !productType) {
+        showNotification('Please fill all required fields', 'error');
+        return;
+    }
+    
+    // Collect log data
+    const logs = [];
+    let totalCFT = 0;
+    
+    document.querySelectorAll('.length-input').forEach((input, index) => {
+        const row = index + 1;
+        const length = parseFloat(input.value) || 0;
+        const allowance = parseFloat(document.querySelector(`.allowance-input[data-row="${row}"]`).value) || 0;
+        const girth = parseFloat(document.querySelector(`.girth-input[data-row="${row}"]`).value) || 0;
+        const cft = parseFloat(document.querySelector(`.cft-input[data-row="${row}"]`).value) || 0;
+        
+        if (length > 0 && girth > 0) {
+            logs.push({
+                srNo: row,
+                length: length,
+                allowance: allowance,
+                girth: girth,
+                cft: cft
+            });
+            
+            totalCFT += cft;
+        }
+    });
+    
+    if (logs.length === 0) {
+        showNotification('Please enter at least one log entry', 'error');
+        return;
+    }
+    
+    // Generate print preview
+    const printPreviewContainer = document.getElementById('printPreviewContainer');
+    printPreviewContainer.innerHTML = generatePrintHTML(listNumber, date, partyName, vehicleNumber, productType, logs, totalCFT);
+    
+    // Show modal
+    const printPreviewModal = new bootstrap.Modal(document.getElementById('printPreviewModal'));
+    printPreviewModal.show();
 }
 
-function deleteRow(index) {
-  if (!confirm("Are you sure you want to delete this row?")) return;
-  tableData.splice(index, 1);
-  const maxPage = Math.max(1, Math.ceil(tableData.length / rowsPerPage));
-  currentPage = Math.min(currentPage, maxPage);
-  populateTable();
-  calculateTotals();
-  showNotification("Row deleted successfully", "success");
+// Print current data
+function printCurrentData() {
+    // Validate form
+    const listNumber = document.getElementById('listNumber').value;
+    const date = document.getElementById('date').value;
+    const partyName = document.getElementById('partyName').value;
+    const vehicleNumber = document.getElementById('vehicleNumber').value;
+    const productType = document.getElementById('productType').value;
+    
+    if (!date || !partyName || !vehicleNumber || !productType) {
+        showNotification('Please fill all required fields', 'error');
+        return;
+    }
+    
+    // Collect log data
+    const logs = [];
+    let totalCFT = 0;
+    
+    document.querySelectorAll('.length-input').forEach((input, index) => {
+        const row = index + 1;
+        const length = parseFloat(input.value) || 0;
+        const allowance = parseFloat(document.querySelector(`.allowance-input[data-row="${row}"]`).value) || 0;
+        const girth = parseFloat(document.querySelector(`.girth-input[data-row="${row}"]`).value) || 0;
+        const cft = parseFloat(document.querySelector(`.cft-input[data-row="${row}"]`).value) || 0;
+        
+        if (length > 0 && girth > 0) {
+            logs.push({
+                srNo: row,
+                length: length,
+                allowance: allowance,
+                girth: girth,
+                cft: cft
+            });
+            
+            totalCFT += cft;
+        }
+    });
+    
+    if (logs.length === 0) {
+        showNotification('Please enter at least one log entry', 'error');
+        return;
+    }
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Print - ${listNumber}</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                }
+                .print-header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .header-info {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 10px;
+                }
+                .header-left, .header-right {
+                    text-align: left;
+                    width: 48%;
+                }
+                .two-column-table {
+                    display: flex;
+                    justify-content: space-between;
+                }
+                .column-table {
+                    width: 48%;
+                }
+                .print-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                .print-table th, .print-table td {
+                    border: 1px solid #000;
+                    padding: 5px;
+                    text-align: center;
+                }
+                .print-table th {
+                    background-color: #f2f2f2;
+                }
+                .print-footer {
+                    margin-top: 20px;
+                    text-align: center;
+                }
+                @media print {
+                    @page {
+                        size: A4;
+                        margin: 1cm;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            ${generatePrintHTML(listNumber, date, partyName, vehicleNumber, productType, logs, totalCFT)}
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Wait for the content to load before printing
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 500);
 }
 
-function addNewRow() {
-  const newSrNo = tableData.length ? Math.max(...tableData.map((i) => i.srNo)) + 1 : 1;
-  tableData.push({ srNo: newSrNo, fullLength: 0, invLength: 0, girth: 0 });
-  populateTable();
-  calculateTotals();
-  showNotification("New row added successfully", "success");
+// Generate print HTML
+function generatePrintHTML(listNumber, date, partyName, vehicleNumber, productType, logs, totalCFT) {
+    let html = `
+        <div class="print-header">
+            <h2>OSWAL LUMBERS PVT LTD</h2>
+            <h3>${productType}</h3>
+            
+            <div class="header-info">
+                <div class="header-left">
+                    <p><strong>List Number:</strong> ${listNumber}</p>
+                    <p><strong>Party Name:</strong> ${partyName}</p>
+                </div>
+                <div class="header-right">
+                    <p><strong>Date:</strong> ${date}</p>
+                    <p><strong>Vehicle Number:</strong> ${vehicleNumber}</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Split logs into two columns for printing
+    const leftColumnLogs = logs.slice(0, 50);
+    const rightColumnLogs = logs.slice(50, 100);
+    
+    html += '<div class="two-column-table">';
+    
+    // Left column
+    html += '<div class="column-table">';
+    html += '<table class="print-table">';
+    html += '<thead><tr><th>Sr No</th><th>Length</th><th>Allowance</th><th>Girth</th><th>CFT</th></tr></thead>';
+    html += '<tbody>';
+    
+    leftColumnLogs.forEach(log => {
+        html += `<tr>
+            <td>${log.srNo}</td>
+            <td>${log.length}</td>
+            <td>${log.allowance}</td>
+            <td>${log.girth}</td>
+            <td>${log.cft.toFixed(2)}</td>
+        </tr>`;
+    });
+    
+    html += '</tbody></table></div>';
+    
+    // Right column
+    html += '<div class="column-table">';
+    html += '<table class="print-table">';
+    html += '<thead><tr><th>Sr No</th><th>Length</th><th>Allowance</th><th>Girth</th><th>CFT</th></tr></thead>';
+    html += '<tbody>';
+    
+    rightColumnLogs.forEach(log => {
+        html += `<tr>
+            <td>${log.srNo}</td>
+            <td>${log.length}</td>
+            <td>${log.allowance}</td>
+            <td>${log.girth}</td>
+            <td>${log.cft.toFixed(2)}</td>
+        </tr>`;
+    });
+    
+    html += '</tbody></table></div>';
+    html += '</div>';
+    
+    // Grand total
+    html += `
+        <div class="print-footer">
+            <h3>Grand Total</h3>
+            <p><strong>Total CFT:</strong> ${totalCFT.toFixed(2)}</p>
+            <p><strong>Total CBM:</strong> ${(totalCFT / 27.74).toFixed(2)}</p>
+            <p><strong>Total PCS:</strong> ${logs.length}</p>
+        </div>
+    `;
+    
+    return html;
 }
 
-function clearAllData() {
-  if (!confirm("Are you sure you want to clear all data?")) return;
-  tableData = [];
-  currentPage = 1;
-  populateTable();
-  calculateTotals();
-  showNotification("All data cleared", "info");
+// Update dashboard
+function updateDashboard() {
+    const tableBody = document.getElementById('dashboardTableBody');
+    tableBody.innerHTML = '';
+    
+    // Filter and paginate data
+    const filteredLists = filterLists();
+    const paginatedLists = paginateLists(filteredLists);
+    
+    // Generate table rows
+    paginatedLists.forEach(list => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${list.listNumber}</td>
+            <td>${list.date}</td>
+            <td>${list.partyName}</td>
+            <td>${list.vehicleNumber}</td>
+            <td>${list.productType}</td>
+            <td>${list.totalCFT.toFixed(2)}</td>
+            <td>${list.totalCBM.toFixed(2)}</td>
+            <td>${list.totalPCS}</td>
+            <td>
+                <button class="btn btn-sm btn-primary edit-list-btn" data-id="${list.id}">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-danger print-list-btn" data-id="${list.id}">
+                    <i class="bi bi-printer"></i>
+                </button>
+                <button class="btn btn-sm btn-success export-list-btn" data-id="${list.id}">
+                    <i class="bi bi-file-earmark-excel"></i>
+                </button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+    
+    // Add event listeners to action buttons
+    document.querySelectorAll('.edit-list-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            loadListForEditing(this.dataset.id);
+        });
+    });
+    
+    document.querySelectorAll('.print-list-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            printList(this.dataset.id);
+        });
+    });
+    
+    document.querySelectorAll('.export-list-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            exportListToExcel(this.dataset.id);
+        });
+    });
+    
+    // Update pagination
+    updatePagination(filteredLists.length);
 }
 
-/* ================== Totals & Export/Print ================== */
-function calculateTotals() {
-  const startIndex = (currentPage - 1) * rowsPerPage;
-  const endIndex = Math.min(startIndex + rowsPerPage, tableData.length);
-
-  let pageTotal = 0;
-  for (let i = startIndex; i < endIndex; i++) {
-    const { invLength = 0, girth = 0 } = tableData[i] || {};
-    pageTotal += calculateCFT(invLength, girth);
-  }
-
-  let grandTotal = 0;
-  for (const item of tableData) {
-    const { invLength = 0, girth = 0 } = item || {};
-    grandTotal += calculateCFT(invLength, girth);
-  }
-
-  const grandTotalCBM = grandTotal / 27.74;
-  const totalPieces = tableData.length;
-
-  const setText = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = val;
-  };
-  setText("pageTotal", pageTotal.toFixed(2));
-  setText("grandTotal", grandTotal.toFixed(2));
-  setText("grandTotalCBM", grandTotalCBM.toFixed(2));
-  setText("totalPieces", totalPieces);
-  setText("totalCFT", grandTotal.toFixed(2));
-  setText("totalCBM", grandTotalCBM.toFixed(2));
-  setText("totalPCS", totalPieces);
-  setText("totalRecords", tableData.length);
+// Filter lists
+function filterLists() {
+    let filtered = [...savedLists];
+    
+    // Search filter
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    if (searchTerm) {
+        filtered = filtered.filter(list => 
+            list.listNumber.toLowerCase().includes(searchTerm) ||
+            list.partyName.toLowerCase().includes(searchTerm) ||
+            list.vehicleNumber.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    // Date filter
+    const dateFrom = document.getElementById('filterDateFrom').value;
+    const dateTo = document.getElementById('filterDateTo').value;
+    
+    if (dateFrom) {
+        filtered = filtered.filter(list => list.date >= dateFrom);
+    }
+    
+    if (dateTo) {
+        filtered = filtered.filter(list => list.date <= dateTo);
+    }
+    
+    // Sort by date (newest first)
+    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    return filtered;
 }
 
-function exportToCSV() {
-  if (!tableData.length) return showNotification("No data to export", "error");
-
-  let csv = "Sr No,Full Length,Inv Length,Girth,CFT\n";
-  for (const item of tableData) {
-    const cft = calculateCFT(item.invLength || 0, item.girth || 0);
-    csv += `${item.srNo},${item.fullLength},${item.invLength},${item.girth},${cft.toFixed(2)}\n`;
-  }
-
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `timber_measurement_${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
-  showNotification("Data exported successfully", "success");
+// Paginate lists
+function paginateLists(lists) {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return lists.slice(startIndex, endIndex);
 }
 
-function printDocument() {
-  const w = window.open("", "_blank");
-  const dataHtml = `
-    <h3>Measurement Report</h3>
-    <pre>${JSON.stringify(tableData, null, 2)}</pre>
-  `;
-  w.document.write(`<html><head><title>Print</title></head><body>${dataHtml}</body></html>`);
-  w.document.close();
-  w.print();
+// Update pagination
+function updatePagination(totalItems) {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const pagination = document.getElementById('dashboardPagination');
+    pagination.innerHTML = '';
+    
+    // Previous button
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
+    prevLi.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (currentPage > 1) {
+            currentPage--;
+            updateDashboard();
+        }
+    });
+    pagination.appendChild(prevLi);
+    
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+        li.addEventListener('click', function(e) {
+            e.preventDefault();
+            currentPage = i;
+            updateDashboard();
+        });
+        pagination.appendChild(li);
+    }
+    
+    // Next button
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
+    nextLi.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (currentPage < totalPages) {
+            currentPage++;
+            updateDashboard();
+        }
+    });
+    pagination.appendChild(nextLi);
 }
 
-/* ================== Notifications ================== */
-function showNotification(message, type = "success") {
-  const n = document.getElementById("notification");
-  const t = document.getElementById("notificationText");
-  if (!n || !t) return;
-  t.textContent = message;
-  n.style.backgroundColor = type === "error" ? "#e74c3c" : type === "info" ? "#3498db" : "#27ae60";
-  n.classList.add("show");
-  setTimeout(() => n.classList.remove("show"), 3000);
+// Filter dashboard
+function filterDashboard() {
+    currentPage = 1;
+    updateDashboard();
+}
+
+// Load list for editing
+function loadListForEditing(listId) {
+    const list = savedLists.find(l => l.id === listId);
+    if (!list) return;
+    
+    // Switch to entry view
+    switchView('entry');
+    
+    // Load list data into form
+    document.getElementById('listNumber').value = list.listNumber;
+    document.getElementById('date').value = list.date;
+    document.getElementById('partyName').value = list.partyName;
+    document.getElementById('vehicleNumber').value = list.vehicleNumber;
+    document.getElementById('productType').value = list.productType;
+    
+    // Clear existing rows
+    document.getElementById('logsTableBody').innerHTML = '';
+    rowCount = 1;
+    
+    // Load log data into table
+    list.logs.forEach(log => {
+        addTableRow();
+        const lengthInput = document.querySelector(`.length-input[data-row="${log.srNo}"]`);
+        const allowanceInput = document.querySelector(`.allowance-input[data-row="${log.srNo}"]`);
+        const girthInput = document.querySelector(`.girth-input[data-row="${log.srNo}"]`);
+        const cftInput = document.querySelector(`.cft-input[data-row="${log.srNo}"]`);
+        
+        if (lengthInput) {
+            lengthInput.value = log.length;
+            allowanceInput.value = log.allowance;
+            girthInput.value = log.girth;
+            cftInput.value = log.cft;
+        }
+    });
+    
+    // Add a few empty rows for new entries
+    for (let i = 0; i < 3; i++) {
+        addTableRow();
+    }
+    
+    // Update totals
+    updateTotals();
+    
+    // Set current list ID
+    currentListId = listId;
+    
+    showNotification('List loaded for editing', 'info');
+}
+
+// Print list
+function printList(listId) {
+    const list = savedLists.find(l => l.id === listId);
+    if (!list) return;
+    
+    // Generate print HTML
+    const printHTML = generatePrintHTML(
+        list.listNumber,
+        list.date,
+        list.partyName,
+        list.vehicleNumber,
+        list.productType,
+        list.logs,
+        list.totalCFT
+    );
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Print - ${list.listNumber}</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                }
+                .print-header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .header-info {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 10px;
+                }
+                .header-left, .header-right {
+                    text-align: left;
+                    width: 48%;
+                }
+                .two-column-table {
+                    display: flex;
+                    justify-content: space-between;
+                }
+                .column-table {
+                    width: 48%;
+                }
+                .print-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                .print-table th, .print-table td {
+                    border: 1px solid #000;
+                    padding: 5px;
+                    text-align: center;
+                }
+                .print-table th {
+                    background-color: #f2f2f2;
+                }
+                .print-footer {
+                    margin-top: 20px;
+                    text-align: center;
+                }
+                @media print {
+                    @page {
+                        size: A4;
+                        margin: 1cm;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            ${printHTML}
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Wait for the content to load before printing
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 500);
+}
+
+// Export list to Excel
+function exportListToExcel(listId) {
+    const list = savedLists.find(l => l.id === listId);
+    if (!list) return;
+    
+    // Create a new workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Create header row
+    const header = [
+        ['OSWAL LUMBERS PVT LTD'],
+        [''],
+        ['List Number:', list.listNumber],
+        ['Date:', list.date],
+        ['Party Name:', list.partyName],
+        ['Vehicle Number:', list.vehicleNumber],
+        ['Product Type:', list.productType],
+        [''],
+        ['Sr No', 'Length', 'Length Allowance', 'Girth', 'CFT']
+    ];
+    
+    // Add log data
+    const data = list.logs.map(log => [
+        log.srNo,
+        log.length,
+        log.allowance,
+        log.girth,
+        log.cft.toFixed(2)
+    ]);
+    
+    // Add totals
+    data.push([]);
+    data.push(['Total CFT:', '', '', '', list.totalCFT.toFixed(2)]);
+    data.push(['Total CBM:', '', '', '', list.totalCBM.toFixed(2)]);
+    data.push(['Total PCS:', '', '', '', list.totalPCS]);
+    
+    // Combine header and data
+    const wsData = [...header, ...data];
+    
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Log List');
+    
+    // Generate filename
+    const filename = `${list.listNumber}_${list.date}_${list.partyName.replace(/\s+/g, '_')}.xlsx`;
+    
+    // Save the file
+    XLSX.writeFile(wb, filename);
+    
+    showNotification('List exported to Excel successfully', 'success');
+}
+
+// Reset form
+function resetForm() {
+    document.getElementById('logForm').reset();
+    setTodayDate();
+    updateListNumber();
+    
+    // Clear table and regenerate initial rows
+    generateInitialRows();
+    
+    // Update totals
+    updateTotals();
+}
+
+// Show notification
+function showNotification(message, type) {
+    const notification = document.getElementById('notification');
+    notification.textContent = message;
+    notification.className = `notification ${type}`;
+    notification.classList.add('show');
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 3000);
+}
+
+// Show loading spinner
+function showLoadingSpinner() {
+    document.getElementById('loadingSpinner').style.display = 'flex';
+}
+
+// Hide loading spinner
+function hideLoadingSpinner() {
+    document.getElementById('loadingSpinner').style.display = 'none';
 }
