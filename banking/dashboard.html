@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LC / BC Management Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6;
+            scroll-behavior: smooth;
+        }
+        /* Due date highlighting */
+        .due-soon { background-color: #e0f2fe !important; } /* bg-sky-100 */
+        .due-tomorrow { background-color: #fefcbf !important; } /* bg-yellow-100 */
+        .due-today { background-color: #fee2e2 !important; } /* bg-red-100 */
+        .overdue { background-color: #fca5a5 !important; font-weight: 600; } /* bg-red-300 */
+        
+        /* Disabled fields */
+        input:disabled, select:disabled { 
+            background-color: #f3f4f6; 
+            color: #6b7280; 
+            cursor: not-allowed;
+            border-color: #e5e7eb;
+        }
+        
+        /* Table layout */
+        #lc-table {
+            table-layout: auto; /* Let browser decide column widths */
+            width: 100%;
+        }
+        #lc-table th, #lc-table td {
+            padding: 0.75rem 1rem; /* Reduced padding */
+            white-space: nowrap; /* Keep table compact */
+        }
+        /* Allow specific columns to wrap */
+        #lc-table th.wrap, #lc-table td.wrap {
+            white-space: normal;
+        }
+
+        /* Input field focus style */
+        input[type="text"], input[type="date"], input[type="number"], select {
+             border-color: #d1d5db;
+        }
+        input:focus, select:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            --tw-ring-color: #4f46e5;
+            --tw-ring-shadow: 0 0 0 2px var(--tw-ring-color);
+            box-shadow: var(--tw-ring-shadow);
+            border-color: #4f46e5;
+        }
+
+        /* NEW: Sortable header styles */
+        th[data-sort-key] {
+            cursor: pointer;
+            user-select: none;
+        }
+        th[data-sort-key]:hover {
+            background-color: #e5e7eb; /* bg-gray-200 */
+        }
+        .sort-icon {
+            display: inline-block;
+            margin-left: 0.5rem;
+            color: #9ca3af; /* text-gray-400 */
+            font-size: 0.65rem;
+        }
+        th.sort-asc .sort-icon::after {
+            content: '▲';
+            color: #111827; /* text-gray-900 */
+        }
+        th.sort-desc .sort-icon::after {
+            content: '▼';
+            color: #111827; /* text-gray-900 */
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-800">
+
+    <div class="container max-w-full mx-auto p-4 md:p-8">
+
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">LC / BC Management Dashboard</h1>
+            <p class="text-sm text-gray-600 mt-1">Your User ID (for this browser): <span id="user-id" class="font-medium text-gray-800">Loading...</span></p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            
+            <div class="lg:col-span-1">
+                <div class="bg-white border-l-4 border-blue-500 p-6 rounded-lg shadow-md h-full">
+                    <h2 class="text-sm font-medium text-blue-700 uppercase tracking-wide">Total Outstanding Liability</h2>
+                    <p class="text-4xl font-bold text-gray-900 mt-2">
+                        $<span id="total-outstanding-usd">0.00</span>
+                    </p>
+                    <p class="text-sm text-gray-500">As of today (for all pending LCs)</p>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2">
+                <div class="bg-white p-6 rounded-lg shadow-md h-full">
+                    <h2 class="text-xl font-semibold mb-4">Auto-fill from PDF</h2>
+                    <label for="pdfUpload" class="block text-sm font-medium text-gray-700">Upload LC Advice PDF</label>
+                    <p class="text-xs text-gray-500 mb-2">Upload the LC Advice PDF from the bank to automatically fill the form.</p>
+                    <input type="file" id="pdfUpload" accept=".pdf" class="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-md file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-indigo-50 file:text-indigo-700
+                        hover:file:bg-indigo-100 cursor-pointer"/>
+                    <span id="pdf-parse-status" class="text-sm text-gray-600 mt-2"></span>
+                </div>
+            </div>
+        </div>
+        <div id="form-container" class="bg-white p-6 md:p-8 rounded-lg shadow-md mb-8">
+            <h2 id="form-title" class="text-2xl font-semibold mb-6">Add New LC / BC Record</h2>
+
+            <form id="add-lc-form" class="space-y-6">
+                <input type="hidden" id="edit-doc-id">
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    
+                    <div>
+                        <label for="lcOpenDate" class="block text-sm font-medium text-gray-700">LC Open Date *</label>
+                        <input type="date" id="lcOpenDate" required class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
+                    </div>
+
+                    <div>
+                        <label for="dueDate" class="block text-sm font-medium text-gray-700">Due Date *</label>
+                        <input type="date" id="dueDate" required class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
+                    </div>
+
+                    <div>
+                        <label for="usanceDays" class="block text-sm font-medium text-gray-700">Usance Days (Auto)</label>
+                        <input type="text" id="usanceDays" disabled class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="lcNumber" class="block text-sm font-medium text-gray-700">LC Number *</label>
+                        <input type="text" id="lcNumber" required class="mt-1 block w-full rounded-md shadow-sm sm:text-sm" placeholder="e.g., 04672G2...">
+                    </div>
+
+                    <div>
+                        <label for="shipperName" class="block text-sm font-medium text-gray-700">Shipper Name *</label>
+                        <input type="text" id="shipperName" required class="mt-1 block w-full rounded-md shadow-sm sm:text-sm" placeholder="e.g., BOROUGE PTE LTD">
+                    </div>
+
+                    <div>
+                        <label for="party" class="block text-sm font-medium text-gray-700">Party *</label>
+                        <select id="party" required class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
+                            <option value="OLPL">OLPL</option>
+                            <option value="OEL">OEL</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="usdAmount" class="block text-sm font-medium text-gray-700">USD Amount *</label>
+                        <input type="number" id="usdAmount" step="0.01" required class="mt-1 block w-full rounded-md shadow-sm sm:text-sm" placeholder="e.g., 100980.00">
+                    </div>
+
+                    <div>
+                        <label for="openExRate" class="block text-sm font-medium text-gray-700">Opening Ex. Rate *</label>
+                        <input type="number" id="openExRate" step="0.0001" required class="mt-1 block w-full rounded-md shadow-sm sm:text-sm" placeholder="e.g., 87.17">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="invoiceDetails" class="block text-sm font-medium text-gray-700">Invoice Details</label>
+                        <input type="text" id="invoiceDetails" class="mt-1 block w-full rounded-md shadow-sm sm:text-sm" placeholder="e.g., 60600... DTD 24/09/2025">
+                    </div>
+
+                    <div>
+                        <label for="lodgementNumber" class="block text-sm font-medium text-gray-700">Lodgement Number</label>
+                        <input type="text" id="lodgementNumber" class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="interestUsd" class="block text-sm font-medium text-gray-700">Interest (USD)</label>
+                        <input type="number" id="interestUsd" step="0.01" value="0" class="mt-1 block w-full rounded-md shadow-sm sm:text-sm" placeholder="Manual Entry">
+                    </div>
+
+                    <div>
+                        <label for="debitChargesAmount" class="block text-sm font-medium text-gray-700">Debit Charges Amt</label>
+                        <input type="number" id="debitChargesAmount" step="0.01" value="0" class="mt-1 block w-full rounded-md shadow-sm sm:text-sm" placeholder="Manual Entry">
+                    </div>
+
+                    <div>
+                        <label for="inrAmount" class="block text-sm font-medium text-gray-700">INR Amount (Auto)</label>
+                        <input type="text" id="inrAmount" disabled class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
+                    </div>
+
+                    <div>
+                        <label for="chargesPercent" class="block text-sm font-medium text-gray-700">Charges % (Auto)</label>
+                        <input type="text" id="chargesPercent" disabled class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
+                    </div>
+
+                     <div>
+                        <label for="bankLiabilityUsd" class="block text-sm font-medium text-gray-700">Bank Liability (Auto)</label>
+                        <input type="text" id="bankLiabilityUsd" disabled class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
+                    </div>
+                </div>
+                
+                <div class="text-right space-x-3">
+                    <button type="submit" id="submit-lc-btn" class="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Add Record
+                    </button>
+                    <button type="button" id="update-lc-btn" class="hidden inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        Update Record
+                    </button>
+                    <button type="button" id="cancel-edit-btn" class="hidden inline-flex justify-center py-2 px-6 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="flex justify-between items-center p-6">
+                <h2 class="text-2xl font-semibold">Current LC / BC Records</h2>
+                <button type="button" id="export-excel-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none">
+                    Export to Excel
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table id="lc-table" class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="openDate">Open Date<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="dueDate">Due Date<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="party">Party<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="lcNumber">LC Number<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider wrap" data-sort-key="shipperName">Shipper Name<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="bankLiabilityUsd">Bank Liability (USD)<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="usdAmount">USD Amount<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="interestUsd">Interest (USD)<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="openExRate">Ex. Rate<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="inrAmount">INR Amount<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="usanceDays">Usance Days<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="lodgementNumber">Lodgement No.<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider wrap" data-sort-key="invoiceDetails">Invoice Details<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="debitChargesAmount">Debit Charges<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="chargesPercent">Charges %<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="status">Status<span class="sort-icon"></span></th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Details</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lc-table-body" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="18" class="px-6 py-10 text-center text-gray-500">
+                                Loading records or no records found...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="payment-modal" class="fixed inset-0 z-10 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                <div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Mark as Paid</h3>
+                    <p class="text-sm text-gray-600 mt-1">Enter payment details for LC: <strong id="modal-lc-number"></strong></p>
+                    <div class="mt-4 space-y-4">
+                        <input type="hidden" id="modal-doc-id">
+                        <div>
+                            <label for="paymentUsd" class="block text-sm font-medium text-gray-700">Payment USD *</label>
+                            <input type="number" id="paymentUsd" step="0.01" required class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="paymentExRate" class="block text-sm font-medium text-gray-700">Payment Exchange Rate *</label>
+                            <input type="number" id="paymentExRate" step="0.0001" required class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="paymentDate" class="block text-sm font-medium text-gray-700">Payment Date *</label>
+                            <input type="date" id="paymentDate" required class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                    <button type="button" id="confirm-payment-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:col-start-2 sm:text-sm">
+                        Confirm Payment
+                    </button>
+                    <button type="button" id="cancel-payment-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:col-start-1 sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast" class="fixed bottom-5 right-5 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg hidden animate-pulse">
+        <span class="font-bold">Reminder:</span> You have LCs due soon!
+    </div>
+
+
+    <script type="module">
+        // Import Firebase modules (v12.5.0)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            addDoc, 
+            setDoc, 
+            updateDoc, 
+            deleteDoc, 
+            onSnapshot, 
+            collection, 
+            query, 
+            where, 
+            serverTimestamp,
+            Timestamp,
+            setLogLevel
+        } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+        // --- Firebase Configuration (Your Production Config) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyChwQ56XFaTuy2nlEM26gCGEprP0ix28j4",
+            authDomain: "banking-2b6d6.firebaseapp.com",
+            projectId: "banking-2b6d6",
+            storageBucket: "banking-2b6d6.firebasestorage.app",
+            messagingSenderId: "966016429205",
+            appId: "1:966016429205:web:1882088d8e86d6e84d7f9c",
+            measurementId: "G-34SVZ3YK7S"
+        };
+
+        // --- Wait for the DOM to be fully loaded ---
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- App Variables ---
+            let db, auth, currentUserId;
+            let lcCollectionRef;
+            let unsubscribeLcListener = null;
+            let globalRecords = []; // Raw data from Firebase
+            let processedRecords = []; // Data separated into pending/paid
+            // NEW: Sort state
+            let currentSort = {
+                key: 'dueDate', // Default sort
+                order: 'asc'
+            };
+
+            // --- DOM Element References ---
+            const lcOpenDateEl = document.getElementById('lcOpenDate');
+            const dueDateEl = document.getElementById('dueDate');
+            const usanceDaysEl = document.getElementById('usanceDays');
+            const usdAmountEl = document.getElementById('usdAmount');
+            const openExRateEl = document.getElementById('openExRate');
+            const inrAmountEl = document.getElementById('inrAmount');
+            const interestUsdEl = document.getElementById('interestUsd');
+            const bankLiabilityUsdEl = document.getElementById('bankLiabilityUsd');
+            const debitChargesAmountEl = document.getElementById('debitChargesAmount');
+            const chargesPercentEl = document.getElementById('chargesPercent');
+            const tableBody = document.getElementById('lc-table-body');
+            const tableHead = document.querySelector('#lc-table thead'); // For sort listener
+            const totalOutstandingEl = document.getElementById('total-outstanding-usd');
+            const modal = document.getElementById('payment-modal');
+            const modalDocId = document.getElementById('modal-doc-id');
+            const modalLcNumber = document.getElementById('modal-lc-number');
+            const paymentUsdEl = document.getElementById('paymentUsd');
+            const paymentExRateEl = document.getElementById('paymentExRate');
+            const paymentDateEl = document.getElementById('paymentDate');
+            const toast = document.getElementById('toast');
+            const addLcForm = document.getElementById('add-lc-form');
+            const submitLcBtn = document.getElementById('submit-lc-btn');
+            const updateLcBtn = document.getElementById('update-lc-btn');
+            const cancelEditBtn = document.getElementById('cancel-edit-btn');
+            const editDocIdInput = document.getElementById('edit-doc-id');
+            const formTitle = document.getElementById('form-title');
+
+            // --- Utility Functions ---
+            const formatCurrency = (value) => {
+                return (Number(value) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            };
+
+            // UPDATED: New date format dd-MM-yyyy
+            const formatDate = (timestamp) => {
+                if (!timestamp) return 'N/A';
+                if (typeof timestamp.toDate !== 'function') {
+                    return 'Invalid Date';
+                }
+                const date = timestamp.toDate();
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}-${month}-${year}`;
+            };
+            
+            // This helper function MUST return yyyy-MM-dd for the <input type="date">
+            const formatTimestampForInput = (timestamp) => {
+                 if (!timestamp) return '';
+                if (typeof timestamp.toDate !== 'function') {
+                    return '';
+                }
+                return timestamp.toDate().toLocaleDateString('en-CA'); // yyyy-MM-dd
+            };
+
+            const getStartOfDay = (date) => {
+                const newDate = new Date(date);
+                newDate.setHours(0, 0, 0, 0);
+                return newDate;
+            };
+
+            // --- Form Auto-Calculation (UPDATED) ---
+            function updateFormCalculations() {
+                const usd = parseFloat(usdAmountEl.value) || 0;
+                const rate = parseFloat(openExRateEl.value) || 0;
+                const interest = parseFloat(interestUsdEl.value) || 0;
+                const charges = parseFloat(debitChargesAmountEl.value) || 0;
+
+                // 1. Bank Liability (USD) = USD + Interest
+                const liability = usd + interest;
+                
+                // 2. Liability in INR (for % calc)
+                const liabilityInr = liability * rate;
+
+                // 3. INR Amount (Auto) = (Liability * Rate) + Charges
+                const totalInr = liabilityInr + charges;
+                
+                // 4. Total Charges in INR = (Interest * Rate) + Charges
+                const totalChargesInr = (interest * rate) + charges;
+
+                // 5. Charges % = (Total Charges INR / Total INR Amount) * 100
+                const chargesPercent = (totalInr > 0) ? (totalChargesInr / totalInr) * 100 : 0;
+
+                bankLiabilityUsdEl.value = formatCurrency(liability);
+                inrAmountEl.value = formatCurrency(totalInr); // Use the new formula
+                chargesPercentEl.value = chargesPercent.toFixed(2) + ' %';
+            }
+            
+            function calculateUsanceDays() {
+                const startDate = lcOpenDateEl.value;
+                const endDate = dueDateEl.value;
+                
+                if (startDate && endDate) {
+                    const date1 = new Date(startDate);
+                    const date2 = new Date(endDate);
+                    if (date1 > date2) {
+                         usanceDaysEl.value = "Check Dates";
+                         return;
+                    }
+                    const diffTime = Math.abs(date2 - date1);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    usanceDaysEl.value = diffDays + " DAYS";
+                } else {
+                    usanceDaysEl.value = "";
+                }
+            }
+
+            // Add listeners
+            [usdAmountEl, openExRateEl, interestUsdEl, debitChargesAmountEl].forEach(el => {
+                el.addEventListener('input', updateFormCalculations);
+            });
+            lcOpenDateEl.addEventListener('input', calculateUsanceDays);
+            dueDateEl.addEventListener('input', calculateUsanceDays);
+
+
+            // --- PDF Parsing Logic (UPDATED) ---
+            function formatDateYYMMDD(dateStr) {
+                if (!dateStr || dateStr.length !== 6) return null;
+                const year = "20" + dateStr.substring(0, 2);
+                const month = dateStr.substring(2, 4);
+                const day = dateStr.substring(4, 6);
+                return `${year}-${month}-${day}`;
+            }
+
+            function formatDateDDMMYYYY(dateStr) {
+                if (!dateStr) return null;
+                const parts = dateStr.split('/');
+                if (parts.length !== 3) return null;
+                return `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+
+            function parseSwiftCurrency(currencyStr) {
+                if (!currencyStr) return null;
+                return currencyStr.replace(',', '.');
+            }
+
+            function parsePdfText(text) {
+                console.log("Parsing PDF Text...");
+                try {
+                    const lcNumMatch = text.match(/:20:(\S+)/);
+                    if (lcNumMatch) document.getElementById('lcNumber').value = lcNumMatch[1];
+
+                    const openDateMatch = text.match(/:30:(\d{6})/);
+                    if (openDateMatch) document.getElementById('lcOpenDate').value = formatDateYYMMDD(openDateMatch[1]);
+
+                    if (text.match(/:50:OSWAL LUMBERS PVT LTD/)) document.getElementById('party').value = "OLPL";
+
+                    // **FIXED**: Robust Shipper Name Regex
+                    const shipperMatch = text.match(/3\.NAME AND COMPLETE ADDRESS OF EXPORT(?:ER)?:\s*([\s\S]*?)4\.DESCRIPTION/);
+                    if (shipperMatch && shipperMatch[1]) {
+                        const firstLine = shipperMatch[1].trim().split('\n')[0].trim();
+                        document.getElementById('shipperName').value = firstLine;
+                        console.log("Found Shipper:", firstLine);
+                    } else {
+                        console.log("Shipper Name not found.");
+                    }
+
+                    const usdMatch = text.match(/:32B:USD([\d,]+)/);
+                    if (usdMatch) document.getElementById('usdAmount').value = parseSwiftCurrency(usdMatch[1]);
+                    
+                    const dueDateMatch = text.match(/16\.MATURITY DATE\/ REPAYMENT DATE: (\d{2}\/\d{2}\/\d{4})/);
+                    if (dueDateMatch) document.getElementById('dueDate').value = formatDateDDMMYYYY(dueDateMatch[1]);
+                    
+                    document.getElementById('interestUsd').value = '0';
+                    document.getElementById('debitChargesAmount').value = '0';
+
+                    const invoiceMatch = text.match(/12\.NUMBER AND DATE OF INVOICE: (.*?)(?:,|$)/);
+                    if (invoiceMatch) document.getElementById('invoiceDetails').value = invoiceMatch[1].trim();
+
+                    const lodgementMatch = text.match(/:45L:(\S+)/);
+                    if (lodgementMatch) document.getElementById('lodgementNumber').value = lodgementMatch[1];
+
+                    updateFormCalculations();
+                    calculateUsanceDays();
+                    document.getElementById('pdf-parse-status').textContent = '✅ PDF parsed! Please manually enter Interest and Debit Charges.';
+                    document.getElementById('pdf-parse-status').style.color = 'green';
+
+                } catch (error) {
+                    console.error("Error parsing PDF text:", error);
+                    document.getElementById('pdf-parse-status').textContent = '❌ Error parsing PDF. Please check console.';
+                    document.getElementById('pdf-parse-status').style.color = 'red';
+                }
+            }
+
+            async function handlePdfUpload(event) {
+                const file = event.target.files[0];
+                if (!file || file.type !== 'application/pdf') return;
+                const statusEl = document.getElementById('pdf-parse-status');
+                statusEl.textContent = 'Parsing PDF...';
+                statusEl.style.color = 'gray';
+                const fileReader = new FileReader();
+                fileReader.onload = async function() {
+                    const typedarray = new Uint8Array(this.result);
+                    try {
+                        const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+                        let fullText = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            let lines = {};
+                            textContent.items.forEach(item => {
+                                let y = item.transform[5];
+                                if (!lines[y]) lines[y] = [];
+                                lines[y].push(item.str);
+                            });
+                            let sortedY = Object.keys(lines).sort((a, b) => b - a);
+                            fullText += sortedY.map(y => lines[y].join(' ')).join('\n');
+                            fullText += '\n';
+                        }
+                        parsePdfText(fullText);
+                    } catch (error) {
+                        console.error("Error reading PDF:", error);
+                        statusEl.textContent = '❌ Failed to read PDF.';
+                        statusEl.style.color = 'red';
+                    }
+                };
+                fileReader.readAsArrayBuffer(file);
+            }
+
+            // --- Firebase Initialization & Auth ---
+            async function initializeFirebase() {
+                try {
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+                    const app = initializeApp(firebaseConfig);
+                    const analytics = getAnalytics(app);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+                    setLogLevel('debug');
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            console.log("User is signed in:", user.uid);
+                            currentUserId = user.uid;
+                            document.getElementById('user-id').textContent = currentUserId;
+                            lcCollectionRef = collection(db, `users/${currentUserId}/lc_records`);
+                            loadLcRecords();
+                        } else {
+                            console.log("User is signed out.");
+                            document.getElementById('user-id').textContent = "Signing in...";
+                            signIn();
+                        }
+                    });
+                } catch (error) {
+                    console.error("Error initializing Firebase:", error);
+                    document.getElementById('user-id').textContent = "Firebase Init Error";
+                }
+            }
+
+            async function signIn() {
+                try {
+                    await signInAnonymously(auth);
+                    console.log("Signed in anonymously.");
+                } catch (error) {
+                    console.error("Error signing in:", error);
+                    document.getElementById('user-id').textContent = "Auth Error";
+                }
+            }
+
+            // --- Firestore Data Operations (REFACTORED) ---
+            
+            // 1. Load data from Firebase
+            function loadLcRecords() {
+                if (unsubscribeLcListener) unsubscribeLcListener();
+                if (!lcCollectionRef) return;
+                
+                unsubscribeLcListener = onSnapshot(lcCollectionRef, (snapshot) => {
+                    globalRecords = []; // Clear old raw data
+                    snapshot.forEach(doc => globalRecords.push({ id: doc.id, ...doc.data() }));
+                    
+                    // Separate and sort data
+                    let pending = globalRecords.filter(r => r.status === 'Pending');
+                    let paid = globalRecords.filter(r => r.status === 'Paid');
+                    
+                    // Sort pending by due date (nearest first)
+                    pending.sort((a, b) => (a.dueDate ? a.dueDate.toMillis() : 0) - (b.dueDate ? b.dueDate.toMillis() : 0));
+                    // Sort paid by payment date (newest first)
+                    paid.sort((a, b) => (b.paymentDate ? b.paymentDate.toMillis() : 0) - (a.paymentDate ? a.paymentDate.toMillis() : 0));
+                    
+                    processedRecords = [...pending, ...paid]; // This is the default view
+                    
+                    // Render the table with the default sort
+                    currentSort = { key: 'dueDate', order: 'asc' }; // Reset to default view
+                    renderTable(processedRecords);
+
+                }, (error) => {
+                    console.error("Error with onSnapshot:", error);
+                    tableBody.innerHTML = `<tr><td colspan="18" class="px-6 py-10 text-center text-red-500">Error loading data.</td></tr>`;
+                });
+            }
+
+            // 2. Render the table (NEW FUNCTION)
+            function renderTable(records) {
+                tableBody.innerHTML = '';
+                let totalOutstandingUsd = 0;
+                let hasUrgentDues = false;
+
+                if (records.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="18" class="px-6 py-10 text-center text-gray-500">No records found.</td></tr>`;
+                    totalOutstandingEl.textContent = '0.00';
+                    return;
+                }
+
+                // Date checks for reminders
+                const today = getStartOfDay(new Date());
+                const tomorrow = getStartOfDay(new Date());
+                tomorrow.setDate(today.getDate() + 1);
+                const dayAfterTomorrow = getStartOfDay(new Date());
+                dayAfterTomorrow.setDate(today.getDate() + 2);
+                
+                // Apply the current sort
+                sortData(records);
+
+                records.forEach(data => {
+                    const docId = data.id;
+                    const tr = document.createElement('tr');
+                    
+                    let dueDateClass = '';
+                    if (data.status === 'Pending' && data.dueDate) {
+                        const dueDate = getStartOfDay(data.dueDate.toDate());
+                        if (dueDate < today) { dueDateClass = 'overdue'; hasUrgentDues = true; }
+                        else if (dueDate.getTime() === today.getTime()) { dueDateClass = 'due-today'; hasUrgentDues = true; }
+                        else if (dueDate.getTime() === tomorrow.getTime()) { dueDateClass = 'due-tomorrow'; hasUrgentDues = true; }
+                        else if (dueDate.getTime() === dayAfterTomorrow.getTime()) { dueDateClass = 'due-soon'; hasUrgentDues = true; }
+                    }
+                    tr.className = dueDateClass;
+
+                    if (data.status === 'Pending') {
+                        totalOutstandingUsd += parseFloat(data.bankLiabilityUsd) || 0;
+                    }
+
+                    tr.innerHTML = `
+                        <td class="px-4 py-3">${formatDate(data.openDate)}</td>
+                        <td class="px-4 py-3">${formatDate(data.dueDate)}</td>
+                        <td class="px-4 py-3">${data.party || 'N/A'}</td>
+                        <td class="px-4 py-3">${data.lcNumber || 'N/A'}</td>
+                        <td class="px-4 py-3 wrap">${data.shipperName || 'N/A'}</td>
+                        <td class="px-4 py-3 font-medium">${formatCurrency(data.bankLiabilityUsd)}</td>
+                        <td class="px-4 py-3">${formatCurrency(data.usdAmount)}</td>
+                        <td class="px-4 py-3">${formatCurrency(data.interestUsd)}</td>
+                        <td class="px-4 py-3">${(Number(data.openExRate) || 0).toFixed(4)}</td>
+                        <td class="px-4 py-3">${formatCurrency(data.inrAmount)}</td>
+                        <td class="px-4 py-3">${data.usanceDays || 'N/A'}</td>
+                        <td class="px-4 py-3">${data.lodgementNumber || 'N/A'}</td>
+                        <td class="px-4 py-3 wrap">${data.invoiceDetails || 'N/A'}</td>
+                        <td class="px-4 py-3">${formatCurrency(data.debitChargesAmount)}</td>
+                        <td class="px-4 py-3">${(Number(data.chargesPercent) || 0).toFixed(2)} %</td>
+                        <td class="px-4 py-3">
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${data.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                                ${data.status}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            ${data.status === 'Paid' ? `
+                                D: ${formatDate(data.paymentDate)}<br>
+                                $: ${formatCurrency(data.paymentFinalUsd)}<br>
+                                @: ${(Number(data.paymentFinalExRate) || 0).toFixed(4)}
+                            ` : 'N/A'}
+                        </td>
+                        <td class="px-4 py-3">
+                            ${data.status === 'Pending' ? `
+                                <button data-id="${docId}" class="edit-btn text-white bg-blue-600 hover:bg-blue-700 text-xs font-medium py-1 px-3 rounded-md shadow-sm">
+                                    Edit
+                                </button>
+                                <button data-id="${docId}" data-lc-number="${data.lcNumber}" class="mark-paid-btn text-white bg-green-600 hover:bg-green-700 text-xs font-medium py-1 px-3 rounded-md shadow-sm mt-1">
+                                    Mark Paid
+                                </button>
+                                <button data-id="${docId}" class="delete-btn text-white bg-red-600 hover:bg-red-700 text-xs font-medium py-1 px-3 rounded-md shadow-sm mt-1">
+                                    Delete
+                                </button>
+                            ` : `
+                                <button data-id="${docId}" class="unmark-paid-btn text-white bg-gray-500 hover:bg-gray-600 text-xs font-medium py-1 px-3 rounded-md shadow-sm">
+                                    Unmark
+                                </button>
+                            `}
+                        </td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+
+                totalOutstandingEl.textContent = formatCurrency(totalOutstandingUsd);
+                
+                if (hasUrgentDues) {
+                    toast.innerHTML = '<span class="font-bold">Reminder:</span> You have LCs due soon!';
+                    toast.classList.remove('hidden');
+                } else {
+                    toast.classList.add('hidden');
+                }
+
+                // Update sort icons
+                document.querySelectorAll('th[data-sort-key]').forEach(th => {
+                    th.classList.remove('sort-asc', 'sort-desc');
+                    if (th.dataset.sortKey === currentSort.key) {
+                        th.classList.add(currentSort.order === 'asc' ? 'sort-asc' : 'sort-desc');
+                    }
+                });
+            }
+
+            // 3. Sort data (NEW FUNCTION)
+            function sortData(records) {
+                const key = currentSort.key;
+                const order = currentSort.order;
+                
+                records.sort((a, b) => {
+                    let valA = a[key];
+                    let valB = b[key];
+
+                    // Handle date objects
+                    if (valA && typeof valA.toMillis === 'function') valA = valA.toMillis();
+                    if (valB && typeof valB.toMillis === 'function') valB = valB.toMillis();
+                    
+                    // Handle null/undefined values
+                    valA = valA || 0;
+                    valB = valB || 0;
+                    
+                    if (typeof valA === 'string') {
+                        valA = valA.toLowerCase();
+                        valB = valB.toLowerCase();
+                    }
+                    
+                    if (valA < valB) return order === 'asc' ? -1 : 1;
+                    if (valA > valB) return order === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+            
+            // --- Collect Form Data (UPDATED) ---
+            function getFormData() {
+                const openDateVal = document.getElementById('lcOpenDate').value;
+                const dueDateVal = document.getElementById('dueDate').value;
+                
+                if (!openDateVal || !dueDateVal) {
+                    throw new Error("LC Open Date and Due Date are required.");
+                }
+
+                // Calculate all values based on form inputs
+                const usd = parseFloat(document.getElementById('usdAmount').value) || 0;
+                const rate = parseFloat(document.getElementById('openExRate').value) || 0;
+                const interest = parseFloat(document.getElementById('interestUsd').value) || 0;
+                const charges = parseFloat(document.getElementById('debitChargesAmount').value) || 0;
+                
+                const liability = usd + interest;
+                const liabilityInr = liability * rate;
+                const totalInr = liabilityInr + charges;
+                const totalChargesInr = (interest * rate) + charges;
+                const chargesPercent = (totalInr > 0) ? (totalChargesInr / totalInr) * 100 : 0;
+
+                // Return the complete object to be saved
+                return {
+                    openDate: Timestamp.fromDate(new Date(openDateVal)),
+                    lcNumber: document.getElementById('lcNumber').value,
+                    shipperName: document.getElementById('shipperName').value,
+                    party: document.getElementById('party').value,
+                    usdAmount: usd,
+                    openExRate: rate,
+                    dueDate: Timestamp.fromDate(new Date(dueDateVal)),
+                    usanceDays: document.getElementById('usanceDays').value,
+                    lodgementNumber: document.getElementById('lodgementNumber').value,
+                    invoiceDetails: document.getElementById('invoiceDetails').value,
+                    interestUsd: interest,
+                    debitChargesAmount: charges,
+                    inrAmount: totalInr, // Save the new calculated total INR
+                    bankLiabilityUsd: liability,
+                    chargesPercent: chargesPercent, // Save the new calculated Charges %
+                };
+            }
+
+            // --- Form Event Listeners (Add/Update) ---
+            addLcForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = submitLcBtn;
+                btn.disabled = true;
+                btn.textContent = 'Adding...';
+
+                try {
+                    let newLcData = getFormData();
+                    newLcData.status = 'Pending';
+                    newLcData.createdAt = serverTimestamp();
+                    
+                    if (!lcCollectionRef) throw new Error("Database connection not established.");
+                    await addDoc(lcCollectionRef, newLcData);
+                    
+                    resetForm();
+                } catch (error) {
+                    console.error("Error adding document: ", error);
+                    alert("Error adding record: " + error.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Add Record';
+                }
+            });
+
+            updateLcBtn.addEventListener('click', async () => {
+                const docId = editDocIdInput.value;
+                if (!docId) return;
+
+                const btn = updateLcBtn;
+                btn.disabled = true;
+                btn.textContent = 'Updating...';
+
+                try {
+                    const updatedLcData = getFormData();
+                    if (!lcCollectionRef) throw new Error("Database connection not established.");
+                    
+                    const docRef = doc(lcCollectionRef, docId);
+                    await updateDoc(docRef, updatedLcData);
+                    
+                    resetForm();
+                } catch (error) {
+                    console.error("Error updating document: ", error);
+                    alert("Error updating record: " + error.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Update Record';
+                }
+            });
+
+            cancelEditBtn.addEventListener('click', resetForm);
+
+            function resetForm() {
+                addLcForm.reset();
+                editDocIdInput.value = '';
+                document.getElementById('pdfUpload').value = null; 
+                document.getElementById('pdf-parse-status').textContent = '';
+                updateFormCalculations();
+                calculateUsanceDays();
+
+                formTitle.textContent = 'Add New LC / BC Record';
+                submitLcBtn.classList.remove('hidden');
+                updateLcBtn.classList.add('hidden');
+                cancelEditBtn.classList.add('hidden');
+            }
+
+            // --- Payment Modal Logic ---
+            function openPaymentModal(docId, lcNumber) {
+                modalDocId.value = docId;
+                modalLcNumber.textContent = lcNumber;
+                // Set payment date to today by default (in yyyy-MM-dd format)
+                paymentDateEl.value = new Date().toLocaleDateString('en-CA');
+                paymentUsdEl.value = '';
+                paymentExRateEl.value = '';
+                modal.classList.remove('hidden');
+                paymentUsdEl.focus();
+            }
+
+            function closePaymentModal() {
+                modal.classList.add('hidden');
+            }
+
+            document.getElementById('cancel-payment-btn').addEventListener('click', closePaymentModal);
+
+            document.getElementById('confirm-payment-btn').addEventListener('click', async () => {
+                const docId = modalDocId.value;
+                const paymentUsd = parseFloat(paymentUsdEl.value);
+                const paymentExRate = parseFloat(paymentExRateEl.value);
+                const paymentDate = paymentDateEl.value; // yyyy-MM-dd
+
+                if (!docId || !paymentUsd || !paymentExRate || !paymentDate) {
+                    alert("Please fill in all payment details.");
+                    return;
+                }
+
+                const btn = document.getElementById('confirm-payment-btn');
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+
+                try {
+                    const docRef = doc(lcCollectionRef, docId);
+                    await updateDoc(docRef, {
+                        status: 'Paid',
+                        paymentFinalUsd: paymentUsd,
+                        paymentFinalExRate: paymentExRate,
+                        paymentDate: Timestamp.fromDate(new Date(paymentDate))
+                    });
+                    closePaymentModal();
+                } catch (error) {
+                    console.error("Error updating document: ", error);
+                    alert("Error saving payment: " + error.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Confirm Payment';
+                }
+            });
+
+
+            // --- Table Button Event Delegation (FIXED) ---
+            tableBody.addEventListener('click', async (e) => {
+                const target = e.target.closest('button');
+                if (!target) return;
+
+                const docId = target.dataset.id;
+                if (!docId) return;
+
+                // Handle Edit
+                if (target.classList.contains('edit-btn')) {
+                    const record = globalRecords.find(r => r.id === docId);
+                    if (record) {
+                        // Use formatTimestampForInput to set date fields
+                        document.getElementById('lcOpenDate').value = formatTimestampForInput(record.openDate);
+                        document.getElementById('dueDate').value = formatTimestampForInput(record.dueDate);
+                        
+                        document.getElementById('lcNumber').value = record.lcNumber || '';
+                        document.getElementById('shipperName').value = record.shipperName || '';
+                        document.getElementById('party').value = record.party || 'OLPL';
+                        document.getElementById('usdAmount').value = record.usdAmount || 0;
+                        document.getElementById('openExRate').value = record.openExRate || 0;
+                        document.getElementById('lodgementNumber').value = record.lodgementNumber || '';
+                        document.getElementById('invoiceDetails').value = record.invoiceDetails || '';
+                        document.getElementById('interestUsd').value = record.interestUsd || 0;
+                        document.getElementById('debitChargesAmount').value = record.debitChargesAmount || 0;
+                        
+                        updateFormCalculations();
+                        calculateUsanceDays();
+                        
+                        editDocIdInput.value = docId;
+                        
+                        formTitle.textContent = 'Edit LC / BC Record';
+                        submitLcBtn.classList.add('hidden');
+                        updateLcBtn.classList.remove('hidden');
+                        cancelEditBtn.classList.remove('hidden');
+                        
+                        document.getElementById('form-container').scrollIntoView();
+                    }
+                }
+                
+                // Mark as Paid
+                if (target.classList.contains('mark-paid-btn')) {
+                    const lcNumber = target.dataset.lcNumber;
+                    openPaymentModal(docId, lcNumber);
+                }
+                
+                // Unmark as Paid
+                if (target.classList.contains('unmark-paid-btn')) {
+                    if (!confirm("Are you sure you want to mark this item as 'Pending' again?")) return;
+                    try {
+                        await updateDoc(doc(lcCollectionRef, docId), {
+                            status: 'Pending',
+                            paymentFinalUsd: null,
+                            paymentFinalExRate: null,
+                            paymentDate: null
+                        });
+                    } catch (error) {
+                        alert("Error unmarking: " + error.message);
+                    }
+                }
+
+                // Delete
+                if (target.classList.contains('delete-btn')) {
+                    if (!confirm("Are you sure you want to permanently delete this record?")) return;
+                    try {
+                        await deleteDoc(doc(lcCollectionRef, docId));
+                    } catch (error) {
+                        alert("Error deleting record: " + error.message);
+                    }
+                }
+            });
+
+            // --- NEW: Table Sort Listener ---
+            tableHead.addEventListener('click', (e) => {
+                const header = e.target.closest('th[data-sort-key]');
+                if (!header) return;
+                
+                const key = header.dataset.sortKey;
+                
+                // If same key, toggle order. Otherwise, set to 'asc'.
+                if (currentSort.key === key) {
+                    currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSort.key = key;
+                    currentSort.order = 'asc';
+                }
+                
+                // Re-render the table with the sorted data
+                renderTable(processedRecords);
+            });
+
+
+            // --- Excel Export Logic (UPDATED) ---
+            function exportToExcel() {
+                // Use processedRecords to export in the current view's sort order
+                if (processedRecords.length === 0) {
+                    alert("No data to export.");
+                    return;
+                }
+
+                const dataToExport = processedRecords.map(rec => ({
+                    "LC Open Date": formatDate(rec.openDate),
+                    "Due Date": formatDate(rec.dueDate),
+                    "Party": rec.party,
+                    "LC Number": rec.lcNumber,
+                    "Shipper Name": rec.shipperName,
+                    "Bank Liability (USD)": rec.bankLiabilityUsd,
+                    "USD Amount": rec.usdAmount,
+                    "Interest (USD)": rec.interestUsd,
+                    "Opening Ex. Rate": rec.openExRate,
+                    "INR Amount": rec.inrAmount,
+                    "Usance Days": rec.usanceDays,
+                    "Lodgement No.": rec.lodgementNumber,
+                    "Invoice Details": rec.invoiceDetails,
+                    "Debit Charges": rec.debitChargesAmount,
+                    "Charges %": rec.chargesPercent,
+                    "Status": rec.status,
+                    "Payment Date": rec.status === 'Paid' ? formatDate(rec.paymentDate) : 'N/A',
+                    "Payment USD": rec.status === 'Paid' ? rec.paymentFinalUsd : 'N/A',
+                    "Payment Ex. Rate": rec.status === 'Paid' ? rec.paymentFinalExRate : 'N/A',
+                }));
+
+                const ws = XLSX.utils.json_to_sheet(dataToExport);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'LC_BC_Records');
+                XLSX.writeFile(wb, 'LC_BC_Export.xlsx');
+            }
+            
+            document.getElementById('export-excel-btn').addEventListener('click', exportToExcel);
+
+            // --- Initial Load ---
+            document.getElementById('pdfUpload').addEventListener('change', handlePdfUpload);
+            initializeFirebase();
+
+        }); // <-- End of DOMContentLoaded listener
+    </script>
+</body>
+</html>
