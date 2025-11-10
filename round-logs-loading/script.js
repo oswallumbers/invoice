@@ -60,6 +60,7 @@ function setupEventListeners() {
     document.getElementById('saveBtn').addEventListener('click', saveData);
     document.getElementById('editBtn').addEventListener('click', editData);
     document.getElementById('printBtn').addEventListener('click', showPrintPreview);
+    document.getElementById('signOutBtn').addEventListener('click', signOutUser);
     
     // Dashboard search and filter
     document.getElementById('searchInput').addEventListener('input', filterDashboard);
@@ -1141,4 +1142,21 @@ function showLoadingSpinner() {
 // Hide loading spinner (No changes needed)
 function hideLoadingSpinner() {
     document.getElementById('loadingSpinner').style.display = 'none';
+}
+// NEW: Function to sign the user out
+function signOutUser() {
+    showLoadingSpinner();
+    firebase.auth().signOut()
+        .then(() => {
+            // Sign-out successful.
+            // The auth listener in index.html will catch this
+            // and redirect to login.html.
+            console.log('User signed out.');
+            window.location.href = 'login.html';
+        })
+        .catch((error) => {
+            console.error('Sign out error', error);
+            showNotification('Error signing out', 'error');
+            hideLoadingSpinner();
+        });
 }
