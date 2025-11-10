@@ -32,20 +32,13 @@
             
             <form id="loginForm">
                 <div class="mb-3">
-                    <label for="email" class="form-label">Email address</label>
-                    <input type="email" class="form-control" id="email" required>
-                </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" required>
+                    <label for="pin" class="form-label">Enter Access PIN</label>
+                    <input type="password" class="form-control" id="pin" required>
                 </div>
                 
                 <div class="d-grid gap-2">
                     <button type="button" class="btn btn-primary" id="loginBtn">
-                        <i class="bi bi-box-arrow-in-right"></i> Login
-                    </button>
-                    <button type="button" class="btn btn-secondary" id="registerBtn">
-                        <i class="bi bi-person-plus"></i> Register New User
+                        <i class="bi bi-box-arrow-in-right"></i> Enter
                     </button>
                 </div>
             </form>
@@ -58,66 +51,60 @@
     <script src="firebase-init.js"></script>
 
     <script>
-        // NEW: Login Page Logic
         document.addEventListener('DOMContentLoaded', () => {
             const auth = firebase.auth();
-            const emailInput = document.getElementById('email');
-            const passwordInput = document.getElementById('password');
+            const pinInput = document.getElementById('pin');
             const loginBtn = document.getElementById('loginBtn');
-            const registerBtn = document.getElementById('registerBtn');
             const notification = document.getElementById('notification');
 
-            // --- Login Button Click ---
-            loginBtn.addEventListener('click', () => {
-                const email = emailInput.value;
-                const password = passwordInput.value;
+            // --- CONFIGURATION ---
+            // Set your desired User PIN here
+            const USER_PIN = "1234"; 
 
-                if (!email || !password) {
-                    showNotification('Please enter email and password.');
-                    return;
+            // Set the master account credentials you created in Step 1
+            const MASTER_EMAIL = "app-user@oswal.com";
+            const MASTER_PASSWORD = "A-Very-Strong-Secret-Password-123!";
+            // ---------------------
+
+            // Handle Enter key
+            pinInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleLogin();
                 }
-
-                auth.signInWithEmailAndPassword(email, password)
-                    .then((userCredential) => {
-                        // Signed in! Redirect to the main app.
-                        window.location.href = 'index.html';
-                    })
-                    .catch((error) => {
-                        showNotification(error.message);
-                    });
             });
 
-            // --- Register Button Click ---
-            registerBtn.addEventListener('click', () => {
-                const email = emailInput.value;
-                const password = passwordInput.value;
+            // Handle button click
+            loginBtn.addEventListener('click', handleLogin);
 
-                if (!email || !password) {
-                    showNotification('Please enter email and password.');
-                    return;
-                }
-                
-                if (password.length < 6) {
-                    showNotification('Password must be at least 6 characters.');
-                    return;
-                }
+            function handleLogin() {
+                const enteredPin = pinInput.value;
 
-                auth.createUserWithEmailAndPassword(email, password)
-                    .then((userCredential) => {
-                        // Registered and signed in!
-                        showNotification('Account created! Logging in...', 'success');
-                        setTimeout(() => {
+                if (enteredPin === USER_PIN) {
+                    // PIN is correct!
+                    // Now, secretly sign in with the master account.
+                    notification.style.display = 'none';
+                    
+                    auth.signInWithEmailAndPassword(MASTER_EMAIL, MASTER_PASSWORD)
+                        .then((userCredential) => {
+                            // Signed in! Redirect to the main app.
                             window.location.href = 'index.html';
-                        }, 1500);
-                    })
-                    .catch((error) => {
-                        showNotification(error.message);
-                    });
-            });
+                        })
+                        .catch((error) => {
+                            // This error is for you, the developer.
+                            // It means your MASTER_EMAIL or MASTER_PASSWORD is wrong.
+                            console.error("Master login failed:", error);
+                            showNotification('Login system error. Contact admin.');
+                        });
+
+                } else {
+                    // PIN is wrong.
+                    showNotification('Invalid PIN. Please try again.');
+                }
+            }
             
-            function showNotification(message, type = 'danger') {
+            function showNotification(message) {
                 notification.textContent = message;
-                notification.className = `alert alert-${type}`;
                 notification.style.display = 'block';
             }
         });
