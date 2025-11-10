@@ -137,7 +137,7 @@
                 <div class="bg-white p-8 md:p-12 rounded-lg shadow-xl">
                     <h2 class="text-3xl font-bold text-secondary mb-8 text-center">Submit Your Application</h2>
                     
-                    <form id="career-form" action="#" method="POST" class="space-y-8">
+                    <form id="career-form" action="https://getform.io/f/bolzpoka" method="POST" enctype="multipart/form-data" class="space-y-8">
                         
                         <!-- Personal Information -->
                         <fieldset>
@@ -344,38 +344,6 @@
             }
         });
 
-        // Handle form submission
-        const careerForm = document.getElementById('career-form');
-        const formSuccess = document.getElementById('form-success');
-
-        careerForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            // In a real application, you would send this data to a server
-            // For this demo, we'll just show the success message
-            
-            // Get user's name to personalize the message
-            const fullName = document.getElementById('full-name').value;
-            // Since I know your name is Dharmendra, I'll use that for the demo.
-            const applicantName = fullName || "Dharmendra"; 
-            
-            formSuccess.innerHTML = `
-                <p class="font-semibold">Thank you, ${applicantName}!</p>
-                <p>Your application has been submitted successfully. We will review it and get back to you soon.</p>
-            `;
-            
-            formSuccess.classList.remove('hidden');
-            careerForm.reset();
-            otherPositionContainer.classList.add('hidden'); // Hide 'other' field again
-            
-            // Hide success message after 10 seconds
-            setTimeout(() => {
-                formSuccess.classList.add('hidden');
-            }, 10000);
-
-            // Scroll to the success message
-            formSuccess.scrollIntoView({ behavior: 'smooth' });
-        });
-
-    </script>
+        </script>
 </body>
 </html>
