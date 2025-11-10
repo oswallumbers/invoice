@@ -1,41 +1,46 @@
 // Global variables
 let currentView = 'entry';
-let logsData = [];
-let savedLists = [];
+let logsData = []; // This remains for the current entry form
+// let savedLists = []; // REMOVED: This is now replaced by 'allFetchedLists' from Firestore
+let allFetchedLists = []; // NEW: A cache for all lists fetched from the dashboard
 let currentListId = null;
-let nextListNumber = 1;
+let nextListNumber = 1; // MODIFIED: This will be loaded from Firestore
 let currentPage = 1;
 let rowCount = 1;
 const itemsPerPage = 10;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
+    // MODIFIED: initializeApp is now async to fetch data from Firestore
     initializeApp();
     setupEventListeners();
     generateInitialRows(); // Start with just a few rows
-    updateListNumber();
     setTodayDate();
 });
 
-// Initialize the application
-function initializeApp() {
-    // Load saved lists from localStorage
-    const savedListsJSON = localStorage.getItem('savedLists');
-    if (savedListsJSON) {
-        savedLists = JSON.parse(savedListsJSON);
-        
-        // Find the highest list number
-        if (savedLists.length > 0) {
-            const highestListNumber = savedLists.reduce((max, list) => {
-                const listNumber = parseInt(list.listNumber.split('/')[2]);
-                return listNumber > max ? listNumber : max;
-            }, 0);
-            nextListNumber = highestListNumber + 1;
-        }
+// MODIFIED: Now an async function to load data from Firestore
+async function initializeApp() {
+    showLoadingSpinner();
+    await updateListNumberFromFirestore(); // NEW: Load the next list number from DB
+    await updateDashboard(); // MODIFIED: This will now fetch from Firestore
+    hideLoadingSpinner();
+}
+
+// NEW: Fetches the next list number from a 'metadata' collection
+async function updateListNumberFromFirestore() {
+    const metadataRef = db.collection('metadata').doc('counter');
+    const doc = await metadataRef.get();
+
+    if (doc.exists) {
+        nextListNumber = doc.data().nextListNumber;
+    } else {
+        // If counter doesn't exist, this might be the first run.
+        // We'll set it to 1 and initialize it in the database.
+        nextListNumber = 1;
+        await metadataRef.set({ nextListNumber: 1 });
     }
-    
-    // Load dashboard data
-    updateDashboard();
+    // Update the UI field
+    updateListNumber();
 }
 
 // Setup event listeners
@@ -83,6 +88,8 @@ function switchView(view) {
         document.getElementById('entryView').style.display = 'none';
         document.getElementById('dashboardView').style.display = 'block';
         document.getElementById('dashboardNav').classList.add('active');
+        
+        // MODIFIED: updateDashboard is now async
         updateDashboard();
     }
 }
@@ -99,7 +106,7 @@ function generateInitialRows() {
     }
 }
 
-// Add a new table row
+// Add a new table row (No changes needed)
 function addTableRow() {
     const tableBody = document.getElementById('logsTableBody');
     const row = document.createElement('tr');
@@ -222,7 +229,7 @@ function addTableRow() {
     rowCount++;
 }
 
-// Delete a row
+// Delete a row (No changes needed)
 function deleteRow(rowNumber) {
     const row = document.querySelector(`tr:has(.delete-row-btn[data-row="${rowNumber}"])`);
     if (!row) return;
@@ -240,7 +247,7 @@ function deleteRow(rowNumber) {
     showNotification(`Row ${rowNumber} deleted successfully`, 'success');
 }
 
-// Renumber rows after deletion
+// Renumber rows after deletion (No changes needed)
 function renumberRowsAfterDeletion(deletedRowNumber) {
     const allRows = document.querySelectorAll('#logsTableBody tr');
     
@@ -277,14 +284,14 @@ function renumberRowsAfterDeletion(deletedRowNumber) {
     rowCount = allRows.length + 1;
 }
 
-// Add a new row and return the new row number
+// Add a new row and return the new row number (No changes needed)
 function addNewRowAndReturnNumber() {
     const newRowNumber = rowCount;
     addTableRow();
     return newRowNumber;
 }
 
-// Focus on an input in a specific row
+// Focus on an input in a specific row (No changes needed)
 function focusOnInput(inputClass, rowNumber) {
     // Use requestAnimationFrame to ensure the DOM is updated
     requestAnimationFrame(() => {
@@ -295,7 +302,7 @@ function focusOnInput(inputClass, rowNumber) {
     });
 }
 
-// Calculate CFT
+// Calculate CFT (No changes needed)
 function calculateCFT(row) {
     const allowanceInput = document.querySelector(`.allowance-input[data-row="${row}"]`);
     const girthInput = document.querySelector(`.girth-input[data-row="${row}"]`);
@@ -315,7 +322,7 @@ function calculateCFT(row) {
     updateTotals();
 }
 
-// Update totals
+// Update totals (No changes needed)
 function updateTotals() {
     let totalCFT = 0;
     let totalPCS = 0;
@@ -337,23 +344,23 @@ function updateTotals() {
     document.getElementById('totalPCS').textContent = totalPCS;
 }
 
-// Update list number
+// Update list number (No changes needed)
 function updateListNumber() {
     const listNumber = `OLPL/LOG/${String(nextListNumber).padStart(3, '0')}`;
     document.getElementById('listNumber').value = listNumber;
 }
 
-// Set today's date
+// Set today's date (No changes needed)
 function setTodayDate() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('date').value = today;
 }
 
-// Save data
-function saveData() {
+// MODIFIED: This function is now async to save to Firestore
+async function saveData() {
     showLoadingSpinner();
     
-    // Validate form
+    // Validate form (No change)
     const listNumber = document.getElementById('listNumber').value;
     const date = document.getElementById('date').value;
     const partyName = document.getElementById('partyName').value;
@@ -366,7 +373,7 @@ function saveData() {
         return;
     }
     
-    // Collect log data
+    // Collect log data (No change)
     const logs = [];
     let totalCFT = 0;
     let totalPCS = 0;
@@ -398,9 +405,8 @@ function saveData() {
         return;
     }
     
-    // Create list object
+    // Create list object (No 'id' field, Firestore will add it)
     const list = {
-        id: currentListId || Date.now().toString(),
         listNumber: listNumber,
         date: date,
         partyName: partyName,
@@ -413,42 +419,48 @@ function saveData() {
         createdAt: new Date().toISOString()
     };
     
-    // Save to localStorage
-    if (currentListId) {
-        // Update existing list
-        const index = savedLists.findIndex(l => l.id === currentListId);
-        if (index !== -1) {
-            savedLists[index] = list;
+    // NEW: Save to Firestore
+    try {
+        if (currentListId) {
+            // Update existing list in Firestore
+            await db.collection('lists').doc(currentListId).update(list);
+            showNotification('Data updated successfully', 'success');
+        } else {
+            // Add new list to Firestore
+            const docRef = await db.collection('lists').add(list);
+            
+            // NEW: Update the document with its own ID for easier reference later
+            await db.collection('lists').doc(docRef.id).update({ id: docRef.id });
+
+            // NEW: Increment and save the next list number in Firestore
+            nextListNumber++;
+            await db.collection('metadata').doc('counter').set({ nextListNumber: nextListNumber });
+            
+            updateListNumber(); // Update UI with new number
+            resetForm(); // Reset form for new entry
+            showNotification('Data saved successfully', 'success');
         }
-    } else {
-        // Add new list
-        savedLists.push(list);
-        nextListNumber++;
-        updateListNumber();
+        
+        // NEW: Invalidate dashboard cache and reload
+        allFetchedLists = []; 
+        await updateDashboard(); // Refresh dashboard data
+
+    } catch (error) {
+        console.error("Error saving data: ", error);
+        showNotification('Error saving data. See console for details.', 'error');
+    } finally {
+        currentListId = null;
+        hideLoadingSpinner();
     }
-    
-    localStorage.setItem('savedLists', JSON.stringify(savedLists));
-    
-    // Reset form
-    if (!currentListId) {
-        resetForm();
-    }
-    
-    currentListId = null;
-    
-    hideLoadingSpinner();
-    showNotification('Data saved successfully', 'success');
 }
 
-// Edit data
+// Edit data (No changes needed, just a helper)
 function editData() {
-    // This would typically load a list for editing
-    // For now, we'll just show a notification
     showNotification('Select a list from the dashboard to edit', 'info');
     switchView('dashboard');
 }
 
-// Show print preview
+// Show print preview (No changes needed)
 function showPrintPreview() {
     // Validate form
     const listNumber = document.getElementById('listNumber').value;
@@ -500,7 +512,7 @@ function showPrintPreview() {
     printPreviewModal.show();
 }
 
-// Print current data
+// Print current data (No changes needed)
 function printCurrentData() {
     // Validate form
     const listNumber = document.getElementById('listNumber').value;
@@ -616,7 +628,7 @@ function printCurrentData() {
     }, 500);
 }
 
-// Generate print HTML
+// Generate print HTML (No changes needed)
 function generatePrintHTML(listNumber, date, partyName, vehicleNumber, productType, logs, totalCFT) {
     let html = `
         <div class="print-header">
@@ -692,76 +704,95 @@ function generatePrintHTML(listNumber, date, partyName, vehicleNumber, productTy
     return html;
 }
 
-// Update dashboard
-function updateDashboard() {
+// MODIFIED: Fetches data from Firestore
+async function updateDashboard() {
+    showLoadingSpinner();
     const tableBody = document.getElementById('dashboardTableBody');
     tableBody.innerHTML = '';
-    
-    // Filter and paginate data
-    const filteredLists = filterLists();
-    const paginatedLists = paginateLists(filteredLists);
-    
-    // Generate table rows
-    paginatedLists.forEach(list => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${list.listNumber}</td>
-            <td>${list.date}</td>
-            <td>${list.partyName}</td>
-            <td>${list.vehicleNumber}</td>
-            <td>${list.productType}</td>
-            <td>${list.totalCFT.toFixed(2)}</td>
-            <td>${list.totalCBM.toFixed(2)}</td>
-            <td>${list.totalPCS}</td>
-            <td>
-                <button class="btn btn-sm btn-primary edit-list-btn" data-id="${list.id}">
-                    <i class="bi bi-pencil"></i>
-                </button>
-                <button class="btn btn-sm btn-danger print-list-btn" data-id="${list.id}">
-                    <i class="bi bi-printer"></i>
-                </button>
-                <button class="btn btn-sm btn-success export-list-btn" data-id="${list.id}">
-                    <i class="bi bi-file-earmark-excel"></i>
-                </button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-    
-    // Add event listeners to action buttons
-    document.querySelectorAll('.edit-list-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            loadListForEditing(this.dataset.id);
+
+    try {
+        // NEW: Only fetch from Firestore if the local cache 'allFetchedLists' is empty.
+        // This avoids unnecessary reads every time you switch views.
+        // The cache is cleared when you save or update data.
+        if (allFetchedLists.length === 0) {
+            // Note: For large databases, you should filter/paginate using Firestore queries.
+            // For simplicity, we are fetching all documents and filtering locally.
+            const snapshot = await db.collection('lists').orderBy('date', 'desc').get();
+            allFetchedLists = snapshot.docs.map(doc => doc.data());
+        }
+
+        // Filter and paginate data (now uses the fetched list)
+        const filteredLists = filterLists(allFetchedLists);
+        const paginatedLists = paginateLists(filteredLists);
+        
+        // Generate table rows (No change in this logic)
+        paginatedLists.forEach(list => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${list.listNumber}</td>
+                <td>${list.date}</td>
+                <td>${list.partyName}</td>
+                <td>${list.vehicleNumber}</td>
+                <td>${list.productType}</td>
+                <td>${list.totalCFT.toFixed(2)}</td>
+                <td>${list.totalCBM.toFixed(2)}</td>
+                <td>${list.totalPCS}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary edit-list-btn" data-id="${list.id}">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger print-list-btn" data-id="${list.id}">
+                        <i class="bi bi-printer"></i>
+                    </button>
+                    <button class="btn btn-sm btn-success export-list-btn" data-id="${list.id}">
+                        <i class="bi bi-file-earmark-excel"></i>
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
         });
-    });
-    
-    document.querySelectorAll('.print-list-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            printList(this.dataset.id);
+        
+        // Add event listeners to action buttons (No change)
+        document.querySelectorAll('.edit-list-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                loadListForEditing(this.dataset.id);
+            });
         });
-    });
-    
-    document.querySelectorAll('.export-list-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            exportListToExcel(this.dataset.id);
+        
+        document.querySelectorAll('.print-list-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                printList(this.dataset.id);
+            });
         });
-    });
-    
-    // Update pagination
-    updatePagination(filteredLists.length);
+        
+        document.querySelectorAll('.export-list-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                exportListToExcel(this.dataset.id);
+            });
+        });
+        
+        // Update pagination (No change)
+        updatePagination(filteredLists.length);
+
+    } catch (error) {
+        console.error("Error loading dashboard data: ", error);
+        showNotification('Error loading dashboard. See console.', 'error');
+    } finally {
+        hideLoadingSpinner();
+    }
 }
 
-// Filter lists
-function filterLists() {
-    let filtered = [...savedLists];
+// MODIFIED: Accepts a list to filter, instead of using global 'savedLists'
+function filterLists(listsToFilter) {
+    let filtered = [...listsToFilter];
     
     // Search filter
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     if (searchTerm) {
         filtered = filtered.filter(list => 
-            list.listNumber.toLowerCase().includes(searchTerm) ||
-            list.partyName.toLowerCase().includes(searchTerm) ||
-            list.vehicleNumber.toLowerCase().includes(searchTerm)
+            (list.listNumber && list.listNumber.toLowerCase().includes(searchTerm)) ||
+            (list.partyName && list.partyName.toLowerCase().includes(searchTerm)) ||
+            (list.vehicleNumber && list.vehicleNumber.toLowerCase().includes(searchTerm))
         );
     }
     
@@ -783,14 +814,14 @@ function filterLists() {
     return filtered;
 }
 
-// Paginate lists
+// Paginate lists (No changes needed)
 function paginateLists(lists) {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return lists.slice(startIndex, endIndex);
 }
 
-// Update pagination
+// Update pagination (No changes needed)
 function updatePagination(totalItems) {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const pagination = document.getElementById('dashboardPagination');
@@ -836,205 +867,248 @@ function updatePagination(totalItems) {
     pagination.appendChild(nextLi);
 }
 
-// Filter dashboard
+// Filter dashboard (No changes needed)
 function filterDashboard() {
     currentPage = 1;
     updateDashboard();
 }
 
-// Load list for editing
-function loadListForEditing(listId) {
-    const list = savedLists.find(l => l.id === listId);
-    if (!list) return;
-    
-    // Switch to entry view
-    switchView('entry');
-    
-    // Load list data into form
-    document.getElementById('listNumber').value = list.listNumber;
-    document.getElementById('date').value = list.date;
-    document.getElementById('partyName').value = list.partyName;
-    document.getElementById('vehicleNumber').value = list.vehicleNumber;
-    document.getElementById('productType').value = list.productType;
-    
-    // Clear existing rows
-    document.getElementById('logsTableBody').innerHTML = '';
-    rowCount = 1;
-    
-    // Load log data into table
-    list.logs.forEach(log => {
-        addTableRow();
-        const lengthInput = document.querySelector(`.length-input[data-row="${log.srNo}"]`);
-        const allowanceInput = document.querySelector(`.allowance-input[data-row="${log.srNo}"]`);
-        const girthInput = document.querySelector(`.girth-input[data-row="${log.srNo}"]`);
-        const cftInput = document.querySelector(`.cft-input[data-row="${log.srNo}"]`);
-        
-        if (lengthInput) {
-            lengthInput.value = log.length;
-            allowanceInput.value = log.allowance;
-            girthInput.value = log.girth;
-            cftInput.value = log.cft;
+// MODIFIED: Now async, fetches the specific document from Firestore
+async function loadListForEditing(listId) {
+    showLoadingSpinner();
+    try {
+        const docRef = db.collection('lists').doc(listId);
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
+            showNotification('Error: List not found.', 'error');
+            hideLoadingSpinner();
+            return;
         }
-    });
-    
-    // Add a few empty rows for new entries
-    for (let i = 0; i < 3; i++) {
-        addTableRow();
+
+        const list = doc.data();
+        
+        // Switch to entry view
+        switchView('entry');
+        
+        // Load list data into form (No change in this logic)
+        document.getElementById('listNumber').value = list.listNumber;
+        document.getElementById('date').value = list.date;
+        document.getElementById('partyName').value = list.partyName;
+        document.getElementById('vehicleNumber').value = list.vehicleNumber;
+        document.getElementById('productType').value = list.productType;
+        
+        // Clear existing rows
+        document.getElementById('logsTableBody').innerHTML = '';
+        rowCount = 1;
+        
+        // Load log data into table (No change in this logic)
+        list.logs.forEach(log => {
+            addTableRow();
+            const lengthInput = document.querySelector(`.length-input[data-row="${log.srNo}"]`);
+            const allowanceInput = document.querySelector(`.allowance-input[data-row="${log.srNo}"]`);
+            const girthInput = document.querySelector(`.girth-input[data-row="${log.srNo}"]`);
+            const cftInput = document.querySelector(`.cft-input[data-row="${log.srNo}"]`);
+            
+            if (lengthInput) {
+                lengthInput.value = log.length;
+                allowanceInput.value = log.allowance;
+                girthInput.value = log.girth;
+                cftInput.value = log.cft;
+            }
+        });
+        
+        // Add a few empty rows for new entries
+        for (let i = 0; i < 3; i++) {
+            addTableRow();
+        }
+        
+        // Update totals
+        updateTotals();
+        
+        // Set current list ID
+        currentListId = list.id;
+        
+        showNotification('List loaded for editing', 'info');
+
+    } catch (error) {
+        console.error("Error loading list for editing: ", error);
+        showNotification('Error loading list. See console.', 'error');
+    } finally {
+        hideLoadingSpinner();
     }
-    
-    // Update totals
-    updateTotals();
-    
-    // Set current list ID
-    currentListId = listId;
-    
-    showNotification('List loaded for editing', 'info');
 }
 
-// Print list
-function printList(listId) {
-    const list = savedLists.find(l => l.id === listId);
-    if (!list) return;
-    
-    // Generate print HTML
-    const printHTML = generatePrintHTML(
-        list.listNumber,
-        list.date,
-        list.partyName,
-        list.vehicleNumber,
-        list.productType,
-        list.logs,
-        list.totalCFT
-    );
-    
-    // Create a new window for printing
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Print - ${list.listNumber}</title>
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    margin: 20px;
-                }
-                .print-header {
-                    text-align: center;
-                    margin-bottom: 20px;
-                }
-                .header-info {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 10px;
-                }
-                .header-left, .header-right {
-                    text-align: left;
-                    width: 48%;
-                }
-                .two-column-table {
-                    display: flex;
-                    justify-content: space-between;
-                }
-                .column-table {
-                    width: 48%;
-                }
-                .print-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 20px;
-                }
-                .print-table th, .print-table td {
-                    border: 1px solid #000;
-                    padding: 5px;
-                    text-align: center;
-                }
-                .print-table th {
-                    background-color: #f2f2f2;
-                }
-                .print-footer {
-                    margin-top: 20px;
-                    text-align: center;
-                }
-                @media print {
-                    @page {
-                        size: A4;
-                        margin: 1cm;
+// MODIFIED: Now async, fetches the specific document from Firestore
+async function printList(listId) {
+    showLoadingSpinner();
+    try {
+        const doc = await db.collection('lists').doc(listId).get();
+        if (!doc.exists) {
+            showNotification('Error: List not found.', 'error');
+            return;
+        }
+        const list = doc.data();
+        
+        // Generate print HTML (No change in this logic)
+        const printHTML = generatePrintHTML(
+            list.listNumber,
+            list.date,
+            list.partyName,
+            list.vehicleNumber,
+            list.productType,
+            list.logs,
+            list.totalCFT
+        );
+        
+        // Create a new window for printing (No change in this logic)
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Print - ${list.listNumber}</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 20px;
                     }
-                }
-            </style>
-        </head>
-        <body>
-            ${printHTML}
-        </body>
-        </html>
-    `);
-    
-    printWindow.document.close();
-    printWindow.focus();
-    
-    // Wait for the content to load before printing
-    setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-    }, 500);
+                    .print-header {
+                        text-align: center;
+                        margin-bottom: 20px;
+                    }
+                    .header-info {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 10px;
+                    }
+                    .header-left, .header-right {
+                        text-align: left;
+                        width: 48%;
+                    }
+                    .two-column-table {
+                        display: flex;
+                        justify-content: space-between;
+                    }
+                    .column-table {
+                        width: 48%;
+                    }
+                    .print-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 20px;
+                    }
+                    .print-table th, .print-table td {
+                        border: 1px solid #000;
+                        padding: 5px;
+                        text-align: center;
+                    }
+                    .print-table th {
+                        background-color: #f2f2f2;
+                    }
+                    .print-footer {
+                        margin-top: 20px;
+                        text-align: center;
+                    }
+                    @media print {
+                        @page {
+                            size: A4;
+                            margin: 1cm;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                ${printHTML}
+            </body>
+            </html>
+        `);
+        
+        printWindow.document.close();
+        printWindow.focus();
+        
+        // Wait for the content to load before printing
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 500);
+
+    } catch (error) {
+        console.error("Error printing list: ", error);
+        showNotification('Error printing list. See console.', 'error');
+    } finally {
+        hideLoadingSpinner();
+    }
 }
 
-// Export list to Excel
-function exportListToExcel(listId) {
-    const list = savedLists.find(l => l.id === listId);
-    if (!list) return;
-    
-    // Create a new workbook
-    const wb = XLSX.utils.book_new();
-    
-    // Create header row
-    const header = [
-        ['OSWAL LUMBERS PVT LTD'],
-        [''],
-        ['List Number:', list.listNumber],
-        ['Date:', list.date],
-        ['Party Name:', list.partyName],
-        ['Vehicle Number:', list.vehicleNumber],
-        ['Product Type:', list.productType],
-        [''],
-        ['Sr No', 'Length', 'Length Allowance', 'Girth', 'CFT']
-    ];
-    
-    // Add log data
-    const data = list.logs.map(log => [
-        log.srNo,
-        log.length,
-        log.allowance,
-        log.girth,
-        log.cft.toFixed(2)
-    ]);
-    
-    // Add totals
-    data.push([]);
-    data.push(['Total CFT:', '', '', '', list.totalCFT.toFixed(2)]);
-    data.push(['Total CBM:', '', '', '', list.totalCBM.toFixed(2)]);
-    data.push(['Total PCS:', '', '', '', list.totalPCS]);
-    
-    // Combine header and data
-    const wsData = [...header, ...data];
-    
-    // Create worksheet
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Log List');
-    
-    // Generate filename
-    const filename = `${list.listNumber}_${list.date}_${list.partyName.replace(/\s+/g, '_')}.xlsx`;
-    
-    // Save the file
-    XLSX.writeFile(wb, filename);
-    
-    showNotification('List exported to Excel successfully', 'success');
+// MODIFIED: Now async, fetches the specific document from Firestore
+async function exportListToExcel(listId) {
+    showLoadingSpinner();
+    try {
+        const doc = await db.collection('lists').doc(listId).get();
+        if (!doc.exists) {
+            showNotification('Error: List not found.', 'error');
+            return;
+        }
+        const list = doc.data();
+        
+        // Create a new workbook (No change in this logic)
+        const wb = XLSX.utils.book_new();
+        
+        // Create header row
+        const header = [
+            ['OSWAL LUMBERS PVT LTD'],
+            [''],
+            ['List Number:', list.listNumber],
+            ['Date:', list.date],
+            ['Party Name:', list.partyName],
+            ['Vehicle Number:', list.vehicleNumber],
+            ['Product Type:', list.productType],
+            [''],
+            ['Sr No', 'Length', 'Length Allowance', 'Girth', 'CFT']
+        ];
+        
+        // Add log data
+        const data = list.logs.map(log => [
+            log.srNo,
+            log.length,
+            log.allowance,
+            log.girth,
+            log.cft.toFixed(2)
+        ]);
+        
+        // Add totals
+        data.push([]);
+        data.push(['Total CFT:', '', '', '', list.totalCFT.toFixed(2)]);
+        data.push(['Total CBM:', '', '', '', list.totalCBM.toFixed(2)]);
+        data.push(['Total PCS:', '', '', '', list.totalPCS]);
+        
+        // Combine header and data
+        const wsData = [...header, ...data];
+        
+        // Create worksheet
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Log List');
+        
+        // Generate filename
+        const filename = `${list.listNumber}_${list.date}_${list.partyName.replace(/\s+/g, '_')}.xlsx`;
+        
+        // Save the file
+        XLSX.writeFile(wb, filename);
+        
+        showNotification('List exported to Excel successfully', 'success');
+
+    } catch (error) {
+        console.error("Error exporting list: ", error);
+        showNotification('Error exporting list. See console.', 'error');
+    } finally {
+        hideLoadingSpinner();
+    }
 }
 
-// Reset form
+// Reset form (No changes needed)
 function resetForm() {
     document.getElementById('logForm').reset();
     setTodayDate();
@@ -1047,7 +1121,7 @@ function resetForm() {
     updateTotals();
 }
 
-// Show notification
+// Show notification (No changes needed)
 function showNotification(message, type) {
     const notification = document.getElementById('notification');
     notification.textContent = message;
@@ -1059,12 +1133,12 @@ function showNotification(message, type) {
     }, 3000);
 }
 
-// Show loading spinner
+// Show loading spinner (No changes needed)
 function showLoadingSpinner() {
     document.getElementById('loadingSpinner').style.display = 'flex';
 }
 
-// Hide loading spinner
+// Hide loading spinner (No changes needed)
 function hideLoadingSpinner() {
     document.getElementById('loadingSpinner').style.display = 'none';
 }
