@@ -60,6 +60,8 @@ function setupEventListeners() {
     document.getElementById('saveBtn').addEventListener('click', saveData);
     document.getElementById('editBtn').addEventListener('click', editData);
     document.getElementById('printBtn').addEventListener('click', showPrintPreview);
+    
+    // NEW: Added Sign Out button listener
     document.getElementById('signOutBtn').addEventListener('click', signOutUser);
     
     // Dashboard search and filter
@@ -1143,6 +1145,7 @@ function showLoadingSpinner() {
 function hideLoadingSpinner() {
     document.getElementById('loadingSpinner').style.display = 'none';
 }
+
 // NEW: Function to sign the user out
 function signOutUser() {
     showLoadingSpinner();
