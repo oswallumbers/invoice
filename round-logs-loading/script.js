@@ -1,7 +1,6 @@
 // Global variables
 let currentView = 'entry';
 let logsData = []; // This remains for the current entry form
-// let savedLists = []; // REMOVED: This is now replaced by 'allFetchedLists' from Firestore
 let allFetchedLists = []; // NEW: A cache for all lists fetched from the dashboard
 let currentListId = null;
 let nextListNumber = 1; // MODIFIED: This will be loaded from Firestore
@@ -9,90 +8,199 @@ let currentPage = 1;
 let rowCount = 1;
 const itemsPerPage = 10;
 
+// NEW: Global variable to store the target of the right-click
+let currentContextMenuTarget = null;
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-    // MODIFIED: initializeApp is now async to fetch data from Firestore
     initializeApp();
     setupEventListeners();
-    generateInitialRows(); // Start with just a few rows
+    generateInitialRows(); 
     setTodayDate();
 });
 
-// MODIFIED: Now an async function to load data from Firestore
 async function initializeApp() {
     showLoadingSpinner();
-    await updateListNumberFromFirestore(); // NEW: Load the next list number from DB
-    await updateDashboard(); // MODIFIED: This will now fetch from Firestore
+    await updateListNumberFromFirestore(); 
+    await updateDashboard(); 
     hideLoadingSpinner();
 }
 
-// NEW: Fetches the next list number from a 'metadata' collection
 async function updateListNumberFromFirestore() {
+    // Make sure 'db' is defined in firebase-init.js
+    if (typeof db === 'undefined') {
+        console.error("Firestore 'db' is not initialized. Check firebase-init.js");
+        return;
+    }
     const metadataRef = db.collection('metadata').doc('counter');
     const doc = await metadataRef.get();
 
     if (doc.exists) {
         nextListNumber = doc.data().nextListNumber;
     } else {
-        // If counter doesn't exist, this might be the first run.
-        // We'll set it to 1 and initialize it in the database.
         nextListNumber = 1;
         await metadataRef.set({ nextListNumber: 1 });
     }
-    // Update the UI field
     updateListNumber();
 }
 
+// 
+// --- THIS FUNCTION HAS BEEN UPDATED ---
+//
 // Setup event listeners
 function setupEventListeners() {
     // Navigation
-    document.getElementById('entryNav').addEventListener('click', function(e) {
-        e.preventDefault();
-        switchView('entry');
-    });
+    const entryNav = document.getElementById('entryNav');
+    if (entryNav) {
+        entryNav.addEventListener('click', function(e) {
+            e.preventDefault();
+            switchView('entry');
+        });
+    }
     
-    document.getElementById('dashboardNav').addEventListener('click', function(e) {
-        e.preventDefault();
-        switchView('dashboard');
-    });
+    const dashboardNav = document.getElementById('dashboardNav');
+    if (dashboardNav) {
+        dashboardNav.addEventListener('click', function(e) {
+            e.preventDefault();
+            switchView('dashboard');
+        });
+    }
     
     // Form buttons
-    document.getElementById('saveBtn').addEventListener('click', saveData);
-    document.getElementById('editBtn').addEventListener('click', editData);
-    document.getElementById('printBtn').addEventListener('click', showPrintPreview);
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveData);
+    }
     
-    // NEW: Added Sign Out button listener
-    document.getElementById('signOutBtn').addEventListener('click', signOutUser);
+    const editBtn = document.getElementById('editBtn');
+    if (editBtn) {
+        editBtn.addEventListener('click', editData);
+    }
+    
+    const printBtn = document.getElementById('printBtn');
+    if (printBtn) {
+        printBtn.addEventListener('click', showPrintPreview);
+    }
+    
+    const signOutBtn = document.getElementById('signOutBtn');
+    if (signOutBtn) {
+        signOutBtn.addEventListener('click', signOutUser);
+    }
     
     // Dashboard search and filter
-    document.getElementById('searchInput').addEventListener('input', filterDashboard);
-    document.getElementById('filterBtn').addEventListener('click', filterDashboard);
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', filterDashboard);
+    }
+    
+    const filterBtn = document.getElementById('filterBtn');
+    if (filterBtn) {
+        filterBtn.addEventListener('click', filterDashboard);
+    }
     
     // Print modal
-    document.getElementById('confirmPrintBtn').addEventListener('click', function() {
-        printCurrentData();
+    const confirmPrintBtn = document.getElementById('confirmPrintBtn');
+    if (confirmPrintBtn) {
+        confirmPrintBtn.addEventListener('click', function() {
+            printCurrentData();
+        });
+    }
+
+    // --- NEW: Context Menu Listeners ---
+    const contextMenu = document.getElementById('tableContextMenu');
+    
+    // Hide menu when clicking anywhere
+    document.addEventListener('click', () => {
+        if (contextMenu) {
+            contextMenu.style.display = 'none';
+        }
+        currentContextMenuTarget = null;
     });
+
+    // Action: Insert Row Below
+    const insertRowBelowBtn = document.getElementById('insertRowBelow');
+    if (insertRowBelowBtn) {
+        insertRowBelowBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentContextMenuTarget) {
+                const rowNum = parseInt(currentContextMenuTarget.dataset.row);
+                insertRowAfter(rowNum); // NEW Function
+            }
+            if (contextMenu) {
+                contextMenu.style.display = 'none';
+            }
+        });
+    }
+    
+    // Action: Delete This Row
+    const deleteCurrentRowBtn = document.getElementById('deleteCurrentRow');
+    if (deleteCurrentRowBtn) {
+        deleteCurrentRowBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentContextMenuTarget) {
+                const rowNum = parseInt(currentContextMenuTarget.dataset.row);
+                deleteRow(rowNum); // Use existing delete function
+            }
+            if (contextMenu) {
+                contextMenu.style.display = 'none';
+            }
+        });
+    }
+    
+    // Action: Insert Cell (Shift Down)
+    const insertShiftDownBtn = document.getElementById('insertShiftDown');
+    if (insertShiftDownBtn) {
+        insertShiftDownBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentContextMenuTarget) {
+                shiftColumnData(currentContextMenuTarget, 'down'); // NEW Function
+            }
+            if (contextMenu) {
+                contextMenu.style.display = 'none';
+            }
+        });
+    }
+    
+    // Action: Delete Cell (Shift Up)
+    const deleteShiftUpBtn = document.getElementById('deleteShiftUp');
+    if (deleteShiftUpBtn) {
+        deleteShiftUpBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentContextMenuTarget) {
+                shiftColumnData(currentContextMenuTarget, 'up'); // NEW Function
+            }
+            if (contextMenu) {
+                contextMenu.style.display = 'none';
+            }
+        });
+    }
+    // --- END NEW ---
 }
+// 
+// --- END OF UPDATED FUNCTION ---
+// 
 
 // Switch between views
 function switchView(view) {
     currentView = view;
     
-    // Update navigation
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
     });
     
+    const entryView = document.getElementById('entryView');
+    const dashboardView = document.getElementById('dashboardView');
+    const entryNav = document.getElementById('entryNav');
+    const dashboardNav = document.getElementById('dashboardNav');
+    
     if (view === 'entry') {
-        document.getElementById('entryView').style.display = 'block';
-        document.getElementById('dashboardView').style.display = 'none';
-        document.getElementById('entryNav').classList.add('active');
+        if (entryView) entryView.style.display = 'block';
+        if (dashboardView) dashboardView.style.display = 'none';
+        if (entryNav) entryNav.classList.add('active');
     } else if (view === 'dashboard') {
-        document.getElementById('entryView').style.display = 'none';
-        document.getElementById('dashboardView').style.display = 'block';
-        document.getElementById('dashboardNav').classList.add('active');
-        
-        // MODIFIED: updateDashboard is now async
+        if (entryView) entryView.style.display = 'none';
+        if (dashboardView) dashboardView.style.display = 'block';
+        if (dashboardNav) dashboardNav.classList.add('active');
         updateDashboard();
     }
 }
@@ -100,21 +208,21 @@ function switchView(view) {
 // Generate initial rows (start with just a few)
 function generateInitialRows() {
     const tableBody = document.getElementById('logsTableBody');
+    if (!tableBody) return;
     tableBody.innerHTML = '';
     rowCount = 1;
     
-    // Start with 5 rows
     for (let i = 1; i <= 5; i++) {
         addTableRow();
     }
 }
 
-// Add a new table row (No changes needed)
+// MODIFIED: addTableRow is now simpler, it calls a separate function for listeners
 function addTableRow() {
     const tableBody = document.getElementById('logsTableBody');
+    if (!tableBody) return;
     const row = document.createElement('tr');
     
-    // Use the current row count
     const currentRowNumber = rowCount;
     
     row.innerHTML = `
@@ -131,188 +239,275 @@ function addTableRow() {
     `;
     tableBody.appendChild(row);
     
-    // Add event listener for delete button
-    const deleteBtn = row.querySelector('.delete-row-btn');
-    deleteBtn.addEventListener('click', function() {
-        deleteRow(currentRowNumber);
-    });
+    // NEW: Call the listener function for the new row
+    addListenersToRow(row, currentRowNumber);
     
-    // Add event listeners for inputs
+    rowCount++;
+}
+
+// NEW: Function to add all listeners to a specific row
+function addListenersToRow(row, rowNumber) {
+    // Delete button
+    const deleteBtn = row.querySelector('.delete-row-btn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function() {
+            deleteRow(rowNumber);
+        });
+    }
+    
+    // Input elements
     const lengthInput = row.querySelector('.length-input');
     const allowanceInput = row.querySelector('.allowance-input');
     const girthInput = row.querySelector('.girth-input');
     const cftInput = row.querySelector('.cft-input');
     
-    // Length input event
-    lengthInput.addEventListener('input', function() {
-        allowanceInput.value = this.value;
-        calculateCFT(currentRowNumber);
-    });
+    // Calculation events
+    if (lengthInput && allowanceInput) {
+        lengthInput.addEventListener('input', function() {
+            allowanceInput.value = this.value;
+            calculateCFT(rowNumber);
+        });
+    }
+    if (allowanceInput) {
+        allowanceInput.addEventListener('input', () => calculateCFT(rowNumber));
+    }
+    if (girthInput) {
+        girthInput.addEventListener('input', () => calculateCFT(rowNumber));
+    }
     
-    // Allowance input event
-    allowanceInput.addEventListener('input', function() {
-        calculateCFT(currentRowNumber);
-    });
-    
-    // Girth input event
-    girthInput.addEventListener('input', function() {
-        calculateCFT(currentRowNumber);
-    });
-    
-    // Add keyboard navigation for all inputs
+    // Add keyboard navigation and context menu for all inputs
     [lengthInput, allowanceInput, girthInput, cftInput].forEach(input => {
-        // Enter key navigation - move to the same column in the row below
+        if (!input) return; // Safety check
+        
+        // Keydown navigation (Enter, Up, Down)
         input.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' || e.key === 'ArrowDown') {
                 e.preventDefault();
                 const currentRow = parseInt(this.dataset.row);
                 const allRows = document.querySelectorAll('#logsTableBody tr');
                 const isLastRow = this.closest('tr') === allRows[allRows.length - 1];
                 
                 if (isLastRow) {
-                    // Add a new row and return the new row number
                     const newRowNumber = addNewRowAndReturnNumber();
-                    
-                    // Focus on the new row's same column
-                    const inputClass = this.className.split(' ')[0];
-                    focusOnInput(inputClass, newRowNumber);
+                    focusOnInput(this.className.split(' ')[0], newRowNumber);
                 } else {
-                    // Move to the next row's same column
-                    const nextRow = currentRow + 1;
-                    const inputClass = this.className.split(' ')[0];
-                    const nextInput = document.querySelector(`.${inputClass}[data-row="${nextRow}"]`);
-                    if (nextInput) {
-                        nextInput.focus();
-                    }
+                    focusOnInput(this.className.split(' ')[0], currentRow + 1);
                 }
-            }
-            
-            // Up Arrow key navigation - move to the same column in the row above
-            if (e.key === 'ArrowUp') {
+            } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 const currentRow = parseInt(this.dataset.row);
                 if (currentRow > 1) {
-                    const prevRow = currentRow - 1;
-                    const inputClass = this.className.split(' ')[0];
-                    const prevInput = document.querySelector(`.${inputClass}[data-row="${prevRow}"]`);
-                    if (prevInput) {
-                        prevInput.focus();
-                    }
-                }
-            }
-            
-            // Down Arrow key navigation - move to the same column in the row below
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                const currentRow = parseInt(this.dataset.row);
-                const allRows = document.querySelectorAll('#logsTableBody tr');
-                const isLastRow = this.closest('tr') === allRows[allRows.length - 1];
-                
-                if (isLastRow) {
-                    // Add a new row and return the new row number
-                    const newRowNumber = addNewRowAndReturnNumber();
-                    
-                    // Focus on the new row's same column
-                    const inputClass = this.className.split(' ')[0];
-                    focusOnInput(inputClass, newRowNumber);
-                } else {
-                    // Move to the next row's same column
-                    const nextRow = currentRow + 1;
-                    const inputClass = this.className.split(' ')[0];
-                    const nextInput = document.querySelector(`.${inputClass}[data-row="${nextRow}"]`);
-                    if (nextInput) {
-                        nextInput.focus();
-                    }
+                    focusOnInput(this.className.split(' ')[0], currentRow - 1);
                 }
             }
         });
+        
+        // NEW: Right-click context menu listener
+        input.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            currentContextMenuTarget = e.target; // Store the clicked input
+            
+            const contextMenu = document.getElementById('tableContextMenu');
+            if (contextMenu) {
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = `${e.clientX}px`;
+                contextMenu.style.top = `${e.clientY}px`;
+            }
+            
+            // Disable cell-shift options for the read-only 'CFT' column
+            const isCFT = e.target.classList.contains('cft-input');
+            const insertShiftDownItem = document.getElementById('insertShiftDown');
+            const deleteShiftUpItem = document.getElementById('deleteShiftUp');
+            
+            if (insertShiftDownItem) insertShiftDownItem.style.display = isCFT ? 'none' : 'block';
+            if (deleteShiftUpItem) deleteShiftUpItem.style.display = isCFT ? 'none' : 'block';
+            
+            // Also hide the divider if both are hidden
+            const divider = deleteShiftUpItem ? deleteShiftUpItem.previousElementSibling : null;
+            if (divider && divider.classList.contains('dropdown-divider')) {
+                divider.style.display = isCFT ? 'none' : 'block';
+            }
+        });
     });
-    
-    // Increment rowCount after creating the row
-    rowCount++;
 }
 
-// Delete a row (No changes needed)
+// NEW: Function to insert a new row *after* a specific row
+function insertRowAfter(rowNumber) {
+    const tableBody = document.getElementById('logsTableBody');
+    if (!tableBody) return;
+    const allRows = Array.from(tableBody.querySelectorAll('tr'));
+    const targetRow = allRows[rowNumber - 1]; // -1 because rowNumber is 1-based
+    
+    if (!targetRow) {
+        addTableRow(); // If it's the last row, just add to end
+        return;
+    }
+    
+    // Create a new blank row
+    const newRow = document.createElement('tr');
+    // Row number will be fixed by renumbering
+    newRow.innerHTML = `
+        <td><button class="btn btn-sm btn-danger delete-row-btn" data-row="${rowNumber + 1}"><i class="bi bi-trash"></i></button></td>
+        <td>${rowNumber + 1}</td>
+        <td><input type="number" class="length-input" data-row="${rowNumber + 1}" step="0.01"></td>
+        <td><input type="number" class="allowance-input" data-row="${rowNumber + 1}" step="0.01"></td>
+        <td><input type="number" class="girth-input" data-row="${rowNumber + 1}" step="0.01"></td>
+        <td><input type="number" class="cft-input" data-row="${rowNumber + 1}" step="0.01" readonly></td>
+    `;
+    
+    // Insert the new row *after* the target row
+    targetRow.parentNode.insertBefore(newRow, targetRow.nextSibling);
+    
+    // Re-add listeners to the new row
+    addListenersToRow(newRow, rowNumber + 1);
+    
+    // Renumber all rows starting from the one *after* the inserted row
+    renumberRowsAfterDeletion(rowNumber);
+    updateTotals();
+}
+
+// NEW: Function to shift data in a single column
+function shiftColumnData(targetInput, direction) {
+    const columnClass = targetInput.className.split(' ')[0]; // e.g., 'girth-input'
+    const startRow = parseInt(targetInput.dataset.row);
+    
+    if (direction === 'down') {
+        // --- Shift Down (Insert) ---
+        
+        // Get all inputs in this column
+        let allInputsInColumn = Array.from(document.querySelectorAll(`.${columnClass}`));
+        
+        // Check if the last row is empty. If not, add a new row.
+        const lastRowInput = allInputsInColumn[allInputsInColumn.length - 1];
+        if (lastRowInput && lastRowInput.value !== '') {
+            addTableRow(); // Add a new blank row at the end
+            // Get the list of inputs again since we added one
+            allInputsInColumn = Array.from(document.querySelectorAll(`.${columnClass}`));
+        }
+        
+        // Iterate backwards from the second-to-last row down to the start row
+        for (let i = allInputsInColumn.length - 2; i >= startRow - 1; i--) {
+            const currentRowInput = allInputsInColumn[i];
+            const nextRowInput = allInputsInColumn[i + 1];
+            if (currentRowInput && nextRowInput) {
+                nextRowInput.value = currentRowInput.value;
+            }
+        }
+        
+        // Clear the target input
+        targetInput.value = '';
+        
+    } else if (direction === 'up') {
+        // --- Shift Up (Delete) ---
+        
+        const allInputsInColumn = Array.from(document.querySelectorAll(`.${columnClass}`));
+        
+        // Iterate forwards from the start row to the second-to-last row
+        for (let i = startRow - 1; i < allInputsInColumn.length - 1; i++) {
+            const currentRowInput = allInputsInColumn[i];
+            const nextRowInput = allInputsInColumn[i + 1];
+            if (currentRowInput && nextRowInput) {
+                currentRowInput.value = nextRowInput.value;
+            }
+        }
+        
+        // Clear the last input in the column
+        if (allInputsInColumn.length > 0) {
+            allInputsInColumn[allInputsInColumn.length - 1].value = '';
+        }
+    }
+    
+    // After shifting, recalculate CFT for all rows and update totals
+    recalculateAllCFTs();
+}
+
+// NEW: Function to recalculate all CFTs after a major shift
+function recalculateAllCFTs() {
+    const allRows = document.querySelectorAll('#logsTableBody tr');
+    allRows.forEach((row, index) => {
+        const rowNum = index + 1;
+        // Need to find the row number from the data-row attribute, not index
+        const deleteBtn = row.querySelector('.delete-row-btn');
+        if (deleteBtn) {
+            const actualRowNum = deleteBtn.dataset.row;
+            calculateCFT(actualRowNum); // Use existing function
+        }
+    });
+    // updateTotals() is called by calculateCFT, so no need to call it again here.
+}
+
+
+// Delete a row
 function deleteRow(rowNumber) {
     const row = document.querySelector(`tr:has(.delete-row-btn[data-row="${rowNumber}"])`);
     if (!row) return;
     
-    // Remove the row
     row.remove();
-    
-    // Renumber all rows after the deleted row
-    renumberRowsAfterDeletion(rowNumber);
-    
-    // Update totals
+    renumberRowsAfterDeletion(rowNumber - 1); // Renumber from the row *before* the deleted one
     updateTotals();
-    
-    // Show notification
     showNotification(`Row ${rowNumber} deleted successfully`, 'success');
 }
 
-// Renumber rows after deletion (No changes needed)
-function renumberRowsAfterDeletion(deletedRowNumber) {
+// MODIFIED: Renumber rows after deletion or insertion
+function renumberRowsAfterDeletion(startFromRow) {
     const allRows = document.querySelectorAll('#logsTableBody tr');
     
     allRows.forEach((row, index) => {
         const currentRowNumber = index + 1;
-        const oldRowNumber = parseInt(row.querySelector('.delete-row-btn').dataset.row);
         
         // Update row number display
-        row.querySelector('td:nth-child(2)').textContent = currentRowNumber;
+        const srNoCell = row.querySelector('td:nth-child(2)');
+        if (srNoCell) {
+            srNoCell.textContent = currentRowNumber;
+        }
         
         // Update delete button data attribute
-        row.querySelector('.delete-row-btn').dataset.row = currentRowNumber;
+        const deleteBtn = row.querySelector('.delete-row-btn');
+        if (deleteBtn) {
+            deleteBtn.dataset.row = currentRowNumber;
+        }
         
         // Update all input data attributes
         row.querySelectorAll('input').forEach(input => {
             input.dataset.row = currentRowNumber;
         });
         
-        // If this row was after the deleted row, we need to recalculate CFT
-        if (oldRowNumber > deletedRowNumber) {
-            const lengthInput = row.querySelector('.length-input');
-            const allowanceInput = row.querySelector('.allowance-input');
-            const girthInput = row.querySelector('.girth-input');
-            
-            // Recalculate CFT for this row
-            const allowance = parseFloat(allowanceInput.value) || 0;
-            const girth = parseFloat(girthInput.value) || 0;
-            const cft = (allowance * girth * girth / 16000000 * 35.315).toFixed(2);
-            row.querySelector('.cft-input').value = cft;
-        }
+        // Recalculate CFT for this row
+        // We need to do this in case a shift-up/down affected this
+        calculateCFT(currentRowNumber);
     });
     
     // Update the global row count
     rowCount = allRows.length + 1;
+    updateTotals();
 }
 
-// Add a new row and return the new row number (No changes needed)
+// Add a new row and return the new row number
 function addNewRowAndReturnNumber() {
     const newRowNumber = rowCount;
     addTableRow();
     return newRowNumber;
 }
 
-// Focus on an input in a specific row (No changes needed)
+// Focus on an input in a specific row
 function focusOnInput(inputClass, rowNumber) {
-    // Use requestAnimationFrame to ensure the DOM is updated
     requestAnimationFrame(() => {
         const input = document.querySelector(`.${inputClass}[data-row="${rowNumber}"]`);
         if (input) {
             input.focus();
+            input.select();
         }
     });
 }
 
-// Calculate CFT (No changes needed)
+// Calculate CFT
 function calculateCFT(row) {
     const allowanceInput = document.querySelector(`.allowance-input[data-row="${row}"]`);
     const girthInput = document.querySelector(`.girth-input[data-row="${row}"]`);
     const cftInput = document.querySelector(`.cft-input[data-row="${row}"]`);
     
     if (!allowanceInput || !girthInput || !cftInput) {
-        console.error(`Could not find input elements for row ${row}`);
+        // This can happen if a row is being deleted, it's not an error
         return;
     }
     
@@ -325,7 +520,7 @@ function calculateCFT(row) {
     updateTotals();
 }
 
-// Update totals (No changes needed)
+// Update totals
 function updateTotals() {
     let totalCFT = 0;
     let totalPCS = 0;
@@ -341,29 +536,41 @@ function updateTotals() {
         }
     });
     
-    document.getElementById('totalCFT').textContent = totalCFT.toFixed(2);
-    document.getElementById('grandTotalCFT').textContent = totalCFT.toFixed(2);
-    document.getElementById('grandTotalCBM').textContent = (totalCFT / 27.74).toFixed(2);
-    document.getElementById('totalPCS').textContent = totalPCS;
+    const totalCFTEl = document.getElementById('totalCFT');
+    if (totalCFTEl) totalCFTEl.textContent = totalCFT.toFixed(2);
+    
+    const grandTotalCFTEl = document.getElementById('grandTotalCFT');
+    if (grandTotalCFTEl) grandTotalCFTEl.textContent = totalCFT.toFixed(2);
+    
+    const grandTotalCBMEl = document.getElementById('grandTotalCBM');
+    if (grandTotalCBMEl) grandTotalCBMEl.textContent = (totalCFT / 27.74).toFixed(2);
+    
+    const totalPCSEl = document.getElementById('totalPCS');
+    if (totalPCSEl) totalPCSEl.textContent = totalPCS;
 }
 
-// Update list number (No changes needed)
+// Update list number
 function updateListNumber() {
-    const listNumber = `OLPL/LOG/${String(nextListNumber).padStart(3, '0')}`;
-    document.getElementById('listNumber').value = listNumber;
+    const listNumberEl = document.getElementById('listNumber');
+    if (listNumberEl) {
+        const listNumber = `OLPL/LOG/${String(nextListNumber).padStart(3, '0')}`;
+        listNumberEl.value = listNumber;
+    }
 }
 
-// Set today's date (No changes needed)
+// Set today's date
 function setTodayDate() {
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date').value = today;
+    const dateEl = document.getElementById('date');
+    if (dateEl) {
+        dateEl.value = today;
+    }
 }
 
-// MODIFIED: This function is now async to save to Firestore
+// Save data (async)
 async function saveData() {
     showLoadingSpinner();
     
-    // Validate form (No change)
     const listNumber = document.getElementById('listNumber').value;
     const date = document.getElementById('date').value;
     const partyName = document.getElementById('partyName').value;
@@ -376,21 +583,21 @@ async function saveData() {
         return;
     }
     
-    // Collect log data (No change)
     const logs = [];
     let totalCFT = 0;
     let totalPCS = 0;
     
-    document.querySelectorAll('.length-input').forEach((input, index) => {
-        const row = index + 1;
-        const length = parseFloat(input.value) || 0;
-        const allowance = parseFloat(document.querySelector(`.allowance-input[data-row="${row}"]`).value) || 0;
-        const girth = parseFloat(document.querySelector(`.girth-input[data-row="${row}"]`).value) || 0;
-        const cft = parseFloat(document.querySelector(`.cft-input[data-row="${row}"]`).value) || 0;
+    const allRows = document.querySelectorAll('#logsTableBody tr');
+    allRows.forEach((row, index) => {
+        const rowNum = row.querySelector('.delete-row-btn').dataset.row;
+        const length = parseFloat(document.querySelector(`.length-input[data-row="${rowNum}"]`).value) || 0;
+        const allowance = parseFloat(document.querySelector(`.allowance-input[data-row="${rowNum}"]`).value) || 0;
+        const girth = parseFloat(document.querySelector(`.girth-input[data-row="${rowNum}"]`).value) || 0;
+        const cft = parseFloat(document.querySelector(`.cft-input[data-row="${rowNum}"]`).value) || 0;
         
         if (length > 0 && girth > 0) {
             logs.push({
-                srNo: row,
+                srNo: index + 1, // Save the sequential Sr No
                 length: length,
                 allowance: allowance,
                 girth: girth,
@@ -408,7 +615,6 @@ async function saveData() {
         return;
     }
     
-    // Create list object (No 'id' field, Firestore will add it)
     const list = {
         listNumber: listNumber,
         date: date,
@@ -422,31 +628,23 @@ async function saveData() {
         createdAt: new Date().toISOString()
     };
     
-    // NEW: Save to Firestore
     try {
         if (currentListId) {
-            // Update existing list in Firestore
             await db.collection('lists').doc(currentListId).update(list);
             showNotification('Data updated successfully', 'success');
         } else {
-            // Add new list to Firestore
             const docRef = await db.collection('lists').add(list);
-            
-            // NEW: Update the document with its own ID for easier reference later
             await db.collection('lists').doc(docRef.id).update({ id: docRef.id });
-
-            // NEW: Increment and save the next list number in Firestore
             nextListNumber++;
             await db.collection('metadata').doc('counter').set({ nextListNumber: nextListNumber });
             
-            updateListNumber(); // Update UI with new number
-            resetForm(); // Reset form for new entry
+            updateListNumber();
+            resetForm();
             showNotification('Data saved successfully', 'success');
         }
         
-        // NEW: Invalidate dashboard cache and reload
         allFetchedLists = []; 
-        await updateDashboard(); // Refresh dashboard data
+        await updateDashboard();
 
     } catch (error) {
         console.error("Error saving data: ", error);
@@ -457,15 +655,14 @@ async function saveData() {
     }
 }
 
-// Edit data (No changes needed, just a helper)
+// Edit data
 function editData() {
     showNotification('Select a list from the dashboard to edit', 'info');
     switchView('dashboard');
 }
 
-// Show print preview (No changes needed)
+// Show print preview
 function showPrintPreview() {
-    // Validate form
     const listNumber = document.getElementById('listNumber').value;
     const date = document.getElementById('date').value;
     const partyName = document.getElementById('partyName').value;
@@ -477,26 +674,25 @@ function showPrintPreview() {
         return;
     }
     
-    // Collect log data
     const logs = [];
     let totalCFT = 0;
     
-    document.querySelectorAll('.length-input').forEach((input, index) => {
-        const row = index + 1;
-        const length = parseFloat(input.value) || 0;
-        const allowance = parseFloat(document.querySelector(`.allowance-input[data-row="${row}"]`).value) || 0;
-        const girth = parseFloat(document.querySelector(`.girth-input[data-row="${row}"]`).value) || 0;
-        const cft = parseFloat(document.querySelector(`.cft-input[data-row="${row}"]`).value) || 0;
+    const allRows = document.querySelectorAll('#logsTableBody tr');
+    allRows.forEach((row, index) => {
+        const rowNum = row.querySelector('.delete-row-btn').dataset.row;
+        const length = parseFloat(document.querySelector(`.length-input[data-row="${rowNum}"]`).value) || 0;
+        const allowance = parseFloat(document.querySelector(`.allowance-input[data-row="${rowNum}"]`).value) || 0;
+        const girth = parseFloat(document.querySelector(`.girth-input[data-row="${rowNum}"]`).value) || 0;
+        const cft = parseFloat(document.querySelector(`.cft-input[data-row="${rowNum}"]`).value) || 0;
         
         if (length > 0 && girth > 0) {
             logs.push({
-                srNo: row,
+                srNo: index + 1,
                 length: length,
                 allowance: allowance,
                 girth: girth,
                 cft: cft
             });
-            
             totalCFT += cft;
         }
     });
@@ -506,35 +702,34 @@ function showPrintPreview() {
         return;
     }
     
-    // Generate print preview
     const printPreviewContainer = document.getElementById('printPreviewContainer');
-    printPreviewContainer.innerHTML = generatePrintHTML(listNumber, date, partyName, vehicleNumber, productType, logs, totalCFT);
+    if (printPreviewContainer) {
+        printPreviewContainer.innerHTML = generatePrintHTML(listNumber, date, partyName, vehicleNumber, productType, logs, totalCFT);
+    }
     
-    // Show modal
-    const printPreviewModal = new bootstrap.Modal(document.getElementById('printPreviewModal'));
-    printPreviewModal.show();
+    const printPreviewModalEl = document.getElementById('printPreviewModal');
+    if (printPreviewModalEl) {
+        const printPreviewModal = new bootstrap.Modal(printPreviewModalEl);
+        printPreviewModal.show();
+    }
 }
 
-// Print current data (No changes needed)
+// 
+// --- THIS FUNCTION HAS BEEN UPDATED ---
+//
+// Print current data
 function printCurrentData() {
-    // Validate form
     const listNumber = document.getElementById('listNumber').value;
     const date = document.getElementById('date').value;
     const partyName = document.getElementById('partyName').value;
     const vehicleNumber = document.getElementById('vehicleNumber').value;
     const productType = document.getElementById('productType').value;
     
-    if (!date || !partyName || !vehicleNumber || !productType) {
-        showNotification('Please fill all required fields', 'error');
-        return;
-    }
-    
-    // Collect log data
     const logs = [];
     let totalCFT = 0;
     
     document.querySelectorAll('.length-input').forEach((input, index) => {
-        const row = index + 1;
+        const row = input.dataset.row;
         const length = parseFloat(input.value) || 0;
         const allowance = parseFloat(document.querySelector(`.allowance-input[data-row="${row}"]`).value) || 0;
         const girth = parseFloat(document.querySelector(`.girth-input[data-row="${row}"]`).value) || 0;
@@ -542,7 +737,7 @@ function printCurrentData() {
         
         if (length > 0 && girth > 0) {
             logs.push({
-                srNo: row,
+                srNo: index + 1,
                 length: length,
                 allowance: allowance,
                 girth: girth,
@@ -557,8 +752,8 @@ function printCurrentData() {
         showNotification('Please enter at least one log entry', 'error');
         return;
     }
-    
-    // Create a new window for printing
+
+    // UPDATED: Added new print styles for page breaks, font size, and margins
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <!DOCTYPE html>
@@ -566,52 +761,48 @@ function printCurrentData() {
         <head>
             <title>Print - ${listNumber}</title>
             <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    margin: 20px;
+                body { 
+                    font-family: Arial, sans-serif; 
+                    margin: 5px; 
+                    font-size: 10px; /* Smaller font */
                 }
-                .print-header {
-                    text-align: center;
-                    margin-bottom: 20px;
+                .print-header { text-align: center; margin-bottom: 10px; }
+                .header-info { display: flex; justify-content: space-between; margin-bottom: 10px; }
+                .header-left, .header-right { text-align: left; width: 48%; }
+                .two-column-table { display: flex; justify-content: space-between; }
+                .column-table { width: 48%; }
+                .print-table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin-bottom: 20px; 
+                    font-size: 10px; /* Smaller font */
                 }
-                .header-info {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 10px;
+                .print-table th, .print-table td { 
+                    border: 1px solid #000; 
+                    padding: 2px; /* Less padding */
+                    text-align: center; 
                 }
-                .header-left, .header-right {
-                    text-align: left;
-                    width: 48%;
+                .print-table th { background-color: #f2f2f2; }
+                .print-footer { margin-top: 20px; text-align: center; }
+                
+                /* Page break logic */
+                .print-page { 
+                    page-break-after: always;
+                    display: block;
+                    overflow: hidden;
                 }
-                .two-column-table {
-                    display: flex;
-                    justify-content: space-between;
+                
+                /* This stops the *last* page from page-breaking,
+                   so the footer stays on the same page. */
+                .print-page:last-child {
+                    page-break-after: auto;
                 }
-                .column-table {
-                    width: 48%;
-                }
-                .print-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 20px;
-                }
-                .print-table th, .print-table td {
-                    border: 1px solid #000;
-                    padding: 5px;
-                    text-align: center;
-                }
-                .print-table th {
-                    background-color: #f2f2f2;
-                }
-                .print-footer {
-                    margin-top: 20px;
-                    text-align: center;
-                }
-                @media print {
-                    @page {
-                        size: A4;
-                        margin: 1cm;
-                    }
+                
+                @media print { 
+                    @page { 
+                        size: A4; 
+                        margin: 0.5cm; /* Smaller margins */
+                    } 
                 }
             </style>
         </head>
@@ -624,111 +815,124 @@ function printCurrentData() {
     printWindow.document.close();
     printWindow.focus();
     
-    // Wait for the content to load before printing
     setTimeout(() => {
         printWindow.print();
         printWindow.close();
     }, 500);
 }
 
-// Generate print HTML (No changes needed)
+// 
+// --- THIS FUNCTION HAS BEEN UPDATED (BOTH ISSUES) ---
+//
+// Generate print HTML
 function generatePrintHTML(listNumber, date, partyName, vehicleNumber, productType, logs, totalCFT) {
-    let html = `
-        <div class="print-header">
-            <h2>OSWAL LUMBERS PVT LTD</h2>
-            <h3>${productType}</h3>
-            
-            <div class="header-info">
-                <div class="header-left">
-                    <p><strong>List Number:</strong> ${listNumber}</p>
-                    <p><strong>Party Name:</strong> ${partyName}</p>
+    
+    let html = '';
+    let logIndex = 0;
+    let pageNumber = 1; // Page tracker
+
+    // Loop in chunks of 100 (50 left, 50 right)
+    while (logIndex < logs.length) {
+        
+        // --- 1. Get logs for this page ---
+        const leftColumnLogs = logs.slice(logIndex, logIndex + 50);
+        const rightColumnLogs = logs.slice(logIndex + 50, logIndex + 100);
+
+        // --- 2. Add the page wrapper ---
+        html += '<div class="print-page">';
+        
+        // Only add header on page 1
+        if (pageNumber === 1) {
+            html += `
+                <div class="print-header">
+                    <h2>OSWAL LUMBERS PVT LTD</h2>
+                    <h3>${productType}</h3>
+                    <div class="header-info">
+                        <div class="header-left">
+                            <p><strong>List Number:</strong> ${listNumber}</p>
+                            <p><strong>Party Name:</strong> ${partyName}</p>
+                        </div>
+                        <div class="header-right">
+                            <p><strong>Date:</strong> ${date}</p>
+                            <p><strong>Vehicle Number:</strong> ${vehicleNumber}</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="header-right">
-                    <p><strong>Date:</strong> ${date}</p>
-                    <p><strong>Vehicle Number:</strong> ${vehicleNumber}</p>
+            `;
+        }
+
+        // --- 3. Add the two-column table structure ---
+        // ▼▼▼ FIX 1: Add margin-top to pages 2+ to push content down ▼▼▼
+        if (pageNumber > 1) {
+            html += '<div class="two-column-table" style="margin-top: 1.5cm;">';
+        } else {
+            html += '<div class="two-column-table">';
+        }
+        // ▲▲▲ END FIX 1 ▲▲▲
+
+        // --- 4. Build Left Column ---
+        html += '<div class="column-table"><table class="print-table">';
+        html += '<thead><tr><th>Sr No</th><th>Length</th><th>Allowance</th><th>Girth</th><th>CFT</th></tr></thead><tbody>';
+        leftColumnLogs.forEach(log => {
+            html += `<tr><td>${log.srNo}</td><td>${log.length}</td><td>${log.allowance}</td><td>${log.girth}</td><td>${log.cft.toFixed(2)}</td></tr>`;
+        });
+        html += '</tbody></table></div>'; // End left column
+
+        // --- 5. Build Right Column ---
+        html += '<div class="column-table"><table class="print-table">';
+        html += '<thead><tr><th>Sr No</th><th>Length</th><th>Allowance</th><th>Girth</th><th>CFT</th></tr></thead><tbody>';
+        rightColumnLogs.forEach(log => {
+            html += `<tr><td>${log.srNo}</td><td>${log.length}</td><td>${log.allowance}</td><td>${log.girth}</td><td>${log.cft.toFixed(2)}</td></tr>`;
+        });
+        html += '</tbody></table></div>'; // End right column
+
+        html += '</div>'; // End two-column-table
+
+        // ▼▼▼ FIX 2: Check if this is the last chunk of logs ▼▼▼
+        if (logIndex + 100 >= logs.length) {
+            // This is the last page, so add the footer *inside* this print-page div
+            html += `
+                <div class="print-footer">
+                    <h3>Grand Total</h3>
+                    <p><strong>Total CFT:</strong> ${totalCFT.toFixed(2)}</p>
+                    <p><strong>Total CBM:</strong> ${(totalCFT / 27.74).toFixed(2)}</p>
+                    <p><strong>Total PCS:</strong> ${logs.length}</p>
                 </div>
-            </div>
-        </div>
-    `;
+            `;
+        }
+        // ▲▲▲ END FIX 2 ▲▲▲
+
+        html += '</div>'; // End print-page
+
+        // Move to the next 100 logs
+        logIndex += 100;
+        pageNumber++;
+    }
     
-    // Split logs into two columns for printing
-    const leftColumnLogs = logs.slice(0, 50);
-    const rightColumnLogs = logs.slice(50, 100);
-    
-    html += '<div class="two-column-table">';
-    
-    // Left column
-    html += '<div class="column-table">';
-    html += '<table class="print-table">';
-    html += '<thead><tr><th>Sr No</th><th>Length</th><th>Allowance</th><th>Girth</th><th>CFT</th></tr></thead>';
-    html += '<tbody>';
-    
-    leftColumnLogs.forEach(log => {
-        html += `<tr>
-            <td>${log.srNo}</td>
-            <td>${log.length}</td>
-            <td>${log.allowance}</td>
-            <td>${log.girth}</td>
-            <td>${log.cft.toFixed(2)}</td>
-        </tr>`;
-    });
-    
-    html += '</tbody></table></div>';
-    
-    // Right column
-    html += '<div class="column-table">';
-    html += '<table class="print-table">';
-    html += '<thead><tr><th>Sr No</th><th>Length</th><th>Allowance</th><th>Girth</th><th>CFT</th></tr></thead>';
-    html += '<tbody>';
-    
-    rightColumnLogs.forEach(log => {
-        html += `<tr>
-            <td>${log.srNo}</td>
-            <td>${log.length}</td>
-            <td>${log.allowance}</td>
-            <td>${log.girth}</td>
-            <td>${log.cft.toFixed(2)}</td>
-        </tr>`;
-    });
-    
-    html += '</tbody></table></div>';
-    html += '</div>';
-    
-    // Grand total
-    html += `
-        <div class="print-footer">
-            <h3>Grand Total</h3>
-            <p><strong>Total CFT:</strong> ${totalCFT.toFixed(2)}</p>
-            <p><strong>Total CBM:</strong> ${(totalCFT / 27.74).toFixed(2)}</p>
-            <p><strong>Total PCS:</strong> ${logs.length}</p>
-        </div>
-    `;
+    // --- 6. REMOVED Grand Total from here ---
     
     return html;
 }
 
-// MODIFIED: Fetches data from Firestore
+// Update dashboard (async)
 async function updateDashboard() {
     showLoadingSpinner();
     const tableBody = document.getElementById('dashboardTableBody');
+    if (!tableBody) {
+        hideLoadingSpinner();
+        return; // Can't update if table body doesn't exist
+    }
     tableBody.innerHTML = '';
 
     try {
-        // NEW: Only fetch from Firestore if the local cache 'allFetchedLists' is empty.
-        // This avoids unnecessary reads every time you switch views.
-        // The cache is cleared when you save or update data.
         if (allFetchedLists.length === 0) {
-            // Note: For large databases, you should filter/paginate using Firestore queries.
-            // For simplicity, we are fetching all documents and filtering locally.
             const snapshot = await db.collection('lists').orderBy('date', 'desc').get();
             allFetchedLists = snapshot.docs.map(doc => doc.data());
         }
 
-        // Filter and paginate data (now uses the fetched list)
         const filteredLists = filterLists(allFetchedLists);
         const paginatedLists = paginateLists(filteredLists);
         
-        // Generate table rows (No change in this logic)
         paginatedLists.forEach(list => {
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -741,40 +945,24 @@ async function updateDashboard() {
                 <td>${list.totalCBM.toFixed(2)}</td>
                 <td>${list.totalPCS}</td>
                 <td>
-                    <button class="btn btn-sm btn-primary edit-list-btn" data-id="${list.id}">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger print-list-btn" data-id="${list.id}">
-                        <i class="bi bi-printer"></i>
-                    </button>
-                    <button class="btn btn-sm btn-success export-list-btn" data-id="${list.id}">
-                        <i class="bi bi-file-earmark-excel"></i>
-                    </button>
+                    <button class="btn btn-sm btn-primary edit-list-btn" data-id="${list.id}"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-danger print-list-btn" data-id="${list.id}"><i class="bi bi-printer"></i></button>
+                    <button class="btn btn-sm btn-success export-list-btn" data-id="${list.id}"><i class="bi bi-file-earmark-excel"></i></button>
                 </td>
             `;
             tableBody.appendChild(row);
         });
         
-        // Add event listeners to action buttons (No change)
         document.querySelectorAll('.edit-list-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                loadListForEditing(this.dataset.id);
-            });
+            btn.addEventListener('click', function() { loadListForEditing(this.dataset.id); });
         });
-        
         document.querySelectorAll('.print-list-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                printList(this.dataset.id);
-            });
+            btn.addEventListener('click', function() { printList(this.dataset.id); });
         });
-        
         document.querySelectorAll('.export-list-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                exportListToExcel(this.dataset.id);
-            });
+            btn.addEventListener('click', function() { exportListToExcel(this.dataset.id); });
         });
         
-        // Update pagination (No change)
         updatePagination(filteredLists.length);
 
     } catch (error) {
@@ -785,12 +973,13 @@ async function updateDashboard() {
     }
 }
 
-// MODIFIED: Accepts a list to filter, instead of using global 'savedLists'
+// Filter lists
 function filterLists(listsToFilter) {
     let filtered = [...listsToFilter];
     
-    // Search filter
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const searchInput = document.getElementById('searchInput');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    
     if (searchTerm) {
         filtered = filtered.filter(list => 
             (list.listNumber && list.listNumber.toLowerCase().includes(searchTerm)) ||
@@ -799,56 +988,49 @@ function filterLists(listsToFilter) {
         );
     }
     
-    // Date filter
-    const dateFrom = document.getElementById('filterDateFrom').value;
-    const dateTo = document.getElementById('filterDateTo').value;
+    const dateFromEl = document.getElementById('filterDateFrom');
+    const dateToEl = document.getElementById('filterDateTo');
+    const dateFrom = dateFromEl ? dateFromEl.value : '';
+    const dateTo = dateToEl ? dateToEl.value : '';
     
-    if (dateFrom) {
-        filtered = filtered.filter(list => list.date >= dateFrom);
-    }
+    if (dateFrom) filtered = filtered.filter(list => list.date >= dateFrom);
+    if (dateTo) filtered = filtered.filter(list => list.date <= dateTo);
     
-    if (dateTo) {
-        filtered = filtered.filter(list => list.date <= dateTo);
-    }
-    
-    // Sort by date (newest first)
     filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
     return filtered;
 }
 
-// Paginate lists (No changes needed)
+// Paginate lists
 function paginateLists(lists) {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return lists.slice(startIndex, endIndex);
 }
 
-// Update pagination (No changes needed)
+// Update pagination
 function updatePagination(totalItems) {
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
     const pagination = document.getElementById('dashboardPagination');
+    if (!pagination) return;
+    
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
     pagination.innerHTML = '';
     
-    // Previous button
+    // Previous
     const prevLi = document.createElement('li');
     prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
     prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
-    prevLi.addEventListener('click', function(e) {
+    prevLi.addEventListener('click', (e) => {
         e.preventDefault();
-        if (currentPage > 1) {
-            currentPage--;
-            updateDashboard();
-        }
+        if (currentPage > 1) { currentPage--; updateDashboard(); }
     });
     pagination.appendChild(prevLi);
     
-    // Page numbers
+    // Pages
     for (let i = 1; i <= totalPages; i++) {
         const li = document.createElement('li');
         li.className = `page-item ${i === currentPage ? 'active' : ''}`;
         li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-        li.addEventListener('click', function(e) {
+        li.addEventListener('click', (e) => {
             e.preventDefault();
             currentPage = i;
             updateDashboard();
@@ -856,82 +1038,63 @@ function updatePagination(totalItems) {
         pagination.appendChild(li);
     }
     
-    // Next button
+    // Next
     const nextLi = document.createElement('li');
     nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
     nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
-    nextLi.addEventListener('click', function(e) {
+    nextLi.addEventListener('click', (e) => {
         e.preventDefault();
-        if (currentPage < totalPages) {
-            currentPage++;
-            updateDashboard();
-        }
+        if (currentPage < totalPages) { currentPage++; updateDashboard(); }
     });
     pagination.appendChild(nextLi);
 }
 
-// Filter dashboard (No changes needed)
+// Filter dashboard
 function filterDashboard() {
     currentPage = 1;
     updateDashboard();
 }
 
-// MODIFIED: Now async, fetches the specific document from Firestore
+// Load list for editing (async)
 async function loadListForEditing(listId) {
     showLoadingSpinner();
     try {
         const docRef = db.collection('lists').doc(listId);
         const doc = await docRef.get();
-
-        if (!doc.exists) {
-            showNotification('Error: List not found.', 'error');
-            hideLoadingSpinner();
-            return;
-        }
-
+        if (!doc.exists) throw new Error('List not found');
         const list = doc.data();
         
-        // Switch to entry view
         switchView('entry');
         
-        // Load list data into form (No change in this logic)
         document.getElementById('listNumber').value = list.listNumber;
         document.getElementById('date').value = list.date;
         document.getElementById('partyName').value = list.partyName;
         document.getElementById('vehicleNumber').value = list.vehicleNumber;
         document.getElementById('productType').value = list.productType;
         
-        // Clear existing rows
         document.getElementById('logsTableBody').innerHTML = '';
         rowCount = 1;
         
-        // Load log data into table (No change in this logic)
         list.logs.forEach(log => {
             addTableRow();
-            const lengthInput = document.querySelector(`.length-input[data-row="${log.srNo}"]`);
-            const allowanceInput = document.querySelector(`.allowance-input[data-row="${log.srNo}"]`);
-            const girthInput = document.querySelector(`.girth-input[data-row="${log.srNo}"]`);
-            const cftInput = document.querySelector(`.cft-input[data-row="${log.srNo}"]`);
+            const rowNum = log.srNo;
+            const lengthInput = document.querySelector(`.length-input[data-row="${rowNum}"]`);
+            if (lengthInput) lengthInput.value = log.length;
             
-            if (lengthInput) {
-                lengthInput.value = log.length;
-                allowanceInput.value = log.allowance;
-                girthInput.value = log.girth;
-                cftInput.value = log.cft;
-            }
+            const allowanceInput = document.querySelector(`.allowance-input[data-row="${rowNum}"]`);
+            if (allowanceInput) allowanceInput.value = log.allowance;
+            
+            const girthInput = document.querySelector(`.girth-input[data-row="${rowNum}"]`);
+            if (girthInput) girthInput.value = log.girth;
+            
+            const cftInput = document.querySelector(`.cft-input[data-row="${rowNum}"]`);
+            if (cftInput) cftInput.value = log.cft;
         });
         
-        // Add a few empty rows for new entries
-        for (let i = 0; i < 3; i++) {
-            addTableRow();
-        }
+        for (let i = 0; i < 3; i++) addTableRow();
         
-        // Update totals
         updateTotals();
-        
-        // Set current list ID
         currentListId = list.id;
-        
         showNotification('List loaded for editing', 'info');
 
     } catch (error) {
@@ -942,95 +1105,81 @@ async function loadListForEditing(listId) {
     }
 }
 
-// MODIFIED: Now async, fetches the specific document from Firestore
+// 
+// --- THIS FUNCTION HAS BEEN UPDATED ---
+//
+// Print list (async)
 async function printList(listId) {
     showLoadingSpinner();
     try {
         const doc = await db.collection('lists').doc(listId).get();
-        if (!doc.exists) {
-            showNotification('Error: List not found.', 'error');
-            return;
-        }
+        if (!doc.exists) throw new Error('List not found');
         const list = doc.data();
         
-        // Generate print HTML (No change in this logic)
         const printHTML = generatePrintHTML(
-            list.listNumber,
-            list.date,
-            list.partyName,
-            list.vehicleNumber,
-            list.productType,
-            list.logs,
-            list.totalCFT
+            list.listNumber, list.date, list.partyName, list.vehicleNumber,
+            list.productType, list.logs, list.totalCFT
         );
         
-        // Create a new window for printing (No change in this logic)
+        // UPDATED: Added new print styles for page breaks, font size, and margins
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
             <!DOCTYPE html>
             <html>
-            <head>
-                <title>Print - ${list.listNumber}</title>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        margin: 20px;
-                    }
-                    .print-header {
-                        text-align: center;
-                        margin-bottom: 20px;
-                    }
-                    .header-info {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 10px;
-                    }
-                    .header-left, .header-right {
-                        text-align: left;
-                        width: 48%;
-                    }
-                    .two-column-table {
-                        display: flex;
-                        justify-content: space-between;
-                    }
-                    .column-table {
-                        width: 48%;
-                    }
-                    .print-table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-bottom: 20px;
-                    }
-                    .print-table th, .print-table td {
-                        border: 1px solid #000;
-                        padding: 5px;
-                        text-align: center;
-                    }
-                    .print-table th {
-                        background-color: #f2f2f2;
-                    }
-                    .print-footer {
-                        margin-top: 20px;
-                        text-align: center;
-                    }
-                    @media print {
-                        @page {
-                            size: A4;
-                            margin: 1cm;
-                        }
-                    }
-                </style>
+            <head><title>Print - ${list.listNumber}</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    margin: 5px; 
+                    font-size: 10px; /* Smaller font */
+                }
+                .print-header { text-align: center; margin-bottom: 10px; }
+                .header-info { display: flex; justify-content: space-between; margin-bottom: 10px; }
+                .header-left, .header-right { text-align: left; width: 48%; }
+                .two-column-table { display: flex; justify-content: space-between; }
+                .column-table { width: 48%; }
+                .print-table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin-bottom: 20px; 
+                    font-size: 10px; /* Smaller font */
+                }
+                .print-table th, .print-table td { 
+                    border: 1px solid #000; 
+                    padding: 2px; /* Less padding */
+                    text-align: center; 
+                }
+                .print-table th { background-color: #f2f2f2; }
+                .print-footer { margin-top: 20px; text-align: center; }
+                
+                /* Page break logic */
+                .print-page { 
+                    page-break-after: always;
+                    display: block;
+                    overflow: hidden;
+                }
+                
+                /* This stops the *last* page from page-breaking,
+                   so the footer stays on the same page. */
+                .print-page:last-child {
+                    page-break-after: auto;
+                }
+                
+                @media print { 
+                    @page { 
+                        size: A4; 
+                        margin: 0.5cm; /* Smaller margins */
+                    } 
+                }
+            </style>
             </head>
-            <body>
-                ${printHTML}
-            </body>
+            <body>${printHTML}</body>
             </html>
         `);
         
         printWindow.document.close();
         printWindow.focus();
         
-        // Wait for the content to load before printing
         setTimeout(() => {
             printWindow.print();
             printWindow.close();
@@ -1044,61 +1193,39 @@ async function printList(listId) {
     }
 }
 
-// MODIFIED: Now async, fetches the specific document from Firestore
+// Export list to Excel (async)
 async function exportListToExcel(listId) {
     showLoadingSpinner();
     try {
         const doc = await db.collection('lists').doc(listId).get();
-        if (!doc.exists) {
-            showNotification('Error: List not found.', 'error');
-            return;
-        }
+        if (!doc.exists) throw new Error('List not found');
         const list = doc.data();
         
-        // Create a new workbook (No change in this logic)
         const wb = XLSX.utils.book_new();
-        
-        // Create header row
         const header = [
-            ['OSWAL LUMBERS PVT LTD'],
-            [''],
+            ['OSWAL LUMBERS PVT LTD'], [''],
             ['List Number:', list.listNumber],
             ['Date:', list.date],
             ['Party Name:', list.partyName],
             ['Vehicle Number:', list.vehicleNumber],
-            ['Product Type:', list.productType],
-            [''],
+            ['Product Type:', list.productType], [''],
             ['Sr No', 'Length', 'Length Allowance', 'Girth', 'CFT']
         ];
         
-        // Add log data
         const data = list.logs.map(log => [
-            log.srNo,
-            log.length,
-            log.allowance,
-            log.girth,
-            log.cft.toFixed(2)
+            log.srNo, log.length, log.allowance, log.girth, log.cft.toFixed(2)
         ]);
         
-        // Add totals
         data.push([]);
         data.push(['Total CFT:', '', '', '', list.totalCFT.toFixed(2)]);
         data.push(['Total CBM:', '', '', '', list.totalCBM.toFixed(2)]);
         data.push(['Total PCS:', '', '', '', list.totalPCS]);
         
-        // Combine header and data
         const wsData = [...header, ...data];
-        
-        // Create worksheet
         const ws = XLSX.utils.aoa_to_sheet(wsData);
-        
-        // Add worksheet to workbook
         XLSX.utils.book_append_sheet(wb, ws, 'Log List');
         
-        // Generate filename
         const filename = `${list.listNumber}_${list.date}_${list.partyName.replace(/\s+/g, '_')}.xlsx`;
-        
-        // Save the file
         XLSX.writeFile(wb, filename);
         
         showNotification('List exported to Excel successfully', 'success');
@@ -1111,49 +1238,48 @@ async function exportListToExcel(listId) {
     }
 }
 
-// Reset form (No changes needed)
+// Reset form
 function resetForm() {
-    document.getElementById('logForm').reset();
+    const logForm = document.getElementById('logForm');
+    if (logForm) {
+        logForm.reset();
+    }
     setTodayDate();
     updateListNumber();
-    
-    // Clear table and regenerate initial rows
     generateInitialRows();
-    
-    // Update totals
     updateTotals();
 }
 
-// Show notification (No changes needed)
+// Show notification
 function showNotification(message, type) {
     const notification = document.getElementById('notification');
-    notification.textContent = message;
-    notification.className = `notification ${type}`;
-    notification.classList.add('show');
-    
-    setTimeout(() => {
-        notification.classList.remove('show');
-    }, 3000);
+    if (notification) {
+        notification.textContent = message;
+        notification.className = `notification ${type} show`;
+        setTimeout(() => { notification.classList.remove('show'); }, 3000);
+    }
 }
 
-// Show loading spinner (No changes needed)
+// Loading spinner
 function showLoadingSpinner() {
-    document.getElementById('loadingSpinner').style.display = 'flex';
+    const spinner = document.getElementById('loadingSpinner');
+    if (spinner) {
+        spinner.style.display = 'flex';
+    }
 }
 
-// Hide loading spinner (No changes needed)
 function hideLoadingSpinner() {
-    document.getElementById('loadingSpinner').style.display = 'none';
+    const spinner = document.getElementById('loadingSpinner');
+    if (spinner) {
+        spinner.style.display = 'none';
+    }
 }
 
-// NEW: Function to sign the user out
+// Sign out user
 function signOutUser() {
     showLoadingSpinner();
     firebase.auth().signOut()
         .then(() => {
-            // Sign-out successful.
-            // The auth listener in index.html will catch this
-            // and redirect to login.html.
             console.log('User signed out.');
             window.location.href = 'login.html';
         })
