@@ -136,51 +136,6 @@ body {
     transform: translateY(-5px);
 }
 
-.print-header {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.print-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.print-table th, .print-table td {
-    border: 1px solid #000;
-    padding: 5px;
-    text-align: center;
-}
-
-.print-table th {
-    background-color: #f2f2f2;
-}
-
-.print-footer {
-    margin-top: 20px;
-    text-align: center;
-}
-
-@media print {
-    .no-print {
-        display: none !important;
-    }
-    
-    .print-container {
-        width: 100%;
-        margin: 0;
-        padding: 10px;
-    }
-    
-    .print-page {
-        page-break-after: always;
-    }
-    
-    .print-table {
-        font-size: 12px;
-    }
-}
-
 .search-container {
     position: relative;
     margin-bottom: 20px;
@@ -308,7 +263,70 @@ body {
     background: #555;
 }
 
-/* Print-specific styles */
+#tableContextMenu {
+    display: none;
+    position: fixed;
+    z-index: 1050;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+#tableContextMenu .dropdown-item {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#tableContextMenu .dropdown-item .bi {
+    width: 16px;
+}
+
+
+/* --- ALL PRINT STYLES UPDATED AND CONSOLIDATED HERE ---
+  This controls the print preview modal AND the final print.
+*/
+
+.print-header {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px; /* Smaller font */
+}
+
+.print-table th, .print-table td {
+    border: 1px solid #000;
+    padding: 2px; /* Less padding */
+    text-align: center;
+}
+
+.print-table th {
+    background-color: #f2f2f2;
+}
+
+.print-footer {
+    margin-top: 20px;
+    text-align: center;
+}
+
+/* This class is added by script.js to each 100-log block */
+.print-page {
+    page-break-after: always;
+}
+
+/* ▼▼▼ NEW RULE ▼▼▼ */
+/* This stops the *last* page from page-breaking,
+   so the footer stays on the same page. */
+.print-page:last-child {
+    page-break-after: auto;
+}
+/* ▲▲▲ END NEW RULE ▲▲▲ */
+
+
+/* Specific rules for when the user hits the PRINT button */
 @media print {
     body * {
         visibility: hidden;
@@ -323,5 +341,19 @@ body {
         left: 0;
         top: 0;
         width: 100%;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+    
+    .print-table {
+        font-size: 10px; /* Force small font on print */
+    }
+
+    /* Set A4 size and small margins */
+    @page { 
+        size: A4; 
+        margin: 0.5cm; 
     }
 }
