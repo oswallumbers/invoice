@@ -125,7 +125,7 @@ function addTableRow() {
         </td>
         <td>${currentRowNumber}</td>
         <td><input type="number" class="length-input" data-row="${currentRowNumber}" step="0.01"></td>
-        <td><input type="number" class="allowance-input" data-row="${currentRowNumber}" step="0.01" readonly></td>
+        <td><input type="number" class="allowance-input" data-row="${currentRowNumber}" step="0.01"></td>
         <td><input type="number" class="girth-input" data-row="${currentRowNumber}" step="0.01"></td>
         <td><input type="number" class="cft-input" data-row="${currentRowNumber}" step="0.01" readonly></td>
     `;
