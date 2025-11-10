@@ -304,36 +304,41 @@
         <span class="font-bold">Reminder:</span> You have LCs due soon!
     </div>
 
+<script type="module">
+    // Import Firebase modules (v12.5.0)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics.js";
+    import { 
+        getAuth, 
+        signInAnonymously, 
+        onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+    import { 
+        getFirestore, 
+        doc, 
+        addDoc, 
+        setDoc, 
+        updateDoc, 
+        deleteDoc, 
+        onSnapshot, 
+        collection, 
+        query, 
+        where, 
+        serverTimestamp,
+        Timestamp,
+        setLogLevel
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
-    <script type="module">
-        // Import Firebase modules (v12.5.0)
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics.js";
-        import { 
-            getAuth, 
-            signInAnonymously, 
-            onAuthStateChanged 
-        } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-        import { 
-            getFirestore, 
-            doc, 
-            addDoc, 
-            setDoc, 
-            updateDoc, 
-            deleteDoc, 
-            onSnapshot, 
-            collection, 
-            query, 
-            where, 
-            serverTimestamp,
-            Timestamp,
-            setLogLevel
-        } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-        
-        if (localStorage.getItem('isLoggedIn') !== 'true') {
-            // If not logged in, redirect back to login.html
-            window.location.href = 'index.html';
-        }
+    
+    // --- SECURITY CHECK ---
+    // This check runs immediately.
+    if (localStorage.getItem('isLoggedIn') !== 'true') {
+        // If not logged in, redirect back to login.html
+        window.location.href = 'login.html';
+    
+    } else {
+        // --- APP WILL ONLY RUN IF LOGGED IN ---
+
         // --- Firebase Configuration (Your Production Config) ---
         const firebaseConfig = {
             apiKey: "AIzaSyChwQ56XFaTuy2nlEM26gCGEprP0ix28j4",
@@ -346,6 +351,7 @@
         };
 
         // --- Wait for the DOM to be fully loaded ---
+        // This ensures all HTML elements (like 'lc-table') exist before the script tries to use them.
         document.addEventListener('DOMContentLoaded', () => {
 
             // --- App Variables ---
@@ -354,7 +360,6 @@
             let unsubscribeLcListener = null;
             let globalRecords = []; // Raw data from Firebase
             let processedRecords = []; // Data separated into pending/paid
-            // NEW: Sort state
             let currentSort = {
                 key: 'dueDate', // Default sort
                 order: 'asc'
@@ -393,7 +398,7 @@
                 return (Number(value) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
 
-            // UPDATED: New date format dd-MM-yyyy
+            // NEW date format dd-MM-yyyy
             const formatDate = (timestamp) => {
                 if (!timestamp) return 'N/A';
                 if (typeof timestamp.toDate !== 'function') {
@@ -406,7 +411,7 @@
                 return `${day}-${month}-${year}`;
             };
             
-            // This helper function MUST return yyyy-MM-dd for the <input type="date">
+            // Helper function for <input type="date"> (must be yyyy-MM-dd)
             const formatTimestampForInput = (timestamp) => {
                  if (!timestamp) return '';
                 if (typeof timestamp.toDate !== 'function') {
@@ -421,30 +426,21 @@
                 return newDate;
             };
 
-            // --- Form Auto-Calculation (UPDATED) ---
+            // --- Form Auto-Calculation (FIXED) ---
             function updateFormCalculations() {
                 const usd = parseFloat(usdAmountEl.value) || 0;
                 const rate = parseFloat(openExRateEl.value) || 0;
                 const interest = parseFloat(interestUsdEl.value) || 0;
                 const charges = parseFloat(debitChargesAmountEl.value) || 0;
 
-                // 1. Bank Liability (USD) = USD + Interest
                 const liability = usd + interest;
-                
-                // 2. Liability in INR (for % calc)
                 const liabilityInr = liability * rate;
-
-                // 3. INR Amount (Auto) = (Liability * Rate) + Charges
                 const totalInr = liabilityInr + charges;
-                
-                // 4. Total Charges in INR = (Interest * Rate) + Charges
                 const totalChargesInr = (interest * rate) + charges;
-
-                // 5. Charges % = (Total Charges INR / Total INR Amount) * 100
                 const chargesPercent = (totalInr > 0) ? (totalChargesInr / totalInr) * 100 : 0;
 
                 bankLiabilityUsdEl.value = formatCurrency(liability);
-                inrAmountEl.value = formatCurrency(totalInr); // Use the new formula
+                inrAmountEl.value = formatCurrency(totalInr);
                 chargesPercentEl.value = chargesPercent.toFixed(2) + ' %';
             }
             
@@ -475,7 +471,7 @@
             dueDateEl.addEventListener('input', calculateUsanceDays);
 
 
-            // --- PDF Parsing Logic (UPDATED) ---
+            // --- PDF Parsing Logic (FIXED) ---
             function formatDateYYMMDD(dateStr) {
                 if (!dateStr || dateStr.length !== 6) return null;
                 const year = "20" + dateStr.substring(0, 2);
@@ -507,7 +503,6 @@
 
                     if (text.match(/:50:OSWAL LUMBERS PVT LTD/)) document.getElementById('party').value = "OLPL";
 
-                    // **FIXED**: Robust Shipper Name Regex
                     const shipperMatch = text.match(/3\.NAME AND COMPLETE ADDRESS OF EXPORT(?:ER)?:\s*([\s\S]*?)4\.DESCRIPTION/);
                     if (shipperMatch && shipperMatch[1]) {
                         const firstLine = shipperMatch[1].trim().split('\n')[0].trim();
@@ -617,7 +612,7 @@
                 }
             }
 
-            // --- Firestore Data Operations (REFACTORED) ---
+            // --- Firestore Data Operations ---
             
             // 1. Load data from Firebase
             function loadLcRecords() {
@@ -632,9 +627,9 @@
                     let pending = globalRecords.filter(r => r.status === 'Pending');
                     let paid = globalRecords.filter(r => r.status === 'Paid');
                     
-                    // Sort pending by due date (nearest first)
+                    // Default sort: pending by due date (nearest first)
                     pending.sort((a, b) => (a.dueDate ? a.dueDate.toMillis() : 0) - (b.dueDate ? b.dueDate.toMillis() : 0));
-                    // Sort paid by payment date (newest first)
+                    // Default sort: paid by payment date (newest first)
                     paid.sort((a, b) => (b.paymentDate ? b.paymentDate.toMillis() : 0) - (a.paymentDate ? a.paymentDate.toMillis() : 0));
                     
                     processedRecords = [...pending, ...paid]; // This is the default view
@@ -649,7 +644,7 @@
                 });
             }
 
-            // 2. Render the table (NEW FUNCTION)
+            // 2. Render the table
             function renderTable(records) {
                 tableBody.innerHTML = '';
                 let totalOutstandingUsd = 0;
@@ -661,7 +656,6 @@
                     return;
                 }
 
-                // Date checks for reminders
                 const today = getStartOfDay(new Date());
                 const tomorrow = getStartOfDay(new Date());
                 tomorrow.setDate(today.getDate() + 1);
@@ -756,7 +750,7 @@
                 });
             }
 
-            // 3. Sort data (NEW FUNCTION)
+            // 3. Sort data
             function sortData(records) {
                 const key = currentSort.key;
                 const order = currentSort.order;
@@ -765,11 +759,9 @@
                     let valA = a[key];
                     let valB = b[key];
 
-                    // Handle date objects
                     if (valA && typeof valA.toMillis === 'function') valA = valA.toMillis();
                     if (valB && typeof valB.toMillis === 'function') valB = valB.toMillis();
                     
-                    // Handle null/undefined values
                     valA = valA || 0;
                     valB = valB || 0;
                     
@@ -793,7 +785,6 @@
                     throw new Error("LC Open Date and Due Date are required.");
                 }
 
-                // Calculate all values based on form inputs
                 const usd = parseFloat(document.getElementById('usdAmount').value) || 0;
                 const rate = parseFloat(document.getElementById('openExRate').value) || 0;
                 const interest = parseFloat(document.getElementById('interestUsd').value) || 0;
@@ -805,7 +796,6 @@
                 const totalChargesInr = (interest * rate) + charges;
                 const chargesPercent = (totalInr > 0) ? (totalChargesInr / totalInr) * 100 : 0;
 
-                // Return the complete object to be saved
                 return {
                     openDate: Timestamp.fromDate(new Date(openDateVal)),
                     lcNumber: document.getElementById('lcNumber').value,
@@ -819,9 +809,9 @@
                     invoiceDetails: document.getElementById('invoiceDetails').value,
                     interestUsd: interest,
                     debitChargesAmount: charges,
-                    inrAmount: totalInr, // Save the new calculated total INR
+                    inrAmount: totalInr,
                     bankLiabilityUsd: liability,
-                    chargesPercent: chargesPercent, // Save the new calculated Charges %
+                    chargesPercent: chargesPercent,
                 };
             }
 
@@ -895,7 +885,6 @@
             function openPaymentModal(docId, lcNumber) {
                 modalDocId.value = docId;
                 modalLcNumber.textContent = lcNumber;
-                // Set payment date to today by default (in yyyy-MM-dd format)
                 paymentDateEl.value = new Date().toLocaleDateString('en-CA');
                 paymentUsdEl.value = '';
                 paymentExRateEl.value = '';
@@ -943,7 +932,7 @@
             });
 
 
-            // --- Table Button Event Delegation (FIXED) ---
+            // --- Table Button Event Delegation ---
             tableBody.addEventListener('click', async (e) => {
                 const target = e.target.closest('button');
                 if (!target) return;
@@ -955,7 +944,6 @@
                 if (target.classList.contains('edit-btn')) {
                     const record = globalRecords.find(r => r.id === docId);
                     if (record) {
-                        // Use formatTimestampForInput to set date fields
                         document.getElementById('lcOpenDate').value = formatTimestampForInput(record.openDate);
                         document.getElementById('dueDate').value = formatTimestampForInput(record.dueDate);
                         
@@ -1015,14 +1003,13 @@
                 }
             });
 
-            // --- NEW: Table Sort Listener ---
+            // --- Table Sort Listener ---
             tableHead.addEventListener('click', (e) => {
                 const header = e.target.closest('th[data-sort-key]');
                 if (!header) return;
                 
                 const key = header.dataset.sortKey;
                 
-                // If same key, toggle order. Otherwise, set to 'asc'.
                 if (currentSort.key === key) {
                     currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
                 } else {
@@ -1030,12 +1017,12 @@
                     currentSort.order = 'asc';
                 }
                 
-                // Re-render the table with the sorted data
+                // Re-render the table with the *processedRecords* data
                 renderTable(processedRecords);
             });
 
 
-            // --- Excel Export Logic (UPDATED) ---
+            // --- Excel Export Logic ---
             function exportToExcel() {
                 // Use processedRecords to export in the current view's sort order
                 if (processedRecords.length === 0) {
@@ -1078,6 +1065,8 @@
             initializeFirebase();
 
         }); // <-- End of DOMContentLoaded listener
-    </script>
+
+    } // <-- End of security check 'else' block
+</script>
 </body>
 </html>
