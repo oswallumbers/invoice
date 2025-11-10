@@ -88,10 +88,13 @@
 
     <div class="container max-w-full mx-auto p-4 md:p-8">
 
-        <header class="mb-4">
-            <h1 class="text-3xl font-bold text-gray-900">LC / BC Management Dashboard</h1>
-          
-        </header>
+      <header class="mb-4 flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">LC / BC Management Dashboard</h1>
+    
+        <button id="logout-btn" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+        Logout
+    </button>
+    </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-4">
             
@@ -392,6 +395,7 @@
             const cancelEditBtn = document.getElementById('cancel-edit-btn');
             const editDocIdInput = document.getElementById('edit-doc-id');
             const formTitle = document.getElementById('form-title');
+            const logoutBtn = document.getElementById('logout-btn');
 
             // --- Utility Functions ---
             const formatCurrency = (value) => {
@@ -1059,7 +1063,15 @@
             }
             
             document.getElementById('export-excel-btn').addEventListener('click', exportToExcel);
-
+logoutBtn.addEventListener('click', () => {
+    if (confirm("Are you sure you want to log out?")) {
+        // Clear the login flag
+        localStorage.removeItem('isLoggedIn');
+        
+        // Redirect to the login page
+        window.location.href = 'login.html';
+    }
+});
             // --- Initial Load ---
             document.getElementById('pdfUpload').addEventListener('change', handlePdfUpload);
             initializeFirebase();
