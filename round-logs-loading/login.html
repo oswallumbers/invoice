@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Oswal Lumbers</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card login-card">
+        <div class="card-header text-center">
+            <h3 class="mb-0"><i class="bi bi-tree-fill"></i> Oswal Lumbers Login</h3>
+        </div>
+        <div class="card-body">
+            <div id="notification" class="alert alert-danger" style="display: none;"></div>
+            
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email address</label>
+                    <input type="email" class="form-control" id="email" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" required>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-primary" id="loginBtn">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="registerBtn">
+                        <i class="bi bi-person-plus"></i> Register New User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    
+    <script src="firebase-init.js"></script>
+
+    <script>
+        // NEW: Login Page Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const auth = firebase.auth();
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
+            const notification = document.getElementById('notification');
+
+            // --- Login Button Click ---
+            loginBtn.addEventListener('click', () => {
+                const email = emailInput.value;
+                const password = passwordInput.value;
+
+                if (!email || !password) {
+                    showNotification('Please enter email and password.');
+                    return;
+                }
+
+                auth.signInWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        // Signed in! Redirect to the main app.
+                        window.location.href = 'index.html';
+                    })
+                    .catch((error) => {
+                        showNotification(error.message);
+                    });
+            });
+
+            // --- Register Button Click ---
+            registerBtn.addEventListener('click', () => {
+                const email = emailInput.value;
+                const password = passwordInput.value;
+
+                if (!email || !password) {
+                    showNotification('Please enter email and password.');
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    showNotification('Password must be at least 6 characters.');
+                    return;
+                }
+
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        // Registered and signed in!
+                        showNotification('Account created! Logging in...', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 1500);
+                    })
+                    .catch((error) => {
+                        showNotification(error.message);
+                    });
+            });
+            
+            function showNotification(message, type = 'danger') {
+                notification.textContent = message;
+                notification.className = `alert alert-${type}`;
+                notification.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
