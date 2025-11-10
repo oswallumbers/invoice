@@ -329,7 +329,11 @@
             Timestamp,
             setLogLevel
         } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-
+        
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            // If not logged in, redirect back to login.html
+            window.location.href = 'index.html';
+        }
         // --- Firebase Configuration (Your Production Config) ---
         const firebaseConfig = {
             apiKey: "AIzaSyChwQ56XFaTuy2nlEM26gCGEprP0ix28j4",
