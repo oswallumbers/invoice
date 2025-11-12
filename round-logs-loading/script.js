@@ -969,9 +969,10 @@ async function updateDashboard() {
                 <td>${list.totalCBM.toFixed(3)}</td>
                 <td>${list.totalPCS}</td>
                 <td>
-                    <button class="btn btn-sm btn-primary edit-list-btn" data-id="${list.id}"><i class="bi bi-pencil"></i></button>
-                    <button class="btn btn-sm btn-danger print-list-btn" data-id="${list.id}"><i class="bi bi-printer"></i></button>
-                    <button class="btn btn-sm btn-success export-list-btn" data-id="${list.id}"><i class="bi bi-file-earmark-excel"></i></button>
+                    <button class="btn btn-sm btn-primary edit-list-btn" data-id="${list.id}" title="Edit"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-danger print-list-btn" data-id="${list.id}" title="Print"><i class="bi bi-printer"></i></button>
+                    <button class="btn btn-sm btn-success export-list-btn" data-id="${list.id}" title="Export"><i class="bi bi-file-earmark-excel"></i></button>
+                    <button class="btn btn-sm btn-dark delete-list-btn" data-id="${list.id}" title="Delete" style="background-color: #333; border-color: #333;"><i class="bi bi-trash"></i></button>
                 </td>
             `;
             tableBody.appendChild(row);
@@ -985,6 +986,10 @@ async function updateDashboard() {
         });
         document.querySelectorAll('.export-list-btn').forEach(btn => {
             btn.addEventListener('click', function() { exportListToExcel(this.dataset.id); });
+        });
+        // NEW: Delete Listener
+        document.querySelectorAll('.delete-list-btn').forEach(btn => {
+            btn.addEventListener('click', function() { deleteList(this.dataset.id); });
         });
         
         updatePagination(filteredLists.length);
@@ -1312,4 +1317,42 @@ function signOutUser() {
             showNotification('Error signing out', 'error');
             hideLoadingSpinner();
         });
+}
+// Delete list with Password Protection
+async function deleteList(listId) {
+    // 1. Ask for PIN / Password
+    const pin = prompt("🔒 Enter Admin PIN to DELETE this list:");
+
+    // 2. Check if user pressed Cancel
+    if (pin === null) return;
+
+    // 3. Validate PIN (Change '1234' to whatever password you want)
+    if (pin !== "1234") {
+        alert("❌ Incorrect PIN! Deletion cancelled.");
+        return;
+    }
+
+    // 4. Double Confirmation
+    if (!confirm("⚠️ Are you sure you want to permanently delete this list? This cannot be undone.")) {
+        return;
+    }
+
+    showLoadingSpinner();
+    try {
+        // Delete from Firestore
+        await db.collection('lists').doc(listId).delete();
+        
+        // Remove from local cache so we don't need to reload from server
+        allFetchedLists = allFetchedLists.filter(list => list.id !== listId);
+        
+        showNotification('List deleted successfully', 'success');
+        
+        // Refresh the table
+        updateDashboard(); 
+    } catch (error) {
+        console.error("Error deleting list:", error);
+        showNotification('Error deleting list. See console.', 'error');
+    } finally {
+        hideLoadingSpinner();
+    }
 }
