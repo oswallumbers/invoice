@@ -1530,19 +1530,142 @@ async function saveInvoiceWithAttachments(invoiceData, attachments) {
         let revenueChart = null;
         let buyersChart = null;
         
-        // Initialize the app
-        function init() {
-            // Check if user is logged in
-            if (localStorage.getItem('isLoggedIn') === 'true') {
-                currentUser = {
-                    displayName: localStorage.getItem('userName') || 'User',
-                    email: localStorage.getItem('userEmail') || 'user@example.com'
-                };
-                showDashboard();
-                loadInvoices();
+        // ==========================================
+    // NEW: DATA SYNC INTEGRATION (Start)
+    // ==========================================
+
+    // 1. Configuration for the SOURCE App (export_invoice)
+    // This is taken from your export_invoice/firebase-init.js file
+    const sourceFirebaseConfig = {
+        apiKey: "AIzaSyAMesZEMlRPhbzTZkDtz6SqAdW60GAmLb0",
+        authDomain: "export-inv-82c4e.firebaseapp.com",
+        projectId: "export-inv-82c4e",
+        storageBucket: "export-inv-82c4e.firebasestorage.app",
+        messagingSenderId: "174774832913",
+        appId: "1:174774832913:web:6de53bc9e11da8e2e7c6b0",
+        measurementId: "G-V935DH905E"
+    };
+
+    // 2. Initialize the Secondary App (Source)
+    // We give it a name 'sourceApp' to distinguish it from the main default app
+    const sourceApp = firebase.initializeApp(sourceFirebaseConfig, "sourceApp");
+    const sourceDb = sourceApp.firestore();
+
+    // 3. Function to Sync Data
+    async function syncExternalData() {
+        showToast('Checking for new invoices from Export Invoice App...', 'info');
+
+        try {
+            // A. Get all existing Invoice Numbers in export-main to prevent duplicates
+            const mainSnapshot = await db.collection('invoices').get();
+            const existingInvoiceNos = new Set();
+            mainSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.invoiceNo) existingInvoiceNos.add(data.invoiceNo.trim());
+            });
+
+            // B. Fetch invoices from the Source App (export_invoice)
+            const sourceSnapshot = await sourceDb.collection('invoices').get();
+            
+            let newCount = 0;
+            const batch = db.batch(); // Use batch for efficient writing
+            let hasUpdates = false;
+
+            sourceSnapshot.forEach(doc => {
+                const sourceData = doc.data();
+                const invNo = sourceData.invoiceNo ? sourceData.invoiceNo.trim() : null;
+
+                // Only proceed if we have an invoice number and it DOES NOT exist in main db
+                if (invNo && !existingInvoiceNos.has(invNo)) {
+                    
+                    // C. MAP DATA: Source Fields -> Destination Fields
+                    // We calculate defaults where data is missing
+                    
+                    // Convert items array to a single string for 'Goods' column
+                    const goodsDescription = sourceData.items && sourceData.items.length > 0 
+                        ? sourceData.items.map(i => i.desc).join(', ') 
+                        : 'Timber Products';
+
+                    // Default Exchange Rate (you can change this default)
+                    const defaultExRate = parseFloat(localStorage.getItem('defaultExchangeRate')) || 83.00;
+                    const totalUSD = parseFloat(sourceData.totalAmount) || 0;
+
+                    const newInvoiceRef = db.collection('invoices').doc(); // Create new auto-ID doc ref in Main DB
+                    
+                    const newData = {
+                        invoiceNo: invNo,
+                        buyerName: sourceData.buyerName || 'Unknown',
+                        invoiceDate: sourceData.invoiceDate || new Date().toISOString().split('T')[0],
+                        shippingBillNumber: '', // Not available in source
+                        invoiceFrom: sourceData.sellerDetails ? sourceData.sellerDetails.split('\n')[0] : 'OSWAL LUMBERS',
+                        
+                        // Map Container details
+                        containerNumber: sourceData.containerNo || '',
+                        lineSealNumber: '', // Not available in source
+                        customESealNumber: '', // Not available in source
+                        truckNumber: '', // Not available in source
+                        
+                        // Map Quantities and Amounts
+                        quantity: parseFloat(sourceData.totalM3) || 0, // Mapping M3 to Quantity
+                        rate: 0, // Will need manual update or calculation
+                        totalUSD: totalUSD,
+                        exRate: defaultExRate,
+                        amount: (totalUSD * defaultExRate).toFixed(2), // Auto-calculate amount in INR
+                        pcs: parseFloat(sourceData.totalItems) || 0, // Mapping Items count to PCS
+                        
+                        goods: goodsDescription,
+                        shippingName: sourceData.buyerName || '', // Default to buyer name
+                        
+                        addedBy: 'System Sync',
+                        createdAt: new Date().toISOString(),
+                        sourceId: doc.id // Track original ID
+                    };
+
+                    batch.set(newInvoiceRef, newData);
+                    hasUpdates = true;
+                    newCount++;
+                }
+            });
+
+            // D. Commit the batch if there are new records
+            if (hasUpdates) {
+                await batch.commit();
+                showToast(`Sync Complete: Imported ${newCount} new invoices.`, 'success');
+                loadInvoices(); // Refresh the table
             } else {
-                showLogin();
+                console.log('Sync Complete: No new invoices found.');
             }
+
+        } catch (error) {
+            console.error("Sync Error:", error);
+            showToast("Error syncing data: " + error.message, 'error');
+        }
+    }
+
+    // ==========================================
+    // NEW: DATA SYNC INTEGRATION (End)
+    // ==========================================
+        // Initialize the app
+      // Initialize the app
+function init() {
+    // Check if user is logged in
+    if (localStorage.getItem('isLoggedIn') === 'true') {
+        currentUser = {
+            displayName: localStorage.getItem('userName') || 'User',
+            email: localStorage.getItem('userEmail') || 'user@example.com'
+        };
+        showDashboard();
+        loadInvoices();
+        
+        // <--- ADD THIS LINE HERE --->
+        syncExternalData(); 
+        
+    } else {
+        showLogin();
+    }
+    
+    // ... existing event listeners ...
+
             
             // Event Listeners
             loginForm.addEventListener('submit', handleLogin);
@@ -2686,4 +2809,5 @@ async function saveInvoice() {
     </script>
 </body>
 </html>
+
 
