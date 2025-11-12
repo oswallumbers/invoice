@@ -575,19 +575,28 @@ function setTodayDate() {
 }
 
 async function saveData() {
-    // 1. Find the Save button and disable it to prevent double-clicks
     const saveBtn = document.querySelector("button[onclick='saveData()']") || document.querySelector(".btn-primary");
     const originalBtnText = saveBtn ? saveBtn.textContent : "Save";
-    
+
     if (saveBtn) {
-        if (saveBtn.disabled) return; // Stop if already processing
+        if (saveBtn.disabled) return;
         saveBtn.disabled = true;
         saveBtn.textContent = "Saving...";
     }
 
     try {
-        const listNumberVal = document.getElementById('listNumber').value;
-        const listDate = document.getElementById('listDate').value;
+        // 1. Safely get values (Handle missing elements)
+        const listNumInput = document.getElementById('listNumber');
+        const listDateInput = document.getElementById('listDate');
+        const containerInput = document.getElementById('containerNo'); // Party Name
+        const wagonInput = document.getElementById('wagonNo');         // Vehicle Number
+
+        const listNumberVal = listNumInput ? listNumInput.value : '';
+        const listDate = listDateInput ? listDateInput.value : '';
+        
+        // FIX: Check if inputs exist before reading .value
+        const containerNoVal = containerInput ? containerInput.value : '';
+        const wagonNoVal = wagonInput ? wagonInput.value : '';
 
         if (!listNumberVal || !listDate) {
             alert('Please fill in List Number and Date.');
@@ -616,18 +625,20 @@ async function saveData() {
             }
         });
 
+        // 2. Use String for List Number (supports 'OLPL/LOG/004')
+        // We do NOT use parseInt() here so your custom ID works
         const listData = {
-            listNumber: parseInt(listNumberVal),
+            listNumber: listNumberVal, 
             listDate: listDate,
-            containerNo: document.getElementById('containerNo').value,
-            wagonNo: document.getElementById('wagonNo').value,
+            containerNo: containerNoVal,
+            wagonNo: wagonNoVal,
             logs: logs,
             totalCFT: totalCFT,
             totalCBM: totalCFT / 27.74,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
-        // 2. Check for duplicates (prevents two lists with same number)
+        // 3. Check for duplicates
         const duplicateCheck = await db.collection('loadingLists')
             .where('listNumber', '==', listData.listNumber)
             .get();
@@ -635,7 +646,6 @@ async function saveData() {
         let isDuplicate = false;
         if (!duplicateCheck.empty) {
             duplicateCheck.forEach(doc => {
-                // It's a duplicate if it exists AND it's not the one we are currently editing
                 if (doc.id !== currentListId) {
                     isDuplicate = true;
                 }
@@ -643,12 +653,12 @@ async function saveData() {
         }
 
         if (isDuplicate) {
-            alert(`List Number ${listData.listNumber} already exists! Please use a different number.`);
+            alert(`List Number ${listData.listNumber} already exists!`);
             if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = originalBtnText; }
             return;
         }
 
-        // 3. Save Data
+        // 4. Save to Firestore
         if (currentListId) {
             await db.collection('loadingLists').doc(currentListId).update(listData);
             showNotification('List updated successfully!', 'success');
@@ -656,10 +666,13 @@ async function saveData() {
             listData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
             await db.collection('loadingLists').add(listData);
             
-            // Update counter logic
-            if (listData.listNumber >= nextListNumber) {
-                db.collection('metadata').doc('counter').set({ nextListNumber: listData.listNumber + 1 })
-                  .catch(err => console.log("Counter update error", err));
+            // Only auto-increment if it's a pure number, otherwise skip
+            if (!isNaN(listData.listNumber)) {
+                 const numVal = parseInt(listData.listNumber);
+                 if (numVal >= nextListNumber) {
+                    db.collection('metadata').doc('counter').set({ nextListNumber: numVal + 1 })
+                      .catch(e => console.log("Counter skip", e));
+                 }
             }
             showNotification('List saved successfully!', 'success');
         }
@@ -669,9 +682,8 @@ async function saveData() {
 
     } catch (error) {
         console.error("Error saving:", error);
-        alert('Error saving data. Please try again.');
+        alert('Error saving data: ' + error.message);
     } finally {
-        // 4. Always re-enable the button when done
         if (saveBtn) {
             saveBtn.disabled = false;
             saveBtn.textContent = originalBtnText;
