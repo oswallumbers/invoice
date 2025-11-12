@@ -543,7 +543,7 @@ function updateTotals() {
     if (grandTotalCFTEl) grandTotalCFTEl.textContent = totalCFT.toFixed(2);
     
     const grandTotalCBMEl = document.getElementById('grandTotalCBM');
-    if (grandTotalCBMEl) grandTotalCBMEl.textContent = (totalCFT / 27.74).toFixed(2);
+    if (grandTotalCBMEl) grandTotalCBMEl.textContent = (totalCFT / 27.74).toFixed(3);
     
     const totalPCSEl = document.getElementById('totalPCS');
     if (totalPCSEl) totalPCSEl.textContent = totalPCS;
@@ -942,7 +942,7 @@ async function updateDashboard() {
                 <td>${list.vehicleNumber}</td>
                 <td>${list.productType}</td>
                 <td>${list.totalCFT.toFixed(2)}</td>
-                <td>${list.totalCBM.toFixed(2)}</td>
+                <td>${list.totalCBM.toFixed(3)}</td>
                 <td>${list.totalPCS}</td>
                 <td>
                     <button class="btn btn-sm btn-primary edit-list-btn" data-id="${list.id}"><i class="bi bi-pencil"></i></button>
@@ -1218,7 +1218,7 @@ async function exportListToExcel(listId) {
         
         data.push([]);
         data.push(['Total CFT:', '', '', '', list.totalCFT.toFixed(2)]);
-        data.push(['Total CBM:', '', '', '', list.totalCBM.toFixed(2)]);
+        data.push(['Total CBM:', '', '', '', list.totalCBM.toFixed(3)]);
         data.push(['Total PCS:', '', '', '', list.totalPCS]);
         
         const wsData = [...header, ...data];
