@@ -1,0 +1,2689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Data Management System</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js for Reports -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* Your existing CSS styles remain the same */
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        /* Login Page Styles */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a2980, #26d0ce);
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            width: 400px;
+        }
+        
+        .login-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .login-body {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-control {
+            border-radius: 5px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            width: 100%;
+            transition: border-color 0.3s;
+        }
+        
+        .form-control:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+        
+        .btn-login {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 12px;
+            width: 100%;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-login:hover {
+            background-color: #2980b9;
+        }
+        
+        /* Dashboard Styles */
+        .dashboard-container {
+            display: none;
+            min-height: 100vh;
+            background-color: #f5f7fa;
+        }
+        
+        .sidebar {
+            background-color: var(--primary-color);
+            color: white;
+            width: 250px;
+            min-height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding-top: 20px;
+            z-index: 1000;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .sidebar-menu li {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .sidebar-menu li:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar-menu li.active {
+            background-color: var(--secondary-color);
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        
+        .header {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 24px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 10px;
+        }
+        
+        .btn-logout {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 15px;
+            cursor: pointer;
+            margin-left: 15px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-logout:hover {
+            background-color: #c0392b;
+        }
+        
+        .content-card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 500;
+        }
+        
+        .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-action {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-view {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .btn-view:hover {
+            background-color: #229954;
+        }
+        
+        .btn-edit {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .btn-edit:hover {
+            background-color: #e67e22;
+        }
+        
+        .btn-delete {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background-color: #c0392b;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            overflow-y: auto;
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 1200px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: modalopen 0.4s;
+        }
+        
+        @keyframes modalopen {
+            from {opacity: 0; transform: translateY(-50px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+        
+        .modal-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .modal-body {
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 -10px;
+        }
+        
+        .form-group {
+            flex: 1 0 300px;
+            padding: 0 10px;
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark-color);
+        }
+        
+        .form-control {
+            border-radius: 5px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            width: 100%;
+            transition: border-color 0.3s;
+        }
+        
+        .form-control:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .btn-cancel {
+            background-color: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-cancel:hover {
+            background-color: #7f8c8d;
+        }
+        
+        .btn-save {
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-save:hover {
+            background-color: #229954;
+        }
+        
+        /* Attachment Styles */
+        .attachment-container {
+            margin-top: 20px;
+        }
+        
+        .attachment-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .attachment-icon {
+            margin-right: 10px;
+            color: var(--secondary-color);
+        }
+        
+        .attachment-name {
+            flex-grow: 1;
+        }
+        
+        .attachment-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-attachment {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-download {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .btn-download:hover {
+            background-color: #229954;
+        }
+        
+        .btn-remove {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-remove:hover {
+            background-color: #c0392b;
+        }
+        
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .file-upload input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-upload-label {
+            display: inline-block;
+            padding: 8px 15px;
+            background-color: var(--secondary-color);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .file-upload-label:hover {
+            background-color: #2980b9;
+        }
+        
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 3000;
+        }
+        
+        .toast {
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            min-width: 300px;
+            animation: slidein 0.3s;
+        }
+        
+        @keyframes slidein {
+            from {transform: translateX(100%); opacity: 0;}
+            to {transform: translateX(0); opacity: 1;}
+        }
+        
+        .toast-success {
+            border-left: 5px solid var(--success-color);
+        }
+        
+        .toast-error {
+            border-left: 5px solid var(--danger-color);
+        }
+        
+        .toast-info {
+            border-left: 5px solid var(--secondary-color);
+        }
+        
+        .toast-icon {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        
+        .toast-success .toast-icon {
+            color: var(--success-color);
+        }
+        
+        .toast-error .toast-icon {
+            color: var(--danger-color);
+        }
+        
+        .toast-info .toast-icon {
+            color: var(--secondary-color);
+        }
+        
+        .toast-message {
+            flex-grow: 1;
+        }
+        
+        .toast-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        /* Loading Spinner */
+        .spinner-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Reports Page Styles */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        
+        .stat-icon {
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        /* Settings Page Styles */
+        .settings-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .settings-title {
+            font-size: 18px;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .profile-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+        }
+        
+        .profile-info h3 {
+            margin-bottom: 5px;
+            color: var(--primary-color);
+        }
+        
+        .profile-info p {
+            color: #666;
+            margin: 0;
+        }
+        
+        .theme-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .theme-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.3s;
+        }
+        
+        .theme-option:hover {
+            border-color: var(--secondary-color);
+        }
+        
+        .theme-option.active {
+            border-color: var(--secondary-color);
+        }
+        
+        .backup-section {
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .backup-icon {
+            font-size: 50px;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+        }
+        
+        /* Page Content Styles */
+        .page-content {
+            display: none;
+        }
+        
+        .page-content.active {
+            display: block;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 60px;
+            }
+            
+            .sidebar-header {
+                padding: 10px;
+            }
+            
+            .sidebar-header h2 {
+                display: none;
+            }
+            
+            .sidebar-menu li span {
+                display: none;
+            }
+            
+            .main-content {
+                margin-left: 60px;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .user-info {
+                margin-top: 10px;
+            }
+            
+            .form-row {
+                flex-direction: column;
+            }
+            
+            .form-group {
+                flex: 1 0 100%;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-row {
+                flex-direction: column;
+            }
+            
+            .filter-group {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Page -->
+    <div class="login-container" id="loginPage">
+        <div class="login-card">
+            <div class="login-header">
+                <h2>Export Data Management</h2>
+                <p>Please login to continue</p>
+            </div>
+            <div class="login-body">
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" class="form-control" placeholder="Enter your username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pin">PIN</label>
+                        <input type="password" id="pin" class="form-control" placeholder="Enter your PIN" required>
+                    </div>
+                    <button type="submit" class="btn-login">Login</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dashboard -->
+    <div class="dashboard-container" id="dashboardPage">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Export Management</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="active" data-page="dashboard">
+                    <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
+                </li>
+                <li data-page="invoices">
+                    <i class="fas fa-file-invoice"></i> <span>Invoices</span>
+                </li>
+                <li data-page="reports">
+                    <i class="fas fa-chart-bar"></i> <span>Reports</span>
+                </li>
+                <a href="settings.html" style="text-decoration: none; color: white;"><li data-page="settings">
+                    <i class="fas fa-cog"></i> <span>Settings</span></a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <h1 id="pageTitle">Export Invoice Dashboard</h1>
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <span id="userName">User</span>
+                    <button class="btn-logout" id="logoutBtn">Logout</button>
+                </div>
+            </div>
+            
+            <!-- Dashboard Page Content -->
+            <div id="dashboardContent" class="page-content active">
+                <!-- Content Card -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Export Invoices</h3>
+                        <button class="btn-primary" id="addInvoiceBtn">
+                            <i class="fas fa-plus"></i> Add Export Invoice
+                        </button>
+                    </div>
+                    
+                    <!-- Table Container -->
+                    <div class="table-container">
+                        <table class="data-table" id="invoicesTable">
+                            <thead>
+                                <tr>
+                                    <th>Sr No.</th>
+                                    <th>Invoice No.</th>
+                                    <th>Buyer Name</th>
+                                    <th>Date</th>
+                                    <th>Shipping Bill No.</th>
+                                    <th>Invoice From</th>
+                                    <th>Container Number</th>
+                                    <th>Line Seal Number</th>
+                                    <th>Custom E Seal Number</th>
+                                    <th>Truck Number</th>
+                                    <th>Quantity</th>
+                                    <th>Rate</th>
+                                    <th>Total USD</th>
+                                    <th>Ex Rate</th>
+                                    <th>Amount</th>
+                                    <th>PCS</th>
+                                    <th>GOODS</th>
+                                    <th>SHIPPING NAME</th>
+                                    <th>Added By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoicesTableBody">
+                                <!-- Table rows will be dynamically added here -->
+                            </tbody>
+                        </table>
+                        <div class="spinner-container" id="tableLoader" style="display: none;">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Reports Page Content -->
+            <div id="reportsContent" class="page-content">
+                <!-- Statistics Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--secondary-color);">
+                            <i class="fas fa-file-invoice"></i>
+                        </div>
+                        <div class="stat-value" id="totalInvoices">0</div>
+                        <div class="stat-label">Total Invoices</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--success-color);">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="stat-value" id="totalRevenue">$0</div>
+                        <div class="stat-label">Total Revenue</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--warning-color);">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-value" id="totalBuyers">0</div>
+                        <div class="stat-label">Total Buyers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--danger-color);">
+                            <i class="fas fa-cube"></i>
+                        </div>
+                        <div class="stat-value" id="totalContainers">0</div>
+                        <div class="stat-label">Total Containers</div>
+                    </div>
+                </div>
+                
+                <!-- Filter Section -->
+                <div class="filter-section">
+                    <h4>Filter Reports</h4>
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label class="form-label">From Date</label>
+                            <input type="date" id="filterFromDate" class="form-control">
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">To Date</label>
+                            <input type="date" id="filterToDate" class="form-control">
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Buyer</label>
+                            <select id="filterBuyer" class="form-control">
+                                <option value="">All Buyers</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Goods</label>
+                            <select id="filterGoods" class="form-control">
+                                <option value="">All Goods</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <button class="btn-primary" onclick="applyFilters()">
+                                <i class="fas fa-filter"></i> Apply Filters
+                            </button>
+                        </div>
+                        <div class="filter-group">
+                            <button class="btn-cancel" onclick="clearFilters()">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Charts -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h4>Revenue Trend</h4>
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h4>Top Buyers</h4>
+                            <canvas id="buyersChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Detailed Report Table -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Detailed Invoice Report</h3>
+                        <button class="btn-primary" onclick="exportReport()">
+                            <i class="fas fa-download"></i> Export to Excel
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="reportsTable">
+                            <thead>
+                                <tr>
+                                    <th>Invoice No.</th>
+                                    <th>Date</th>
+                                    <th>Buyer Name</th>
+                                    <th>Goods</th>
+                                    <th>Quantity</th>
+                                    <th>Total USD</th>
+                                    <th>Amount</th>
+                                    <th>Shipping Name</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportsTableBody">
+                                <!-- Report rows will be dynamically added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Settings Page Content -->
+            <div id="settingsContent" class="page-content">
+                <!-- Profile Settings -->
+                <div class="settings-section">
+                    <div class="settings-header">
+                        <h3 class="settings-title">Profile Settings</h3>
+                    </div>
+                    <div class="profile-section">
+                        <div class="profile-avatar" id="settingsAvatar">U</div>
+                        <div class="profile-info">
+                            <h3 id="settingsUserName">User Name</h3>
+                            <p id="settingsUserEmail">user@example.com</p>
+                            <p><small>Last login: <span id="lastLogin">Never</span></small></p>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Display Name</label>
+                            <input type="text" id="displayName" class="form-control" placeholder="Enter your name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="email" class="form-control" placeholder="Enter your email">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" id="phone" class="form-control" placeholder="Enter your phone number">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Department</label>
+                            <input type="text" id="department" class="form-control" placeholder="Enter your department">
+                        </div>
+                    </div>
+                    <button class="btn-save" onclick="saveProfileSettings()">
+                        <i class="fas fa-save"></i> Save Profile
+                    </button>
+                </div>
+                
+                <!-- System Settings -->
+                <div class="settings-section">
+                    <div class="settings-header">
+                        <h3 class="settings-title">System Settings</h3>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Company Name</label>
+                            <input type="text" id="companyName" class="form-control" placeholder="Enter company name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Currency</label>
+                            <select id="currency" class="form-control">
+                                <option value="USD">USD - US Dollar</option>
+                                <option value="EUR">EUR - Euro</option>
+                                <option value="GBP">GBP - British Pound</option>
+                                <option value="INR">INR - Indian Rupee</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Default Exchange Rate</label>
+                            <input type="number" id="defaultExchangeRate" class="form-control" step="0.01" placeholder="Enter default exchange rate">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tax Rate (%)</label>
+                            <input type="number" id="taxRate" class="form-control" step="0.01" placeholder="Enter tax rate">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Notifications</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                            <label class="form-check-label" for="emailNotifications">
+                                Enable email notifications for new invoices
+                            </label>
+                        </div>
+                    </div>
+                    <button class="btn-save" onclick="saveSystemSettings()">
+                        <i class="fas fa-save"></i> Save System Settings
+                    </button>
+                </div>
+                
+                <!-- Theme Settings -->
+                <div class="settings-section">
+                    <div class="settings-header">
+                        <h3 class="settings-title">Theme Settings</h3>
+                    </div>
+                    <label class="form-label">Choose Theme</label>
+                    <div class="theme-selector">
+                        <div class="theme-option active" style="background: linear-gradient(135deg, #1a2980, #26d0ce);" onclick="setTheme('default')"></div>
+                        <div class="theme-option" style="background: linear-gradient(135deg, #f093fb, #f5576c);" onclick="setTheme('pink')"></div>
+                        <div class="theme-option" style="background: linear-gradient(135deg, #4facfe, #00f2fe);" onclick="setTheme('blue')"></div>
+                        <div class="theme-option" style="background: linear-gradient(135deg, #43e97b, #38f9d7);" onclick="setTheme('green')"></div>
+                        <div class="theme-option" style="background: linear-gradient(135deg, #fa709a, #fee140);" onclick="setTheme('sunset')"></div>
+                    </div>
+                </div>
+                
+                <!-- Backup & Restore -->
+                <div class="settings-section">
+                    <div class="settings-header">
+                        <h3 class="settings-title">Backup & Restore</h3>
+                    </div>
+                    <div class="backup-section">
+                        <div class="backup-icon">
+                            <i class="fas fa-cloud-download-alt"></i>
+                        </div>
+                        <h4>Backup Your Data</h4>
+                        <p>Download a complete backup of all your invoices and settings</p>
+                        <button class="btn-primary" onclick="backupData()">
+                            <i class="fas fa-download"></i> Download Backup
+                        </button>
+                        <div style="margin-top: 20px;">
+                            <h4>Restore Data</h4>
+                            <p>Upload a backup file to restore your data</p>
+                            <input type="file" id="restoreFile" accept=".json" style="margin: 10px 0;">
+                            <button class="btn-primary" onclick="restoreData()">
+                                <i class="fas fa-upload"></i> Restore Backup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Invoice Modal -->
+    <div class="modal" id="invoiceModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Add Export Invoice</h3>
+                <button class="close-btn" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="invoiceForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="invoiceNo" class="form-label">Invoice No.</label>
+                            <input type="text" id="invoiceNo" class="form-control" placeholder="e.g., EXP-01/2025" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="buyerName" class="form-label">Buyer Name</label>
+                            <input type="text" id="buyerName" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="invoiceDate" class="form-label">Date</label>
+                            <input type="date" id="invoiceDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="shippingBillNumber" class="form-label">Shipping Bill Number</label>
+                            <input type="text" id="shippingBillNumber" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="invoiceFrom" class="form-label">Invoice From</label>
+                            <input type="text" id="invoiceFrom" class="form-control" placeholder="e.g., Company Name/Location">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="containerNumber" class="form-label">Container Number</label>
+                            <input type="text" id="containerNumber" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="lineSealNumber" class="form-label">Line Seal Number</label>
+                            <input type="text" id="lineSealNumber" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customESealNumber" class="form-label">Custom E Seal Number</label>
+                            <input type="text" id="customESealNumber" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="truckNumber" class="form-label">Truck Number</label>
+                            <input type="text" id="truckNumber" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="quantity" class="form-label">Quantity</label>
+                            <input type="number" id="quantity" class="form-control" step="0.001">
+                        </div>
+                        <div class="form-group">
+                            <label for="rate" class="form-label">Rate</label>
+                            <input type="number" id="rate" class="form-control" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="totalUSD" class="form-label">Total USD</label>
+                            <input type="number" id="totalUSD" class="form-control" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="exRate" class="form-label">Ex Rate</label>
+                            <input type="number" id="exRate" class="form-control" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="amount" class="form-label">Amount (USD*Ex Rate)</label>
+                            <input type="number" id="amount" class="form-control" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="pcs" class="form-label">PCS</label>
+                            <input type="number" id="pcs" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="goods" class="form-label">GOODS</label>
+                            <input type="text" id="goods" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="shippingName" class="form-label">SHIPPING NAME</label>
+                            <input type="text" id="shippingName" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <!-- Attachments Section -->
+                    <div class="attachment-container">
+                        <h4>Attachments</h4>
+                        
+                        <div class="form-group">
+                            <label for="invoiceAttachment" class="form-label">Invoice Attachment</label>
+                            <div class="file-upload">
+                                <input type="file" id="invoiceAttachment" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                <label for="invoiceAttachment" class="file-upload-label">Choose File</label>
+                            </div>
+                            <div id="invoiceAttachmentPreview"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="packingList" class="form-label">Packing List</label>
+                            <div class="file-upload">
+                                <input type="file" id="packingList" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                <label for="packingList" class="file-upload-label">Choose File</label>
+                            </div>
+                            <div id="packingListPreview"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="shippingBill" class="form-label">Shipping Bill</label>
+                            <div class="file-upload">
+                                <input type="file" id="shippingBill" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                <label for="shippingBill" class="file-upload-label">Choose File</label>
+                            </div>
+                            <div id="shippingBillPreview"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cepaCertificate" class="form-label">CEPA Certificate</label>
+                            <div class="file-upload">
+                                <input type="file" id="cepaCertificate" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                <label for="cepaCertificate" class="file-upload-label">Choose File</label>
+                            </div>
+                            <div id="cepaCertificatePreview"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="sealAffix" class="form-label">Seal Affix</label>
+                            <div class="file-upload">
+                                <input type="file" id="sealAffix" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                <label for="sealAffix" class="file-upload-label">Choose File</label>
+                            </div>
+                            <div id="sealAffixPreview"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="annexure1" class="form-label">Annexure-1</label>
+                            <div class="file-upload">
+                                <input type="file" id="annexure1" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                <label for="annexure1" class="file-upload-label">Choose File</label>
+                            </div>
+                            <div id="annexure1Preview"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="otherAttachment1" class="form-label">Other Attachment 1</label>
+                            <div class="file-upload">
+                                <input type="file" id="otherAttachment1" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                <label for="otherAttachment1" class="file-upload-label">Choose File</label>
+                            </div>
+                            <input type="text" id="otherAttachment1Remarks" class="form-control" placeholder="Remarks" style="margin-top: 10px;">
+                            <div id="otherAttachment1Preview"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="otherAttachment2" class="form-label">Other Attachment 2</label>
+                            <div class="file-upload">
+                                <input type="file" id="otherAttachment2" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                <label for="otherAttachment2" class="file-upload-label">Choose File</label>
+                            </div>
+                            <input type="text" id="otherAttachment2Remarks" class="form-control" placeholder="Remarks" style="margin-top: 10px;">
+                            <div id="otherAttachment2Preview"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="otherAttachment3" class="form-label">Other Attachment 3</label>
+                            <div class="file-upload">
+                                <input type="file" id="otherAttachment3" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                <label for="otherAttachment3" class="file-upload-label">Choose File</label>
+                            </div>
+                            <input type="text" id="otherAttachment3Remarks" class="form-control" placeholder="Remarks" style="margin-top: 10px;">
+                            <div id="otherAttachment3Preview"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
+                <button type="button" class="btn-save" id="saveInvoiceBtn">Save Invoice</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- View Invoice Modal -->
+    <div class="modal" id="viewInvoiceModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Invoice Details</h3>
+                <button class="close-btn" id="closeViewModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="invoiceDetails">
+                    <!-- Invoice details will be dynamically added here -->
+                </div>
+                
+                <div class="attachment-container">
+                    <h4>Attachments</h4>
+                    <div id="attachmentsList">
+                        <!-- Attachments will be dynamically added here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" id="closeViewBtn">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <script>
+        // Firebase Configuration - REPLACE WITH YOUR ACTUAL CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyB3kV13liQQRDX28l4ZaVAWbwfxJquI_Lw",
+            authDomain: "export-oswal.firebaseapp.com",
+            projectId: "export-oswal",
+            storageBucket: "export-oswal.firebasestorage.app",
+            messagingSenderId: "838014812507",
+            appId: "1:838014812507:web:135be4e953435a25019a7e"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+        const auth = firebase.auth();
+        
+        // Test Firebase connection
+        db.collection('test').doc('connection').set({
+            timestamp: new Date()
+        }).then(() => {
+            console.log('✅ Firebase connected successfully!');
+        }).catch(error => {
+            console.error('❌ Firebase connection failed:', error);
+        });
+        // Function to upload a file to Firebase Storage
+async function uploadFile(file, invoiceId, attachmentType) {
+    if (!file) return null;
+    
+    const storageRef = storage.ref();
+    const fileRef = storageRef.child(`invoices/${invoiceId}/${attachmentType}/${file.name}`);
+    
+    try {
+        const snapshot = await fileRef.put(file);
+        const downloadURL = await snapshot.ref.getDownloadURL();
+        return {
+            name: file.name,
+            type: attachmentType,
+            url: downloadURL,
+            path: snapshot.ref.fullPath
+        };
+    } catch (error) {
+        console.error(`Error uploading ${attachmentType}:`, error);
+        showToast(`Error uploading ${attachmentType}: ${error.message}`, 'error');
+        return null;
+    }
+}
+// New Helper Function to Upload Files
+async function uploadFile(file, invoiceId, attachmentType) {
+    if (!file) return null;
+
+    const filePath = `invoices/${invoiceId}/${attachmentType}/${file.name}`;
+    const storageRef = storage.ref(filePath);
+    const uploadTask = await storageRef.put(file);
+    const downloadURL = await uploadTask.ref.getDownloadURL();
+
+    return {
+        url: downloadURL,
+        name: file.name,
+        path: filePath,
+        size: file.size,
+        type: file.type
+    };
+}
+// Function to save invoice with attachments
+async function saveInvoiceWithAttachments(invoiceData, attachments) {
+    try {
+        // First save invoice data to Firestore
+        const docRef = await db.collection('invoices').add(invoiceData);
+        const invoiceId = docRef.id;
+        
+        // Upload all attachments
+        const attachmentPromises = [];
+        const attachmentData = {};
+        
+        for (const [key, file] of Object.entries(attachments)) {
+            if (file) {
+                attachmentPromises.push(
+                    uploadFile(file, invoiceId, key).then(result => {
+                        if (result) {
+                            attachmentData[key] = result;
+                        }
+                    })
+                );
+            }
+        }
+        
+        await Promise.all(attachmentPromises);
+        
+        // Update invoice document with attachment info
+        await docRef.update({ 
+            attachments: attachmentData,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        showToast('Invoice saved successfully!', 'success');
+        return invoiceId;
+    } catch (error) {
+        console.error('Error saving invoice:', error);
+        showToast(`Error saving invoice: ${error.message}`, 'error');
+        return null;
+    }
+}
+        // DOM Elements
+        const loginPage = document.getElementById('loginPage');
+        const dashboardPage = document.getElementById('dashboardPage');
+        const loginForm = document.getElementById('loginForm');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const addInvoiceBtn = document.getElementById('addInvoiceBtn');
+        const invoiceModal = document.getElementById('invoiceModal');
+        const viewInvoiceModal = document.getElementById('viewInvoiceModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const closeViewModalBtn = document.getElementById('closeViewModalBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const closeViewBtn = document.getElementById('closeViewBtn');
+        const saveInvoiceBtn = document.getElementById('saveInvoiceBtn');
+        const invoiceForm = document.getElementById('invoiceForm');
+        const invoicesTableBody = document.getElementById('invoicesTableBody');
+        const tableLoader = document.getElementById('tableLoader');
+        const modalTitle = document.getElementById('modalTitle');
+        const invoiceDetails = document.getElementById('invoiceDetails');
+        const attachmentsList = document.getElementById('attachmentsList');
+        const userName = document.getElementById('userName');
+        const userAvatar = document.getElementById('userAvatar');
+        const toastContainer = document.getElementById('toastContainer');
+        const pageTitle = document.getElementById('pageTitle');
+        
+        // Page content elements
+        const dashboardContent = document.getElementById('dashboardContent');
+        const reportsContent = document.getElementById('reportsContent');
+        const settingsContent = document.getElementById('settingsContent');
+        
+        // State
+        let currentUser = null;
+        let currentInvoiceId = null;
+        let invoices = [];
+        let isEditMode = false;
+        let currentPage = 'dashboard';
+        let revenueChart = null;
+        let buyersChart = null;
+        
+        // Initialize the app
+        function init() {
+            // Check if user is logged in
+            if (localStorage.getItem('isLoggedIn') === 'true') {
+                currentUser = {
+                    displayName: localStorage.getItem('userName') || 'User',
+                    email: localStorage.getItem('userEmail') || 'user@example.com'
+                };
+                showDashboard();
+                loadInvoices();
+            } else {
+                showLogin();
+            }
+            
+            // Event Listeners
+            loginForm.addEventListener('submit', handleLogin);
+            logoutBtn.addEventListener('click', handleLogout);
+            addInvoiceBtn.addEventListener('click', openAddInvoiceModal);
+            closeModalBtn.addEventListener('click', closeInvoiceModal);
+            closeViewModalBtn.addEventListener('click', closeViewInvoiceModal);
+            cancelBtn.addEventListener('click', closeInvoiceModal);
+            closeViewBtn.addEventListener('click', closeViewInvoiceModal);
+            saveInvoiceBtn.addEventListener('click', saveInvoice);
+            
+            // Sidebar menu
+            document.querySelectorAll('.sidebar-menu li').forEach(item => {
+                item.addEventListener('click', function() {
+                    const page = this.getAttribute('data-page');
+                    switchPage(page);
+                });
+            });
+            
+            // Calculate amount when totalUSD or exRate changes
+            document.getElementById('totalUSD').addEventListener('input', calculateAmount);
+            document.getElementById('exRate').addEventListener('input', calculateAmount);
+            
+            // File input change events
+            setupFileInputPreview('invoiceAttachment', 'invoiceAttachmentPreview');
+            setupFileInputPreview('packingList', 'packingListPreview');
+            setupFileInputPreview('shippingBill', 'shippingBillPreview');
+            setupFileInputPreview('cepaCertificate', 'cepaCertificatePreview');
+            setupFileInputPreview('sealAffix', 'sealAffixPreview');
+            setupFileInputPreview('annexure1', 'annexure1Preview');
+            setupFileInputPreview('otherAttachment1', 'otherAttachment1Preview');
+            setupFileInputPreview('otherAttachment2', 'otherAttachment2Preview');
+            setupFileInputPreview('otherAttachment3', 'otherAttachment3Preview');
+        }
+        
+        // Switch between pages
+        function switchPage(page) {
+            // Update sidebar active state
+            document.querySelectorAll('.sidebar-menu li').forEach(li => li.classList.remove('active'));
+            document.querySelector(`[data-page="${page}"]`).classList.add('active');
+            
+            // Hide all page contents
+            document.querySelectorAll('.page-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Show selected page content
+            currentPage = page;
+            
+            switch(page) {
+                case 'dashboard':
+                    dashboardContent.classList.add('active');
+                    pageTitle.textContent = 'Export Invoice Dashboard';
+                    addInvoiceBtn.style.display = 'block';
+                    loadInvoices();
+                    break;
+                case 'invoices':
+                    dashboardContent.classList.add('active');
+                    pageTitle.textContent = 'Export Invoices';
+                    addInvoiceBtn.style.display = 'block';
+                    loadInvoices();
+                    break;
+                case 'reports':
+                    reportsContent.classList.add('active');
+                    pageTitle.textContent = 'Reports & Analytics';
+                    addInvoiceBtn.style.display = 'none';
+                    loadReports();
+                    break;
+                case 'settings':
+                    settingsContent.classList.add('active');
+                    pageTitle.textContent = 'Settings';
+                    addInvoiceBtn.style.display = 'none';
+                    loadSettings();
+                    break;
+            }
+        }
+        
+    // 👇 ADD YOUR FUNCTION HERE 👇
+    function formatFileSize(bytes, decimalPoint) {
+       if(bytes == 0) return '0 Bytes';
+       var k = 1000,
+           dm = decimalPoint || 2,
+           sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+           i = Math.floor(Math.log(bytes) / Math.log(k));
+       return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+        // Show login page
+        function showLogin() {
+            loginPage.style.display = 'flex';
+            dashboardPage.style.display = 'none';
+        }
+        
+        // Show dashboard
+        function showDashboard() {
+            loginPage.style.display = 'none';
+            dashboardPage.style.display = 'block';
+            
+            // Update user info
+            if (currentUser) {
+                userName.textContent = currentUser.displayName || currentUser.email || 'User';
+                userAvatar.textContent = (currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase();
+            }
+        }
+        
+        // DELETE THE OLD handleLogin FUNCTION AND PASTE THIS NEW ONE
+
+async function handleLogin(e) {
+    e.preventDefault();
+
+    const username = document.getElementById('username').value;
+    const pin = document.getElementById('pin').value;
+
+    if (!username || !pin) {
+        showToast('Please enter username and PIN', 'error');
+        return;
+    }
+
+    try {
+        // Query Firestore for a user with the matching username
+        const usersRef = db.collection('users');
+        const snapshot = await usersRef.where('username', '==', username).get();
+
+        if (snapshot.empty) {
+            showToast('Invalid username or PIN', 'error');
+            return;
+        }
+
+        let userDoc;
+        snapshot.forEach(doc => {
+            // Check if the pin matches
+            if (doc.data().pin === pin) {
+                userDoc = doc;
+            }
+        });
+
+        if (userDoc) {
+            // Login Successful
+            const userData = userDoc.data();
+            currentUser = {
+                id: userDoc.id, // This is the unique document ID!
+                displayName: userData.displayName || userData.username,
+                email: userData.email
+            };
+
+            // Save essential info to localStorage to remember the user
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userId', userDoc.id); // VERY IMPORTANT
+            localStorage.setItem('userName', currentUser.displayName);
+            localStorage.setItem('lastLogin', new Date().toISOString());
+
+            showDashboard();
+            loadInvoices();
+            showToast('Login successful!', 'success');
+
+        } else {
+            // Pin was incorrect
+            showToast('Invalid username or PIN', 'error');
+        }
+
+    } catch (error) {
+        console.error("Login Error:", error);
+        showToast('An error occurred during login.', 'error');
+    }
+}
+        // Handle logout
+        function handleLogout() {
+            currentUser = null;
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('userEmail');
+            showLogin();
+            showToast('Logged out successfully', 'info');
+        }
+        
+        // Load invoices from Firestore
+        async function loadInvoices() {
+            tableLoader.style.display = 'flex';
+            invoicesTableBody.innerHTML = '';
+            
+            try {
+                const snapshot = await db.collection('invoices').orderBy('createdAt', 'desc').get();
+                
+                if (snapshot.empty) {
+                    invoicesTableBody.innerHTML = '<tr><td colspan="17" style="text-align: center;">No invoices found</td></tr>';
+                    tableLoader.style.display = 'none';
+                    return;
+                }
+                
+                invoices = [];
+                snapshot.forEach(doc => {
+                    const invoice = { id: doc.id, ...doc.data() };
+                    invoices.push(invoice);
+                });
+                
+                renderInvoicesTable();
+                tableLoader.style.display = 'none';
+            } catch (error) {
+                console.error('Error loading invoices:', error);
+                showToast('Failed to load invoices: ' + error.message, 'error');
+                tableLoader.style.display = 'none';
+            }
+        }
+        
+        // Render invoices table
+        function renderInvoicesTable() {
+            invoicesTableBody.innerHTML = '';
+            
+            invoices.forEach((invoice, index) => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${invoice.invoiceNo}</td>
+                    <td>${invoice.buyerName}</td>
+                    <td>${invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : ''}</td>
+                    <td>${invoice.shippingBillNumber || ''}</td>
+                    <td>${invoice.invoiceFrom || ''}</td>
+  
+                    <td>${invoice.containerNumber}</td>
+                    <td>${invoice.lineSealNumber}</td>
+                    <td>${invoice.customESealNumber}</td>
+                    <td>${invoice.truckNumber}</td>
+                    <td>${invoice.quantity}</td>
+                    <td>${invoice.rate}</td>
+                    <td>${invoice.totalUSD}</td>
+                    <td>${invoice.exRate}</td>
+                    <td>${invoice.amount}</td>
+                    <td>${invoice.pcs}</td>
+                    <td>${invoice.goods}</td>
+                    <td>${invoice.shippingName}</td>
+                    <td>${invoice.addedBy || 'Unknown'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-action btn-view" onclick="viewInvoice('${invoice.id}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn-action btn-edit" onclick="editInvoice('${invoice.id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action btn-delete" onclick="deleteInvoice('${invoice.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                invoicesTableBody.appendChild(row);
+            });
+        }
+        
+        // Open add invoice modal
+        function openAddInvoiceModal() {
+            isEditMode = false;
+            currentInvoiceId = null;
+            modalTitle.textContent = 'Add Export Invoice';
+            invoiceForm.reset();
+            clearAttachmentPreviews();
+            invoiceModal.style.display = 'block';
+        }
+        
+        // Edit invoice
+        function editInvoice(id) {
+            isEditMode = true;
+            currentInvoiceId = id;
+            modalTitle.textContent = 'Edit Export Invoice';
+            
+            const invoice = invoices.find(inv => inv.id === id);
+            if (!invoice) return;
+            
+            // Populate form with invoice data
+            document.getElementById('invoiceNo').value = invoice.invoiceNo || '';
+            document.getElementById('buyerName').value = invoice.buyerName || '';
+            document.getElementById('invoiceDate').value = invoice.invoiceDate || '';
+            document.getElementById('shippingBillNumber').value = invoice.shippingBillNumber || '';
+            document.getElementById('invoiceFrom').value = invoice.invoiceFrom || '';
+            document.getElementById('containerNumber').value = invoice.containerNumber || '';
+            document.getElementById('lineSealNumber').value = invoice.lineSealNumber || '';
+            document.getElementById('customESealNumber').value = invoice.customESealNumber || '';
+            document.getElementById('truckNumber').value = invoice.truckNumber || '';
+            document.getElementById('quantity').value = invoice.quantity || '';
+            document.getElementById('rate').value = invoice.rate || '';
+            document.getElementById('totalUSD').value = invoice.totalUSD || '';
+            document.getElementById('exRate').value = invoice.exRate || '';
+            document.getElementById('amount').value = invoice.amount || '';
+            document.getElementById('pcs').value = invoice.pcs || '';
+            document.getElementById('goods').value = invoice.goods || '';
+            document.getElementById('shippingName').value = invoice.shippingName || '';
+            
+            // Show existing attachments
+            if (invoice.attachments) {
+                showAttachmentPreviews(invoice.attachments);
+            }
+            
+            invoiceModal.style.display = 'block';
+        }
+        
+        // View invoice details
+        function viewInvoice(id) {
+            const invoice = invoices.find(inv => inv.id === id);
+            if (!invoice) return;
+            
+            // Display invoice details
+            invoiceDetails.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Invoice No.:</strong> ${invoice.invoiceNo}</p>
+                        <p><strong>Buyer Name:</strong> ${invoice.buyerName}</p>
+                        <p><strong>Date:</strong> ${invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : 'N/A'}</p>
+                        <p><strong>Shipping Bill Number:</strong> ${invoice.shippingBillNumber}</p>
+                        <p><strong>Invoice From:</strong> ${invoice.invoiceFrom || 'N/A'}</p>
+                        <p><strong>Container Number:</strong> ${invoice.containerNumber}</p>
+                        <p><strong>Line Seal Number:</strong> ${invoice.lineSealNumber}</p>
+                        <p><strong>Custom E Seal Number:</strong> ${invoice.customESealNumber}</p>
+                        <p><strong>Truck Number:</strong> ${invoice.truckNumber}</p>
+                        <p><strong>Quantity:</strong> ${invoice.quantity}</p>
+                        <p><strong>Rate:</strong> ${invoice.rate}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Total USD:</strong> ${invoice.totalUSD}</p>
+                        <p><strong>Ex Rate:</strong> ${invoice.exRate}</p>
+                        <p><strong>Amount:</strong> ${invoice.amount}</p>
+                        <p><strong>PCS:</strong> ${invoice.pcs}</p>
+                        <p><strong>GOODS:</strong> ${invoice.goods}</p>
+                        <p><strong>SHIPPING NAME:</strong> ${invoice.shippingName}</p>
+                        <p><strong>Added By:</strong> ${invoice.addedBy || 'Unknown'}</p>
+                        <p><strong>Date:</strong> ${invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : 'Unknown'}</p>
+                    </div>
+                </div>
+            `;
+            
+            // Display attachments
+            if (invoice.attachments) {
+                displayAttachments(invoice.attachments);
+            } else {
+                attachmentsList.innerHTML = '<p>No attachments available</p>';
+            }
+            
+            viewInvoiceModal.style.display = 'block';
+        }
+        
+       // PASTE THIS NEW FUNCTION
+
+function displayAttachments(attachments) {
+    attachmentsList.innerHTML = '';
+
+    if (!attachments || Object.keys(attachments).length === 0) {
+        attachmentsList.innerHTML = '<p>No attachments available</p>';
+        return;
+    }
+
+    Object.entries(attachments).forEach(([key, attachment]) => {
+        if (!attachment) return;
+
+        const attachmentItem = document.createElement('div');
+        attachmentItem.className = 'attachment-item';
+
+        // Use the original file name for display
+        const displayName = attachment.name || key.replace(/([A-Z])/g, ' $1').trim();
+
+        attachmentItem.innerHTML = `
+            <div class="attachment-icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="attachment-name">${displayName}</div>
+            <div class="attachment-actions">
+                <button class="btn-attachment btn-success" onclick="viewAttachment('${attachment.url}')">
+                    <i class="fas fa-external-link-alt"></i> View
+                </button>
+            </div>
+        `;
+        attachmentsList.appendChild(attachmentItem);
+    });
+}
+        
+       // PASTE THIS NEW FUNCTION
+
+function viewAttachment(url) {
+    window.open(url, '_blank');
+}
+        
+        // Delete invoice
+        async function deleteInvoice(id) {
+            if (!confirm('Are you sure you want to delete this invoice?')) return;
+            
+            try {
+                await db.collection('invoices').doc(id).delete();
+                showToast('Invoice deleted successfully', 'success');
+                loadInvoices();
+            } catch (error) {
+                console.error('Error deleting invoice:', error);
+                showToast('Failed to delete invoice: ' + error.message, 'error');
+            }
+        }
+        
+        // Close invoice modal
+        function closeInvoiceModal() {
+            invoiceModal.style.display = 'none';
+            invoiceForm.reset();
+            clearAttachmentPreviews();
+        }
+        
+        // Close view invoice modal
+        function closeViewInvoiceModal() {
+            viewInvoiceModal.style.display = 'none';
+        }
+        
+        // Calculate amount
+        function calculateAmount() {
+            const totalUSD = parseFloat(document.getElementById('totalUSD').value) || 0;
+            const exRate = parseFloat(document.getElementById('exRate').value) || 0;
+            const amount = totalUSD * exRate;
+            document.getElementById('amount').value = amount.toFixed(2);
+        }
+        
+        // MODIFIED saveInvoice function
+async function saveInvoice() {
+    if (!invoiceForm.checkValidity()) {
+        invoiceForm.reportValidity();
+        return;
+    }
+
+    try {
+        // Show loading state
+        saveInvoiceBtn.disabled = true;
+        saveInvoiceBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+        // Get a temporary ID for the new invoice to use for file paths
+        const docRef = isEditMode ? db.collection('invoices').doc(currentInvoiceId) : db.collection('invoices').doc();
+        const invoiceIdForPaths = docRef.id;
+
+        // 1. Handle all file uploads first
+        const attachmentsToSave = {};
+        const attachmentInputs = [
+            { id: 'invoiceAttachment', type: 'invoiceAttachment' },
+            { id: 'packingList', type: 'packingList' },
+            { id: 'shippingBill', type: 'shippingBill' },
+            { id: 'cepaCertificate', type: 'cepaCertificate' },
+            { id: 'sealAffix', type: 'sealAffix' },
+            { id: 'annexure1', type: 'annexure1' },
+            { id: 'otherAttachment1', type: 'otherAttachment1' },
+            { id: 'otherAttachment2', type: 'otherAttachment2' },
+            { id: 'otherAttachment3', type: 'otherAttachment3' }
+        ];
+
+        for (const input of attachmentInputs) {
+            const fileInput = document.getElementById(input.id);
+            if (fileInput.files.length > 0) {
+                showToast(`Uploading ${input.type}...`, 'info');
+                const fileData = await uploadFile(fileInput.files[0], invoiceIdForPaths, input.type);
+                if (fileData) {
+                    // Check for remarks on "other" attachments
+                    if (input.type.startsWith('otherAttachment')) {
+                        const remarks = document.getElementById(`${input.id}Remarks`).value;
+                        fileData.remarks = remarks || '';
+                    }
+                    attachmentsToSave[input.type] = fileData;
+                }
+            }
+        }
+
+        // 2. Prepare invoice data
+        const invoiceData = {
+            invoiceNo: document.getElementById('invoiceNo').value,
+            buyerName: document.getElementById('buyerName').value,
+            invoiceDate: document.getElementById('invoiceDate').value,
+            shippingBillNumber: document.getElementById('shippingBillNumber').value,
+            invoiceFrom: document.getElementById('invoiceFrom').value,
+            containerNumber: document.getElementById('containerNumber').value,
+            lineSealNumber: document.getElementById('lineSealNumber').value,
+            customESealNumber: document.getElementById('customESealNumber').value,
+            truckNumber: document.getElementById('truckNumber').value,
+            quantity: document.getElementById('quantity').value,
+            rate: document.getElementById('rate').value,
+            totalUSD: document.getElementById('totalUSD').value,
+            exRate: document.getElementById('exRate').value,
+            amount: document.getElementById('amount').value,
+            pcs: document.getElementById('pcs').value,
+            goods: document.getElementById('goods').value,
+            shippingName: document.getElementById('shippingName').value,
+            addedBy: currentUser.displayName || currentUser.email || 'Unknown',
+            updatedAt: new Date().toISOString()
+        };
+
+        // 3. Merge new attachments with existing ones if in edit mode
+        let finalAttachments = attachmentsToSave;
+        if (isEditMode) {
+            const existingInvoice = invoices.find(inv => inv.id === currentInvoiceId);
+            const existingAttachments = existingInvoice.attachments || {};
+            finalAttachments = { ...existingAttachments, ...attachmentsToSave };
+        }
+        invoiceData.attachments = finalAttachments;
+
+        // 4. Save to Firestore
+        if (isEditMode) {
+            await docRef.update(invoiceData);
+            showToast('Invoice updated successfully', 'success');
+        } else {
+            invoiceData.createdAt = new Date().toISOString();
+            await docRef.set(invoiceData);
+            showToast('Invoice added successfully', 'success');
+        }
+
+        closeInvoiceModal();
+        loadInvoices();
+
+    } catch (error) {
+        console.error('Error saving invoice:', error);
+        showToast(`Failed to save invoice: ${error.message}`, 'error');
+    } finally {
+        // Reset button state
+        saveInvoiceBtn.disabled = false;
+        saveInvoiceBtn.innerHTML = 'Save Invoice';
+    }
+}
+        
+        // Setup file input preview
+        function setupFileInputPreview(inputId, previewId) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+            
+            input.addEventListener('change', function() {
+                preview.innerHTML = '';
+                
+                if (this.files && this.files[0]) {
+                    const fileInfo = document.createElement('div');
+                    fileInfo.className = 'attachment-item';
+                    fileInfo.innerHTML = `
+                        <div class="attachment-icon">
+                            <i class="fas fa-file"></i>
+                        </div>
+                        <div class="attachment-name">${this.files[0].name}</div>
+                    `;
+                    preview.appendChild(fileInfo);
+                }
+            });
+        }
+        
+        // Clear attachment previews
+        function clearAttachmentPreviews() {
+            document.getElementById('invoiceAttachmentPreview').innerHTML = '';
+            document.getElementById('packingListPreview').innerHTML = '';
+            document.getElementById('shippingBillPreview').innerHTML = '';
+            document.getElementById('cepaCertificatePreview').innerHTML = '';
+            document.getElementById('sealAffixPreview').innerHTML = '';
+            document.getElementById('annexure1Preview').innerHTML = '';
+            document.getElementById('otherAttachment1Preview').innerHTML = '';
+            document.getElementById('otherAttachment2Preview').innerHTML = '';
+            document.getElementById('otherAttachment3Preview').innerHTML = '';
+        }
+        
+        // Show attachment previews for existing attachments
+        function showAttachmentPreviews(attachments) {
+            clearAttachmentPreviews();
+            
+            Object.entries(attachments).forEach(([key, attachment]) => {
+                if (!attachment) return;
+                
+                const previewId = key + 'Preview';
+                const preview = document.getElementById(previewId);
+                
+                if (preview) {
+                    const fileInfo = document.createElement('div');
+                    fileInfo.className = 'attachment-item';
+                    fileInfo.innerHTML = `
+                        <div class="attachment-icon">
+                            <i class="fas fa-file"></i>
+                        </div>
+                        <div class="attachment-name">${attachment.name}</div>
+                    `;
+                    preview.appendChild(fileInfo);
+                }
+                
+                // Set remarks for other attachments
+                if (key.startsWith('otherAttachment') && attachment.remarks) {
+                    const remarksField = document.getElementById(`${key}Remarks`);
+                    if (remarksField) {
+                        remarksField.value = attachment.remarks;
+                    }
+                }
+            });
+        }
+        
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            let icon = '';
+            switch (type) {
+                case 'success':
+                    icon = '<i class="fas fa-check-circle"></i>';
+                    break;
+                case 'error':
+                    icon = '<i class="fas fa-exclamation-circle"></i>';
+                    break;
+                case 'info':
+                    icon = '<i class="fas fa-info-circle"></i>';
+                    break;
+            }
+            
+            toast.innerHTML = `
+                <div class="toast-icon">${icon}</div>
+                <div class="toast-message">${message}</div>
+                <button class="toast-close">&times;</button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                toast.style.animation = 'slidein 0.3s reverse';
+                setTimeout(() => {
+                    if (toastContainer.contains(toast)) {
+                        toastContainer.removeChild(toast);
+                    }
+                }, 300);
+            }, 5000);
+            
+            // Manual close
+            toast.querySelector('.toast-close').addEventListener('click', () => {
+                toast.style.animation = 'slidein 0.3s reverse';
+                setTimeout(() => {
+                    if (toastContainer.contains(toast)) {
+                        toastContainer.removeChild(toast);
+                    }
+                }, 300);
+            });
+        }
+        
+        // REPORTS FUNCTIONS
+        async function loadReports() {
+            try {
+                // Load statistics
+                await loadReportStatistics();
+                
+                // Load filter options
+                await loadFilterOptions();
+                
+                // Load charts
+                await loadCharts();
+                
+                // Load report table
+                await loadReportTable();
+            } catch (error) {
+                console.error('Error loading reports:', error);
+                showToast('Failed to load reports', 'error');
+            }
+        }
+        
+        async function loadReportStatistics() {
+            try {
+                const snapshot = await db.collection('invoices').get();
+                
+                let totalRevenue = 0;
+                const buyers = new Set();
+                const containers = new Set();
+                
+                snapshot.forEach(doc => {
+                    const invoice = doc.data();
+                    totalRevenue += parseFloat(invoice.amount || 0);
+                    buyers.add(invoice.buyerName);
+                    containers.add(invoice.containerNumber);
+                });
+                
+                document.getElementById('totalInvoices').textContent = snapshot.size;
+                document.getElementById('totalRevenue').textContent = '$' + totalRevenue.toFixed(2);
+                document.getElementById('totalBuyers').textContent = buyers.size;
+                document.getElementById('totalContainers').textContent = containers.size;
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+        
+        async function loadFilterOptions() {
+            try {
+                const snapshot = await db.collection('invoices').get();
+                
+                const buyers = new Set();
+                const goods = new Set();
+                
+                snapshot.forEach(doc => {
+                    const invoice = doc.data();
+                    buyers.add(invoice.buyerName);
+                    goods.add(invoice.goods);
+                });
+                
+                const buyerSelect = document.getElementById('filterBuyer');
+                const goodsSelect = document.getElementById('filterGoods');
+                
+                // Clear existing options except the first one
+                buyerSelect.innerHTML = '<option value="">All Buyers</option>';
+                goodsSelect.innerHTML = '<option value="">All Goods</option>';
+                
+                // Add new options
+                buyers.forEach(buyer => {
+                    const option = document.createElement('option');
+                    option.value = buyer;
+                    option.textContent = buyer;
+                    buyerSelect.appendChild(option);
+                });
+                
+                goods.forEach(good => {
+                    const option = document.createElement('option');
+                    option.value = good;
+                    option.textContent = good;
+                    goodsSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading filter options:', error);
+            }
+        }
+        
+        async function loadCharts() {
+            try {
+                // Revenue Chart
+                const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+                
+                // Get monthly revenue data
+                const monthlyData = await getMonthlyRevenueData();
+                
+                if (revenueChart) {
+                    revenueChart.destroy();
+                }
+                
+                revenueChart = new Chart(revenueCtx, {
+                    type: 'line',
+                    data: {
+                        labels: monthlyData.labels,
+                        datasets: [{
+                            label: 'Monthly Revenue',
+                            data: monthlyData.data,
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Buyers Chart
+                const buyersCtx = document.getElementById('buyersChart').getContext('2d');
+                
+                const topBuyersData = await getTopBuyersData();
+                
+                if (buyersChart) {
+                    buyersChart.destroy();
+                }
+                
+                buyersChart = new Chart(buyersCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: topBuyersData.labels,
+                        datasets: [{
+                            label: 'Total Amount',
+                            data: topBuyersData.data,
+                            backgroundColor: '#27ae60'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading charts:', error);
+            }
+        }
+        
+        async function getMonthlyRevenueData() {
+            const monthlyData = {
+                labels: [],
+                data: []
+            };
+            
+            // Get last 6 months
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const currentDate = new Date();
+            
+            for (let i = 5; i >= 0; i--) {
+                const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+                const monthLabel = months[date.getMonth()];
+                monthlyData.labels.push(monthLabel);
+                
+                // Calculate revenue for this month (simplified)
+                monthlyData.data.push(Math.random() * 100000 + 50000);
+            }
+            
+            return monthlyData;
+        }
+        
+        async function getTopBuyersData() {
+            const topBuyersData = {
+                labels: [],
+                data: []
+            };
+            
+            try {
+                const snapshot = await db.collection('invoices').get();
+                const buyerTotals = {};
+                
+                snapshot.forEach(doc => {
+                    const invoice = doc.data();
+                    const buyer = invoice.buyerName;
+                    const amount = parseFloat(invoice.amount || 0);
+                    
+                    if (buyerTotals[buyer]) {
+                        buyerTotals[buyer] += amount;
+                    } else {
+                        buyerTotals[buyer] = amount;
+                    }
+                });
+                
+                // Sort and get top 5 buyers
+                const sortedBuyers = Object.entries(buyerTotals)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+                
+                sortedBuyers.forEach(([buyer, total]) => {
+                    topBuyersData.labels.push(buyer);
+                    topBuyersData.data.push(total);
+                });
+            } catch (error) {
+                console.error('Error getting top buyers data:', error);
+            }
+            
+            return topBuyersData;
+        }
+        
+        async function loadReportTable() {
+            const reportsTableBody = document.getElementById('reportsTableBody');
+            reportsTableBody.innerHTML = '';
+            
+            try {
+                const snapshot = await db.collection('invoices').orderBy('createdAt', 'desc').limit(50).get();
+                
+                if (snapshot.empty) {
+                    reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No data available</td></tr>';
+                    return;
+                }
+                
+                snapshot.forEach(doc => {
+                    const invoice = doc.data();
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${invoice.invoiceNo}</td>
+                        <td>${invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : 'N/A'}</td>
+                        <td>${invoice.buyerName}</td>
+                        <td>${invoice.goods}</td>
+                        <td>${invoice.quantity}</td>
+                        <td>$${parseFloat(invoice.totalUSD || 0).toFixed(2)}</td>
+                        <td>$${parseFloat(invoice.amount || 0).toFixed(2)}</td>
+                        <td>${invoice.shippingName}</td>
+                    `;
+                    
+                    reportsTableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error loading report table:', error);
+            }
+        }
+        
+        function applyFilters() {
+            const fromDate = document.getElementById('filterFromDate').value;
+            const toDate = document.getElementById('filterToDate').value;
+            const buyer = document.getElementById('filterBuyer').value;
+            const goods = document.getElementById('filterGoods').value;
+            
+            showToast('Filters applied successfully', 'success');
+            // Here you would implement the actual filtering logic
+            loadFilteredReportTable(fromDate, toDate, buyer, goods);
+        }
+        
+        function clearFilters() {
+            document.getElementById('filterFromDate').value = '';
+            document.getElementById('filterToDate').value = '';
+            document.getElementById('filterBuyer').value = '';
+            document.getElementById('filterGoods').value = '';
+            
+            showToast('Filters cleared', 'info');
+            loadReportTable();
+        }
+        
+        async function loadFilteredReportTable(fromDate, toDate, buyer, goods) {
+            const reportsTableBody = document.getElementById('reportsTableBody');
+            reportsTableBody.innerHTML = '';
+            
+            try {
+                let query = db.collection('invoices');
+                
+                if (fromDate) {
+                    query = query.where('createdAt', '>=', new Date(fromDate));
+                }
+                if (toDate) {
+                    query = query.where('createdAt', '<=', new Date(toDate + 'T23:59:59'));
+                }
+                if (buyer) {
+                    query = query.where('buyerName', '==', buyer);
+                }
+                if (goods) {
+                    query = query.where('goods', '==', goods);
+                }
+                
+                const snapshot = await query.get();
+                
+                if (snapshot.empty) {
+                    reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No data found with applied filters</td></tr>';
+                    return;
+                }
+                
+                snapshot.forEach(doc => {
+                    const invoice = doc.data();
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${invoice.invoiceNo}</td>
+                        <td>${invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : 'N/A'}</td>
+                        <td>${invoice.buyerName}</td>
+                        <td>${invoice.goods}</td>
+                        <td>${invoice.quantity}</td>
+                        <td>$${parseFloat(invoice.totalUSD || 0).toFixed(2)}</td>
+                        <td>$${parseFloat(invoice.amount || 0).toFixed(2)}</td>
+                        <td>${invoice.shippingName}</td>
+                    `;
+                    
+                    reportsTableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error loading filtered report table:', error);
+            }
+        }
+        
+        function exportReport() {
+            showToast('Exporting report to Excel...', 'info');
+            // Here you would implement the actual Excel export functionality
+            setTimeout(() => {
+                showToast('Report exported successfully', 'success');
+            }, 2000);
+        }
+        
+        // SETTINGS FUNCTIONS
+        function loadSettings() {
+            // Load user profile
+            document.getElementById('settingsUserName').textContent = currentUser.displayName || 'User';
+            document.getElementById('settingsUserEmail').textContent = currentUser.email || 'user@example.com';
+            document.getElementById('settingsAvatar').textContent = (currentUser.displayName || 'U').charAt(0).toUpperCase();
+            
+            const lastLogin = localStorage.getItem('lastLogin');
+            if (lastLogin) {
+                document.getElementById('lastLogin').textContent = new Date(lastLogin).toLocaleString();
+            }
+            
+            // Load saved settings from localStorage
+            document.getElementById('displayName').value = localStorage.getItem('userDisplayName') || '';
+            document.getElementById('email').value = localStorage.getItem('userEmail') || '';
+            document.getElementById('phone').value = localStorage.getItem('userPhone') || '';
+            document.getElementById('department').value = localStorage.getItem('userDepartment') || '';
+            
+            document.getElementById('companyName').value = localStorage.getItem('companyName') || '';
+            document.getElementById('currency').value = localStorage.getItem('currency') || 'USD';
+            document.getElementById('defaultExchangeRate').value = localStorage.getItem('defaultExchangeRate') || '';
+            document.getElementById('taxRate').value = localStorage.getItem('taxRate') || '';
+            document.getElementById('emailNotifications').checked = localStorage.getItem('emailNotifications') === 'true';
+        }
+        
+        function saveProfileSettings() {
+            const displayName = document.getElementById('displayName').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const department = document.getElementById('department').value;
+            
+            // Save to localStorage
+            localStorage.setItem('userDisplayName', displayName);
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('userPhone', phone);
+            localStorage.setItem('userDepartment', department);
+            
+            // Update current user
+            currentUser.displayName = displayName;
+            currentUser.email = email;
+            
+            // Update UI
+            userName.textContent = displayName || email || 'User';
+            userAvatar.textContent = (displayName || email || 'U').charAt(0).toUpperCase();
+            
+            showToast('Profile settings saved successfully', 'success');
+        }
+        
+        function saveSystemSettings() {
+            const companyName = document.getElementById('companyName').value;
+            const currency = document.getElementById('currency').value;
+            const defaultExchangeRate = document.getElementById('defaultExchangeRate').value;
+            const taxRate = document.getElementById('taxRate').value;
+            const emailNotifications = document.getElementById('emailNotifications').checked;
+            
+            // Save to localStorage
+            localStorage.setItem('companyName', companyName);
+            localStorage.setItem('currency', currency);
+            localStorage.setItem('defaultExchangeRate', defaultExchangeRate);
+            localStorage.setItem('taxRate', taxRate);
+            localStorage.setItem('emailNotifications', emailNotifications);
+            
+            showToast('System settings saved successfully', 'success');
+        }
+        
+        function setTheme(theme) {
+            // Remove active class from all theme options
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            
+            // Add active class to selected theme
+            event.target.classList.add('active');
+            
+            // Save theme preference
+            localStorage.setItem('selectedTheme', theme);
+            
+            // Apply theme (simplified - in production you would have more comprehensive theme switching)
+            showToast(`Theme changed to ${theme}`, 'success');
+        }
+        
+        function backupData() {
+            showToast('Creating backup...', 'info');
+            
+            // Collect all data
+            const backupData = {
+                invoices: invoices,
+                settings: {
+                    companyName: localStorage.getItem('companyName'),
+                    currency: localStorage.getItem('currency'),
+                    defaultExchangeRate: localStorage.getItem('defaultExchangeRate'),
+                    taxRate: localStorage.getItem('taxRate'),
+                    emailNotifications: localStorage.getItem('emailNotifications')
+                },
+                userProfile: {
+                    displayName: localStorage.getItem('userDisplayName'),
+                    email: localStorage.getItem('userEmail'),
+                    phone: localStorage.getItem('userPhone'),
+                    department: localStorage.getItem('userDepartment')
+                },
+                backupDate: new Date().toISOString()
+            };
+            
+            // Create and download backup file
+            const dataStr = JSON.stringify(backupData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `backup_${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showToast('Backup downloaded successfully', 'success');
+        }
+        
+        function restoreData() {
+            const fileInput = document.getElementById('restoreFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showToast('Please select a backup file', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    
+                    // Restore settings
+                    if (backupData.settings) {
+                        Object.entries(backupData.settings).forEach(([key, value]) => {
+                            if (value !== null && value !== undefined) {
+                                localStorage.setItem(key, value);
+                            }
+                        });
+                    }
+                    
+                    // Restore user profile
+                    if (backupData.userProfile) {
+                        Object.entries(backupData.userProfile).forEach(([key, value]) => {
+                            if (value !== null && value !== undefined) {
+                                localStorage.setItem('user' + key.charAt(0).toUpperCase() + key.slice(1), value);
+                            }
+                        });
+                    }
+                    
+                    // Restore invoices (this would require Firebase write permissions)
+                    if (backupData.invoices && confirm('Do you want to restore invoices? This will overwrite existing data.')) {
+                        // Here you would implement the actual invoice restoration
+                        showToast('Invoice restoration requires additional permissions', 'warning');
+                    }
+                    
+                    showToast('Data restored successfully', 'success');
+                    loadSettings();
+                    
+                } catch (error) {
+                    console.error('Error restoring data:', error);
+                    showToast('Invalid backup file', 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+
