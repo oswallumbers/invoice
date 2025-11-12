@@ -47,19 +47,26 @@
             white-space: normal;
         }
 
-        /* Input field focus style */
-        input[type="text"], input[type="date"], input[type="number"], select {
-             border-color: #d1d5db;
-        }
-        input:focus, select:focus {
-            outline: 2px solid transparent;
-            outline-offset: 2px;
-            --tw-ring-color: #4f46e5;
-            --tw-ring-shadow: 0 0 0 2px var(--tw-ring-color);
-            box-shadow: var(--tw-ring-shadow);
-            border-color: #4f46e5;
+    /* FIXED: Styles for Input fields to make them taller and cleaner */
+        input[type="text"], 
+        input[type="date"], 
+        input[type="number"], 
+        select {
+             border: 1px solid #d1d5db;   /* Explicit 1px border */
+             padding: 0.6rem 0.75rem;     /* Adds internal space (Height & Width padding) */
+             border-radius: 0.375rem;     /* Smooth rounded corners */
+             font-size: 0.95rem;          /* Slightly clearer text size */
+             line-height: 1.5;            /* Prevents text from being cut off */
+             width: 100%;                 /* Ensures it fills the container */
+             background-color: #fff;      /* White background */
         }
 
+        /* Focus state (when you click inside) */
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4f46e5;        /* Indigo border on focus */
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); /* Soft glow effect */
+        }
         /* NEW: Sortable header styles */
         th[data-sort-key] {
             cursor: pointer;
