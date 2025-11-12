@@ -21,32 +21,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function initializeApp() {
     showLoadingSpinner();
-    await updateListNumberFromFirestore(); 
-    await updateDashboard(); 
-    hideLoadingSpinner();
+    try {
+        await updateListNumberFromFirestore(); 
+        await updateDashboard(); 
+    } catch (error) {
+        console.error("Initialization error:", error);
+        showNotification('Connection error. Some data may not load.', 'error');
+    } finally {
+        // This runs no matter what, ensuring the screen is never blocked
+        hideLoadingSpinner();
+    }
 }
 
 async function updateListNumberFromFirestore() {
-    // Make sure 'db' is defined in firebase-init.js
-    if (typeof db === 'undefined') {
-        console.error("Firestore 'db' is not initialized. Check firebase-init.js");
-        return;
-    }
-    const metadataRef = db.collection('metadata').doc('counter');
-    const doc = await metadataRef.get();
+    if (typeof db === 'undefined') return;
+    
+    try {
+        const metadataRef = db.collection('metadata').doc('counter');
+        const doc = await metadataRef.get();
 
-    if (doc.exists) {
-        nextListNumber = doc.data().nextListNumber;
-    } else {
+        if (doc.exists) {
+            nextListNumber = doc.data().nextListNumber;
+        } else {
+            nextListNumber = 1;
+            // Use .catch here to prevent minor permission errors from stopping the app
+            await metadataRef.set({ nextListNumber: 1 }).catch(e => console.warn("Could not set initial counter", e));
+        }
+    } catch (error) {
+        console.error("Error fetching list number:", error);
+        // Fallback to 1 if offline so the app still works
         nextListNumber = 1;
-        await metadataRef.set({ nextListNumber: 1 });
     }
     updateListNumber();
 }
-
-// 
-// --- THIS FUNCTION HAS BEEN UPDATED ---
-//
 // Setup event listeners
 function setupEventListeners() {
     // Navigation
