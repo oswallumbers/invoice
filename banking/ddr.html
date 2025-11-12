@@ -502,14 +502,29 @@
                     if (text.match(/:50:OSWAL LUMBERS PVT LTD/)) document.getElementById('party').value = "OLPL";
 
                     // **FIXED**: Robust Shipper Name Regex
-                    // Allows for space after "3." and finds name on same or next line
-                    const shipperMatch = text.match(/3\.\s*NAME AND COMPLETE ADDRESS OF EXPORT(?:ER)?:\s*([\s\S]*?)4\.\s*DESCRIPTION/);
+                    // This regex handles:
+                    // 1. "3.NAME" or "3. NAME" (spacing variations)
+                    // 2. Newlines between "NAME" and "EXPORTER" (if label wraps)
+                    // 3. "EXPORTER:" or "EXPORTER :" (space before colon)
+                    // 4. Captures everything until "4.DESCRIPTION"
+                    const shipperMatch = text.match(/3\.\s*NAME[\s\S]*?EXPORTER\s*:\s*([\s\S]*?)4\.\s*DESCRIPTION/i);
+                    
                     if (shipperMatch && shipperMatch[1]) {
-                        const firstLine = shipperMatch[1].trim().split('\n')[0].trim();
-                        document.getElementById('shipperName').value = firstLine;
-                        console.log("Found Shipper:", firstLine);
+                        // The regex captures the full address block. 
+                        // We take the first line, assuming the Company Name is listed first.
+                        let rawName = shipperMatch[1].trim();
+                        
+                        // If the name is on the same line as the label (e.g., "EXPORTER: NAME"), it's captured.
+                        // If the name is on the next line, split('\n') grabs it.
+                        const firstLine = rawName.split('\n')[0].trim();
+                        
+                        // Remove any trailing commas or periods if they exist at the end of the name
+                        const cleanName = firstLine.replace(/[,\.]$/, '');
+
+                        document.getElementById('shipperName').value = cleanName;
+                        console.log("Found Shipper:", cleanName);
                     } else {
-                        console.log("Shipper Name not found.");
+                        console.log("Shipper Name not found via Regex.");
                     }
 
                     const usdMatch = text.match(/:32B:USD([\d,]+)/);
