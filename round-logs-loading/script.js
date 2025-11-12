@@ -1,14 +1,14 @@
 // Global variables
 let currentView = 'entry';
-let logsData = []; // This remains for the current entry form
-let allFetchedLists = []; // NEW: A cache for all lists fetched from the dashboard
+let logsData = []; 
+let allFetchedLists = []; 
 let currentListId = null;
-let nextListNumber = 1; // MODIFIED: This will be loaded from Firestore
+let nextListNumber = 1; 
 let currentPage = 1;
 let rowCount = 1;
 const itemsPerPage = 10;
 
-// NEW: Global variable to store the target of the right-click
+// Global variable to store the target of the right-click
 let currentContextMenuTarget = null;
 
 // Initialize the application
@@ -28,7 +28,6 @@ async function initializeApp() {
         console.error("Initialization error:", error);
         showNotification('Connection error. Some data may not load.', 'error');
     } finally {
-        // This runs no matter what, ensuring the screen is never blocked
         hideLoadingSpinner();
     }
 }
@@ -44,19 +43,17 @@ async function updateListNumberFromFirestore() {
             nextListNumber = doc.data().nextListNumber;
         } else {
             nextListNumber = 1;
-            // Use .catch here to prevent minor permission errors from stopping the app
             await metadataRef.set({ nextListNumber: 1 }).catch(e => console.warn("Could not set initial counter", e));
         }
     } catch (error) {
         console.error("Error fetching list number:", error);
-        // Fallback to 1 if offline so the app still works
         nextListNumber = 1;
     }
     updateListNumber();
 }
+
 // Setup event listeners
 function setupEventListeners() {
-    // Navigation
     const entryNav = document.getElementById('entryNav');
     if (entryNav) {
         entryNav.addEventListener('click', function(e) {
@@ -73,7 +70,6 @@ function setupEventListeners() {
         });
     }
     
-    // Form buttons
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {
         saveBtn.addEventListener('click', saveData);
@@ -94,7 +90,6 @@ function setupEventListeners() {
         signOutBtn.addEventListener('click', signOutUser);
     }
     
-    // Dashboard search and filter
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', filterDashboard);
@@ -105,7 +100,6 @@ function setupEventListeners() {
         filterBtn.addEventListener('click', filterDashboard);
     }
     
-    // Print modal
     const confirmPrintBtn = document.getElementById('confirmPrintBtn');
     if (confirmPrintBtn) {
         confirmPrintBtn.addEventListener('click', function() {
@@ -113,10 +107,9 @@ function setupEventListeners() {
         });
     }
 
-    // --- NEW: Context Menu Listeners ---
+    // --- Context Menu Listeners ---
     const contextMenu = document.getElementById('tableContextMenu');
     
-    // Hide menu when clicking anywhere
     document.addEventListener('click', () => {
         if (contextMenu) {
             contextMenu.style.display = 'none';
@@ -124,70 +117,53 @@ function setupEventListeners() {
         currentContextMenuTarget = null;
     });
 
-    // Action: Insert Row Below
     const insertRowBelowBtn = document.getElementById('insertRowBelow');
     if (insertRowBelowBtn) {
         insertRowBelowBtn.addEventListener('click', (e) => {
             e.preventDefault();
             if (currentContextMenuTarget) {
                 const rowNum = parseInt(currentContextMenuTarget.dataset.row);
-                insertRowAfter(rowNum); // NEW Function
+                insertRowAfter(rowNum);
             }
-            if (contextMenu) {
-                contextMenu.style.display = 'none';
-            }
+            if (contextMenu) contextMenu.style.display = 'none';
         });
     }
     
-    // Action: Delete This Row
     const deleteCurrentRowBtn = document.getElementById('deleteCurrentRow');
     if (deleteCurrentRowBtn) {
         deleteCurrentRowBtn.addEventListener('click', (e) => {
             e.preventDefault();
             if (currentContextMenuTarget) {
                 const rowNum = parseInt(currentContextMenuTarget.dataset.row);
-                deleteRow(rowNum); // Use existing delete function
+                deleteRow(rowNum);
             }
-            if (contextMenu) {
-                contextMenu.style.display = 'none';
-            }
+            if (contextMenu) contextMenu.style.display = 'none';
         });
     }
     
-    // Action: Insert Cell (Shift Down)
     const insertShiftDownBtn = document.getElementById('insertShiftDown');
     if (insertShiftDownBtn) {
         insertShiftDownBtn.addEventListener('click', (e) => {
             e.preventDefault();
             if (currentContextMenuTarget) {
-                shiftColumnData(currentContextMenuTarget, 'down'); // NEW Function
+                shiftColumnData(currentContextMenuTarget, 'down');
             }
-            if (contextMenu) {
-                contextMenu.style.display = 'none';
-            }
+            if (contextMenu) contextMenu.style.display = 'none';
         });
     }
     
-    // Action: Delete Cell (Shift Up)
     const deleteShiftUpBtn = document.getElementById('deleteShiftUp');
     if (deleteShiftUpBtn) {
         deleteShiftUpBtn.addEventListener('click', (e) => {
             e.preventDefault();
             if (currentContextMenuTarget) {
-                shiftColumnData(currentContextMenuTarget, 'up'); // NEW Function
+                shiftColumnData(currentContextMenuTarget, 'up');
             }
-            if (contextMenu) {
-                contextMenu.style.display = 'none';
-            }
+            if (contextMenu) contextMenu.style.display = 'none';
         });
     }
-    // --- END NEW ---
 }
-// 
-// --- END OF UPDATED FUNCTION ---
-// 
 
-// Switch between views
 function switchView(view) {
     currentView = view;
     
@@ -212,24 +188,20 @@ function switchView(view) {
     }
 }
 
-// Generate initial rows (start with just a few)
 function generateInitialRows() {
     const tableBody = document.getElementById('logsTableBody');
     if (!tableBody) return;
     tableBody.innerHTML = '';
     rowCount = 1;
-    
     for (let i = 1; i <= 5; i++) {
         addTableRow();
     }
 }
 
-// MODIFIED: addTableRow is now simpler, it calls a separate function for listeners
 function addTableRow() {
     const tableBody = document.getElementById('logsTableBody');
     if (!tableBody) return;
     const row = document.createElement('tr');
-    
     const currentRowNumber = rowCount;
     
     row.innerHTML = `
@@ -245,16 +217,11 @@ function addTableRow() {
         <td><input type="number" class="cft-input" data-row="${currentRowNumber}" step="0.01" readonly></td>
     `;
     tableBody.appendChild(row);
-    
-    // NEW: Call the listener function for the new row
     addListenersToRow(row, currentRowNumber);
-    
     rowCount++;
 }
 
-// NEW: Function to add all listeners to a specific row
 function addListenersToRow(row, rowNumber) {
-    // Delete button
     const deleteBtn = row.querySelector('.delete-row-btn');
     if (deleteBtn) {
         deleteBtn.addEventListener('click', function() {
@@ -262,38 +229,28 @@ function addListenersToRow(row, rowNumber) {
         });
     }
     
-    // Input elements
     const lengthInput = row.querySelector('.length-input');
     const allowanceInput = row.querySelector('.allowance-input');
     const girthInput = row.querySelector('.girth-input');
     const cftInput = row.querySelector('.cft-input');
     
-    // Calculation events
     if (lengthInput && allowanceInput) {
         lengthInput.addEventListener('input', function() {
             allowanceInput.value = this.value;
             calculateCFT(rowNumber);
         });
     }
-    if (allowanceInput) {
-        allowanceInput.addEventListener('input', () => calculateCFT(rowNumber));
-    }
-    if (girthInput) {
-        girthInput.addEventListener('input', () => calculateCFT(rowNumber));
-    }
+    if (allowanceInput) allowanceInput.addEventListener('input', () => calculateCFT(rowNumber));
+    if (girthInput) girthInput.addEventListener('input', () => calculateCFT(rowNumber));
     
-    // Add keyboard navigation and context menu for all inputs
     [lengthInput, allowanceInput, girthInput, cftInput].forEach(input => {
-        if (!input) return; // Safety check
-        
-        // Keydown navigation (Enter, Up, Down)
+        if (!input) return;
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' || e.key === 'ArrowDown') {
                 e.preventDefault();
                 const currentRow = parseInt(this.dataset.row);
                 const allRows = document.querySelectorAll('#logsTableBody tr');
                 const isLastRow = this.closest('tr') === allRows[allRows.length - 1];
-                
                 if (isLastRow) {
                     const newRowNumber = addNewRowAndReturnNumber();
                     focusOnInput(this.className.split(' ')[0], newRowNumber);
@@ -303,33 +260,24 @@ function addListenersToRow(row, rowNumber) {
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 const currentRow = parseInt(this.dataset.row);
-                if (currentRow > 1) {
-                    focusOnInput(this.className.split(' ')[0], currentRow - 1);
-                }
+                if (currentRow > 1) focusOnInput(this.className.split(' ')[0], currentRow - 1);
             }
         });
         
-        // NEW: Right-click context menu listener
         input.addEventListener('contextmenu', function(e) {
             e.preventDefault();
-            currentContextMenuTarget = e.target; // Store the clicked input
-            
+            currentContextMenuTarget = e.target;
             const contextMenu = document.getElementById('tableContextMenu');
             if (contextMenu) {
                 contextMenu.style.display = 'block';
                 contextMenu.style.left = `${e.clientX}px`;
                 contextMenu.style.top = `${e.clientY}px`;
             }
-            
-            // Disable cell-shift options for the read-only 'CFT' column
             const isCFT = e.target.classList.contains('cft-input');
             const insertShiftDownItem = document.getElementById('insertShiftDown');
             const deleteShiftUpItem = document.getElementById('deleteShiftUp');
-            
             if (insertShiftDownItem) insertShiftDownItem.style.display = isCFT ? 'none' : 'block';
             if (deleteShiftUpItem) deleteShiftUpItem.style.display = isCFT ? 'none' : 'block';
-            
-            // Also hide the divider if both are hidden
             const divider = deleteShiftUpItem ? deleteShiftUpItem.previousElementSibling : null;
             if (divider && divider.classList.contains('dropdown-divider')) {
                 divider.style.display = isCFT ? 'none' : 'block';
@@ -338,21 +286,17 @@ function addListenersToRow(row, rowNumber) {
     });
 }
 
-// NEW: Function to insert a new row *after* a specific row
 function insertRowAfter(rowNumber) {
     const tableBody = document.getElementById('logsTableBody');
     if (!tableBody) return;
     const allRows = Array.from(tableBody.querySelectorAll('tr'));
-    const targetRow = allRows[rowNumber - 1]; // -1 because rowNumber is 1-based
+    const targetRow = allRows[rowNumber - 1];
     
     if (!targetRow) {
-        addTableRow(); // If it's the last row, just add to end
+        addTableRow(); 
         return;
     }
-    
-    // Create a new blank row
     const newRow = document.createElement('tr');
-    // Row number will be fixed by renumbering
     newRow.innerHTML = `
         <td><button class="btn btn-sm btn-danger delete-row-btn" data-row="${rowNumber + 1}"><i class="bi bi-trash"></i></button></td>
         <td>${rowNumber + 1}</td>
@@ -361,142 +305,84 @@ function insertRowAfter(rowNumber) {
         <td><input type="number" class="girth-input" data-row="${rowNumber + 1}" step="0.01"></td>
         <td><input type="number" class="cft-input" data-row="${rowNumber + 1}" step="0.01" readonly></td>
     `;
-    
-    // Insert the new row *after* the target row
     targetRow.parentNode.insertBefore(newRow, targetRow.nextSibling);
-    
-    // Re-add listeners to the new row
     addListenersToRow(newRow, rowNumber + 1);
-    
-    // Renumber all rows starting from the one *after* the inserted row
     renumberRowsAfterDeletion(rowNumber);
     updateTotals();
 }
 
-// NEW: Function to shift data in a single column
 function shiftColumnData(targetInput, direction) {
-    const columnClass = targetInput.className.split(' ')[0]; // e.g., 'girth-input'
+    const columnClass = targetInput.className.split(' ')[0];
     const startRow = parseInt(targetInput.dataset.row);
     
     if (direction === 'down') {
-        // --- Shift Down (Insert) ---
-        
-        // Get all inputs in this column
         let allInputsInColumn = Array.from(document.querySelectorAll(`.${columnClass}`));
-        
-        // Check if the last row is empty. If not, add a new row.
         const lastRowInput = allInputsInColumn[allInputsInColumn.length - 1];
         if (lastRowInput && lastRowInput.value !== '') {
-            addTableRow(); // Add a new blank row at the end
-            // Get the list of inputs again since we added one
+            addTableRow();
             allInputsInColumn = Array.from(document.querySelectorAll(`.${columnClass}`));
         }
-        
-        // Iterate backwards from the second-to-last row down to the start row
         for (let i = allInputsInColumn.length - 2; i >= startRow - 1; i--) {
             const currentRowInput = allInputsInColumn[i];
             const nextRowInput = allInputsInColumn[i + 1];
-            if (currentRowInput && nextRowInput) {
-                nextRowInput.value = currentRowInput.value;
-            }
+            if (currentRowInput && nextRowInput) nextRowInput.value = currentRowInput.value;
         }
-        
-        // Clear the target input
         targetInput.value = '';
-        
     } else if (direction === 'up') {
-        // --- Shift Up (Delete) ---
-        
         const allInputsInColumn = Array.from(document.querySelectorAll(`.${columnClass}`));
-        
-        // Iterate forwards from the start row to the second-to-last row
         for (let i = startRow - 1; i < allInputsInColumn.length - 1; i++) {
             const currentRowInput = allInputsInColumn[i];
             const nextRowInput = allInputsInColumn[i + 1];
-            if (currentRowInput && nextRowInput) {
-                currentRowInput.value = nextRowInput.value;
-            }
+            if (currentRowInput && nextRowInput) currentRowInput.value = nextRowInput.value;
         }
-        
-        // Clear the last input in the column
-        if (allInputsInColumn.length > 0) {
-            allInputsInColumn[allInputsInColumn.length - 1].value = '';
-        }
+        if (allInputsInColumn.length > 0) allInputsInColumn[allInputsInColumn.length - 1].value = '';
     }
-    
-    // After shifting, recalculate CFT for all rows and update totals
     recalculateAllCFTs();
 }
 
-// NEW: Function to recalculate all CFTs after a major shift
 function recalculateAllCFTs() {
     const allRows = document.querySelectorAll('#logsTableBody tr');
     allRows.forEach((row, index) => {
-        const rowNum = index + 1;
-        // Need to find the row number from the data-row attribute, not index
         const deleteBtn = row.querySelector('.delete-row-btn');
         if (deleteBtn) {
             const actualRowNum = deleteBtn.dataset.row;
-            calculateCFT(actualRowNum); // Use existing function
+            calculateCFT(actualRowNum); 
         }
     });
-    // updateTotals() is called by calculateCFT, so no need to call it again here.
 }
 
-
-// Delete a row
 function deleteRow(rowNumber) {
     const row = document.querySelector(`tr:has(.delete-row-btn[data-row="${rowNumber}"])`);
     if (!row) return;
-    
     row.remove();
-    renumberRowsAfterDeletion(rowNumber - 1); // Renumber from the row *before* the deleted one
+    renumberRowsAfterDeletion(rowNumber - 1);
     updateTotals();
     showNotification(`Row ${rowNumber} deleted successfully`, 'success');
 }
 
-// MODIFIED: Renumber rows after deletion or insertion
 function renumberRowsAfterDeletion(startFromRow) {
     const allRows = document.querySelectorAll('#logsTableBody tr');
-    
     allRows.forEach((row, index) => {
         const currentRowNumber = index + 1;
-        
-        // Update row number display
         const srNoCell = row.querySelector('td:nth-child(2)');
-        if (srNoCell) {
-            srNoCell.textContent = currentRowNumber;
-        }
-        
-        // Update delete button data attribute
+        if (srNoCell) srNoCell.textContent = currentRowNumber;
         const deleteBtn = row.querySelector('.delete-row-btn');
-        if (deleteBtn) {
-            deleteBtn.dataset.row = currentRowNumber;
-        }
-        
-        // Update all input data attributes
+        if (deleteBtn) deleteBtn.dataset.row = currentRowNumber;
         row.querySelectorAll('input').forEach(input => {
             input.dataset.row = currentRowNumber;
         });
-        
-        // Recalculate CFT for this row
-        // We need to do this in case a shift-up/down affected this
         calculateCFT(currentRowNumber);
     });
-    
-    // Update the global row count
     rowCount = allRows.length + 1;
     updateTotals();
 }
 
-// Add a new row and return the new row number
 function addNewRowAndReturnNumber() {
     const newRowNumber = rowCount;
     addTableRow();
     return newRowNumber;
 }
 
-// Focus on an input in a specific row
 function focusOnInput(inputClass, rowNumber) {
     requestAnimationFrame(() => {
         const input = document.querySelector(`.${inputClass}[data-row="${rowNumber}"]`);
@@ -507,27 +393,20 @@ function focusOnInput(inputClass, rowNumber) {
     });
 }
 
-// Calculate CFT
 function calculateCFT(row) {
     const allowanceInput = document.querySelector(`.allowance-input[data-row="${row}"]`);
     const girthInput = document.querySelector(`.girth-input[data-row="${row}"]`);
     const cftInput = document.querySelector(`.cft-input[data-row="${row}"]`);
     
-    if (!allowanceInput || !girthInput || !cftInput) {
-        // This can happen if a row is being deleted, it's not an error
-        return;
-    }
+    if (!allowanceInput || !girthInput || !cftInput) return;
     
     const allowance = parseFloat(allowanceInput.value) || 0;
     const girth = parseFloat(girthInput.value) || 0;
-    
     const cft = (allowance * girth * girth / 16000000 * 35.315).toFixed(2);
     cftInput.value = cft;
-    
     updateTotals();
 }
 
-// Update totals
 function updateTotals() {
     let totalCFT = 0;
     let totalPCS = 0;
@@ -538,9 +417,7 @@ function updateTotals() {
     });
     
     document.querySelectorAll('.length-input').forEach(input => {
-        if (input.value) {
-            totalPCS++;
-        }
+        if (input.value) totalPCS++;
     });
     
     const totalCFTEl = document.getElementById('totalCFT');
@@ -550,97 +427,111 @@ function updateTotals() {
     if (grandTotalCFTEl) grandTotalCFTEl.textContent = totalCFT.toFixed(2);
     
     const grandTotalCBMEl = document.getElementById('grandTotalCBM');
-    if (grandTotalCBMEl) grandTotalCBMEl.textContent = (totalCFT / 27.74).toFixed(3);
+    if (grandTotalCBMEl) grandTotalCBMEl.textContent = (totalCFT / 27.74).toFixed(3); // Updated to 3 decimals
     
     const totalPCSEl = document.getElementById('totalPCS');
     if (totalPCSEl) totalPCSEl.textContent = totalPCS;
 }
 
-// Update list number
 function updateListNumber() {
-    const listNumberEl = document.getElementById('listNumber');
+    // Using 'inputListNumber' now
+    const listNumberEl = document.getElementById('inputListNumber');
     if (listNumberEl) {
         const listNumber = `OLPL/LOG/${String(nextListNumber).padStart(3, '0')}`;
         listNumberEl.value = listNumber;
     }
 }
 
-// Set today's date
 function setTodayDate() {
     const today = new Date().toISOString().split('T')[0];
-    const dateEl = document.getElementById('date');
+    const dateEl = document.getElementById('inputListDate'); // Using 'inputListDate'
     if (dateEl) {
         dateEl.value = today;
     }
 }
 
 async function saveData() {
-    const saveBtn = document.querySelector("button[onclick='saveData()']") || document.querySelector(".btn-primary");
+    // Disable button to prevent double-submit
+    const saveBtn = document.getElementById('saveBtn');
     const originalBtnText = saveBtn ? saveBtn.textContent : "Save";
-
     if (saveBtn) {
         if (saveBtn.disabled) return;
         saveBtn.disabled = true;
         saveBtn.textContent = "Saving...";
     }
 
+    showLoadingSpinner();
+
     try {
-        // 1. Safely get values (Handle missing elements)
-        const listNumInput = document.getElementById('listNumber');
-        const listDateInput = document.getElementById('listDate');
-        const containerInput = document.getElementById('containerNo'); // Party Name
-        const wagonInput = document.getElementById('wagonNo');         // Vehicle Number
+        // Using updated IDs: inputListNumber and inputListDate
+        const listNumInput = document.getElementById('inputListNumber');
+        const listDateInput = document.getElementById('inputListDate');
+        const partyInput = document.getElementById('partyName');
+        const vehicleInput = document.getElementById('vehicleNumber');
+        const productInput = document.getElementById('productType');
 
         const listNumberVal = listNumInput ? listNumInput.value : '';
-        const listDate = listDateInput ? listDateInput.value : '';
-        
-        // FIX: Check if inputs exist before reading .value
-        const containerNoVal = containerInput ? containerInput.value : '';
-        const wagonNoVal = wagonInput ? wagonInput.value : '';
+        const dateVal = listDateInput ? listDateInput.value : '';
+        const partyNameVal = partyInput ? partyInput.value : '';
+        const vehicleNumberVal = vehicleInput ? vehicleInput.value : '';
+        const productTypeVal = productInput ? productInput.value : '';
 
-        if (!listNumberVal || !listDate) {
-            alert('Please fill in List Number and Date.');
+        if (!dateVal || !partyNameVal || !vehicleNumberVal || !productTypeVal) {
+            showNotification('Please fill all required fields', 'error');
             if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = originalBtnText; }
+            hideLoadingSpinner();
             return;
         }
 
-        const rows = document.querySelectorAll('#logsTableBody tr');
         const logs = [];
         let totalCFT = 0;
+        let totalPCS = 0;
 
-        rows.forEach(row => {
-            const inputs = row.querySelectorAll('input');
-            if (inputs[0].value) {
-                const len = parseFloat(inputs[1].value) || 0;
-                const girth = parseFloat(inputs[2].value) || 0;
-                const cft = parseFloat(inputs[3].value) || 0;
-                
+        const allRows = document.querySelectorAll('#logsTableBody tr');
+        allRows.forEach((row, index) => {
+            const deleteBtn = row.querySelector('.delete-row-btn');
+            const rowNum = deleteBtn ? deleteBtn.dataset.row : index + 1;
+            const length = parseFloat(document.querySelector(`.length-input[data-row="${rowNum}"]`).value) || 0;
+            const allowance = parseFloat(document.querySelector(`.allowance-input[data-row="${rowNum}"]`).value) || 0;
+            const girth = parseFloat(document.querySelector(`.girth-input[data-row="${rowNum}"]`).value) || 0;
+            const cft = parseFloat(document.querySelector(`.cft-input[data-row="${rowNum}"]`).value) || 0;
+
+            if (length > 0 && girth > 0) {
                 logs.push({
-                    logNo: inputs[0].value,
-                    length: len,
+                    srNo: index + 1,
+                    length: length,
+                    allowance: allowance,
                     girth: girth,
                     cft: cft
                 });
                 totalCFT += cft;
+                totalPCS++;
             }
         });
 
-        // 2. Use String for List Number (supports 'OLPL/LOG/004')
-        // We do NOT use parseInt() here so your custom ID works
-        const listData = {
-            listNumber: listNumberVal, 
-            listDate: listDate,
-            containerNo: containerNoVal,
-            wagonNo: wagonNoVal,
+        if (logs.length === 0) {
+            showNotification('Please enter at least one log entry', 'error');
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = originalBtnText; }
+            hideLoadingSpinner();
+            return;
+        }
+
+        const list = {
+            listNumber: listNumberVal,
+            date: dateVal,
+            partyName: partyNameVal,
+            vehicleNumber: vehicleNumberVal,
+            productType: productTypeVal,
             logs: logs,
             totalCFT: totalCFT,
             totalCBM: totalCFT / 27.74,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            totalPCS: totalPCS,
+            updatedAt: new Date().toISOString() // Using updated date for edits
         };
 
-        // 3. Check for duplicates
-        const duplicateCheck = await db.collection('loadingLists')
-            .where('listNumber', '==', listData.listNumber)
+        // Duplicate Check (Exclude current ID if editing)
+        const duplicateCheck = await db.collection('lists')
+            .where('listNumber', '==', list.listNumber)
             .get();
 
         let isDuplicate = false;
@@ -653,54 +544,57 @@ async function saveData() {
         }
 
         if (isDuplicate) {
-            alert(`List Number ${listData.listNumber} already exists!`);
+            alert(`List Number ${list.listNumber} already exists!`);
             if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = originalBtnText; }
+            hideLoadingSpinner();
             return;
         }
 
-        // 4. Save to Firestore
         if (currentListId) {
-            await db.collection('loadingLists').doc(currentListId).update(listData);
-            showNotification('List updated successfully!', 'success');
+            await db.collection('lists').doc(currentListId).update(list);
+            showNotification('Data updated successfully', 'success');
         } else {
-            listData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-            await db.collection('loadingLists').add(listData);
+            list.createdAt = new Date().toISOString();
+            const docRef = await db.collection('lists').add(list);
+            await db.collection('lists').doc(docRef.id).update({ id: docRef.id });
             
-            // Only auto-increment if it's a pure number, otherwise skip
-            if (!isNaN(listData.listNumber)) {
-                 const numVal = parseInt(listData.listNumber);
-                 if (numVal >= nextListNumber) {
-                    db.collection('metadata').doc('counter').set({ nextListNumber: numVal + 1 })
-                      .catch(e => console.log("Counter skip", e));
-                 }
+            // Only auto-increment logic if it matches our auto-format
+            if (list.listNumber.includes(String(nextListNumber).padStart(3, '0'))) {
+                nextListNumber++;
+                await db.collection('metadata').doc('counter').set({ nextListNumber: nextListNumber })
+                    .catch(e => console.log("Counter update error", e));
             }
-            showNotification('List saved successfully!', 'success');
+            
+            updateListNumber();
+            resetForm();
+            showNotification('Data saved successfully', 'success');
         }
-
-        resetForm();
-        updateDashboard();
+        
+        allFetchedLists = []; 
+        await updateDashboard();
 
     } catch (error) {
-        console.error("Error saving:", error);
-        alert('Error saving data: ' + error.message);
+        console.error("Error saving data: ", error);
+        showNotification('Error saving data. See console for details.', 'error');
     } finally {
         if (saveBtn) {
             saveBtn.disabled = false;
             saveBtn.textContent = originalBtnText;
         }
+        currentListId = null;
+        hideLoadingSpinner();
     }
 }
 
-// Edit data
 function editData() {
     showNotification('Select a list from the dashboard to edit', 'info');
     switchView('dashboard');
 }
 
-// Show print preview
 function showPrintPreview() {
-    const listNumber = document.getElementById('listNumber').value;
-    const date = document.getElementById('date').value;
+    // Uses inputListNumber and inputListDate
+    const listNumber = document.getElementById('inputListNumber').value;
+    const date = document.getElementById('inputListDate').value;
     const partyName = document.getElementById('partyName').value;
     const vehicleNumber = document.getElementById('vehicleNumber').value;
     const productType = document.getElementById('productType').value;
@@ -715,7 +609,8 @@ function showPrintPreview() {
     
     const allRows = document.querySelectorAll('#logsTableBody tr');
     allRows.forEach((row, index) => {
-        const rowNum = row.querySelector('.delete-row-btn').dataset.row;
+        const deleteBtn = row.querySelector('.delete-row-btn');
+        const rowNum = deleteBtn ? deleteBtn.dataset.row : index + 1;
         const length = parseFloat(document.querySelector(`.length-input[data-row="${rowNum}"]`).value) || 0;
         const allowance = parseFloat(document.querySelector(`.allowance-input[data-row="${rowNum}"]`).value) || 0;
         const girth = parseFloat(document.querySelector(`.girth-input[data-row="${rowNum}"]`).value) || 0;
@@ -750,13 +645,9 @@ function showPrintPreview() {
     }
 }
 
-// 
-// --- THIS FUNCTION HAS BEEN UPDATED ---
-//
-// Print current data
 function printCurrentData() {
-    const listNumber = document.getElementById('listNumber').value;
-    const date = document.getElementById('date').value;
+    const listNumber = document.getElementById('inputListNumber').value;
+    const date = document.getElementById('inputListDate').value;
     const partyName = document.getElementById('partyName').value;
     const vehicleNumber = document.getElementById('vehicleNumber').value;
     const productType = document.getElementById('productType').value;
@@ -770,7 +661,6 @@ function printCurrentData() {
         const allowance = parseFloat(document.querySelector(`.allowance-input[data-row="${row}"]`).value) || 0;
         const girth = parseFloat(document.querySelector(`.girth-input[data-row="${row}"]`).value) || 0;
         const cft = parseFloat(document.querySelector(`.cft-input[data-row="${row}"]`).value) || 0;
-        
         if (length > 0 && girth > 0) {
             logs.push({
                 srNo: index + 1,
@@ -779,7 +669,6 @@ function printCurrentData() {
                 girth: girth,
                 cft: cft
             });
-            
             totalCFT += cft;
         }
     });
@@ -789,7 +678,6 @@ function printCurrentData() {
         return;
     }
 
-    // UPDATED: Added new print styles for page breaks, font size, and margins
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <!DOCTYPE html>
@@ -797,49 +685,19 @@ function printCurrentData() {
         <head>
             <title>Print - ${listNumber}</title>
             <style>
-                body { 
-                    font-family: Arial, sans-serif; 
-                    margin: 5px; 
-                    font-size: 10px; /* Smaller font */
-                }
+                body { font-family: Arial, sans-serif; margin: 5px; font-size: 10px; }
                 .print-header { text-align: center; margin-bottom: 10px; }
                 .header-info { display: flex; justify-content: space-between; margin-bottom: 10px; }
                 .header-left, .header-right { text-align: left; width: 48%; }
                 .two-column-table { display: flex; justify-content: space-between; }
                 .column-table { width: 48%; }
-                .print-table { 
-                    width: 100%; 
-                    border-collapse: collapse; 
-                    margin-bottom: 20px; 
-                    font-size: 10px; /* Smaller font */
-                }
-                .print-table th, .print-table td { 
-                    border: 1px solid #000; 
-                    padding: 2px; /* Less padding */
-                    text-align: center; 
-                }
+                .print-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; }
+                .print-table th, .print-table td { border: 1px solid #000; padding: 2px; text-align: center; }
                 .print-table th { background-color: #f2f2f2; }
                 .print-footer { margin-top: 20px; text-align: center; }
-                
-                /* Page break logic */
-                .print-page { 
-                    page-break-after: always;
-                    display: block;
-                    overflow: hidden;
-                }
-                
-                /* This stops the *last* page from page-breaking,
-                   so the footer stays on the same page. */
-                .print-page:last-child {
-                    page-break-after: auto;
-                }
-                
-                @media print { 
-                    @page { 
-                        size: A4; 
-                        margin: 0.5cm; /* Smaller margins */
-                    } 
-                }
+                .print-page { page-break-after: always; display: block; overflow: hidden; }
+                .print-page:last-child { page-break-after: auto; }
+                @media print { @page { size: A4; margin: 0.5cm; } }
             </style>
         </head>
         <body>
@@ -847,37 +705,25 @@ function printCurrentData() {
         </body>
         </html>
     `);
-    
     printWindow.document.close();
     printWindow.focus();
-    
     setTimeout(() => {
         printWindow.print();
         printWindow.close();
     }, 500);
 }
 
-// 
-// --- THIS FUNCTION HAS BEEN UPDATED (BOTH ISSUES) ---
-//
-// Generate print HTML
 function generatePrintHTML(listNumber, date, partyName, vehicleNumber, productType, logs, totalCFT) {
-    
     let html = '';
     let logIndex = 0;
-    let pageNumber = 1; // Page tracker
+    let pageNumber = 1;
 
-    // Loop in chunks of 100 (50 left, 50 right)
     while (logIndex < logs.length) {
-        
-        // --- 1. Get logs for this page ---
         const leftColumnLogs = logs.slice(logIndex, logIndex + 50);
         const rightColumnLogs = logs.slice(logIndex + 50, logIndex + 100);
 
-        // --- 2. Add the page wrapper ---
         html += '<div class="print-page">';
         
-        // Only add header on page 1
         if (pageNumber === 1) {
             html += `
                 <div class="print-header">
@@ -897,36 +743,28 @@ function generatePrintHTML(listNumber, date, partyName, vehicleNumber, productTy
             `;
         }
 
-        // --- 3. Add the two-column table structure ---
-        // ▼▼▼ FIX 1: Add margin-top to pages 2+ to push content down ▼▼▼
         if (pageNumber > 1) {
             html += '<div class="two-column-table" style="margin-top: 1.5cm;">';
         } else {
             html += '<div class="two-column-table">';
         }
-        // ▲▲▲ END FIX 1 ▲▲▲
 
-        // --- 4. Build Left Column ---
         html += '<div class="column-table"><table class="print-table">';
         html += '<thead><tr><th>Sr No</th><th>Length</th><th>Allowance</th><th>Girth</th><th>CFT</th></tr></thead><tbody>';
         leftColumnLogs.forEach(log => {
             html += `<tr><td>${log.srNo}</td><td>${log.length}</td><td>${log.allowance}</td><td>${log.girth}</td><td>${log.cft.toFixed(2)}</td></tr>`;
         });
-        html += '</tbody></table></div>'; // End left column
+        html += '</tbody></table></div>'; 
 
-        // --- 5. Build Right Column ---
         html += '<div class="column-table"><table class="print-table">';
         html += '<thead><tr><th>Sr No</th><th>Length</th><th>Allowance</th><th>Girth</th><th>CFT</th></tr></thead><tbody>';
         rightColumnLogs.forEach(log => {
             html += `<tr><td>${log.srNo}</td><td>${log.length}</td><td>${log.allowance}</td><td>${log.girth}</td><td>${log.cft.toFixed(2)}</td></tr>`;
         });
-        html += '</tbody></table></div>'; // End right column
+        html += '</tbody></table></div>'; 
+        html += '</div>'; 
 
-        html += '</div>'; // End two-column-table
-
-        // ▼▼▼ FIX 2: Check if this is the last chunk of logs ▼▼▼
         if (logIndex + 100 >= logs.length) {
-            // This is the last page, so add the footer *inside* this print-page div
             html += `
                 <div class="print-footer">
                     <h3>Grand Total</h3>
@@ -936,27 +774,20 @@ function generatePrintHTML(listNumber, date, partyName, vehicleNumber, productTy
                 </div>
             `;
         }
-        // ▲▲▲ END FIX 2 ▲▲▲
+        html += '</div>'; 
 
-        html += '</div>'; // End print-page
-
-        // Move to the next 100 logs
         logIndex += 100;
         pageNumber++;
     }
-    
-    // --- 6. REMOVED Grand Total from here ---
-    
     return html;
 }
 
-// Update dashboard (async)
 async function updateDashboard() {
     showLoadingSpinner();
     const tableBody = document.getElementById('dashboardTableBody');
     if (!tableBody) {
         hideLoadingSpinner();
-        return; // Can't update if table body doesn't exist
+        return;
     }
     tableBody.innerHTML = '';
 
@@ -978,7 +809,7 @@ async function updateDashboard() {
                 <td>${list.vehicleNumber}</td>
                 <td>${list.productType}</td>
                 <td>${list.totalCFT.toFixed(2)}</td>
-                <td>${list.totalCBM.toFixed(3)}</td>
+                <td>${list.totalCBM.toFixed(3)}</td> 
                 <td>${list.totalPCS}</td>
                 <td>
                     <button class="btn btn-sm btn-primary edit-list-btn" data-id="${list.id}" title="Edit"><i class="bi bi-pencil"></i></button>
@@ -999,7 +830,6 @@ async function updateDashboard() {
         document.querySelectorAll('.export-list-btn').forEach(btn => {
             btn.addEventListener('click', function() { exportListToExcel(this.dataset.id); });
         });
-        // NEW: Delete Listener
         document.querySelectorAll('.delete-list-btn').forEach(btn => {
             btn.addEventListener('click', function() { deleteList(this.dataset.id); });
         });
@@ -1014,7 +844,6 @@ async function updateDashboard() {
     }
 }
 
-// Filter lists
 function filterLists(listsToFilter) {
     let filtered = [...listsToFilter];
     
@@ -1041,14 +870,12 @@ function filterLists(listsToFilter) {
     return filtered;
 }
 
-// Paginate lists
 function paginateLists(lists) {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return lists.slice(startIndex, endIndex);
 }
 
-// Update pagination
 function updatePagination(totalItems) {
     const pagination = document.getElementById('dashboardPagination');
     if (!pagination) return;
@@ -1056,7 +883,6 @@ function updatePagination(totalItems) {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     pagination.innerHTML = '';
     
-    // Previous
     const prevLi = document.createElement('li');
     prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
     prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
@@ -1066,7 +892,6 @@ function updatePagination(totalItems) {
     });
     pagination.appendChild(prevLi);
     
-    // Pages
     for (let i = 1; i <= totalPages; i++) {
         const li = document.createElement('li');
         li.className = `page-item ${i === currentPage ? 'active' : ''}`;
@@ -1079,7 +904,6 @@ function updatePagination(totalItems) {
         pagination.appendChild(li);
     }
     
-    // Next
     const nextLi = document.createElement('li');
     nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
     nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
@@ -1090,13 +914,11 @@ function updatePagination(totalItems) {
     pagination.appendChild(nextLi);
 }
 
-// Filter dashboard
 function filterDashboard() {
     currentPage = 1;
     updateDashboard();
 }
 
-// Load list for editing (async)
 async function loadListForEditing(listId) {
     showLoadingSpinner();
     try {
@@ -1107,11 +929,12 @@ async function loadListForEditing(listId) {
         
         switchView('entry');
         
-        document.getElementById('listNumber').value = list.listNumber;
-        document.getElementById('date').value = list.date;
-        document.getElementById('partyName').value = list.partyName;
-        document.getElementById('vehicleNumber').value = list.vehicleNumber;
-        document.getElementById('productType').value = list.productType;
+        // Updated to use new IDs
+        if(document.getElementById('inputListNumber')) document.getElementById('inputListNumber').value = list.listNumber;
+        if(document.getElementById('inputListDate')) document.getElementById('inputListDate').value = list.date;
+        if(document.getElementById('partyName')) document.getElementById('partyName').value = list.partyName;
+        if(document.getElementById('vehicleNumber')) document.getElementById('vehicleNumber').value = list.vehicleNumber;
+        if(document.getElementById('productType')) document.getElementById('productType').value = list.productType;
         
         document.getElementById('logsTableBody').innerHTML = '';
         rowCount = 1;
@@ -1121,13 +944,10 @@ async function loadListForEditing(listId) {
             const rowNum = log.srNo;
             const lengthInput = document.querySelector(`.length-input[data-row="${rowNum}"]`);
             if (lengthInput) lengthInput.value = log.length;
-            
             const allowanceInput = document.querySelector(`.allowance-input[data-row="${rowNum}"]`);
             if (allowanceInput) allowanceInput.value = log.allowance;
-            
             const girthInput = document.querySelector(`.girth-input[data-row="${rowNum}"]`);
             if (girthInput) girthInput.value = log.girth;
-            
             const cftInput = document.querySelector(`.cft-input[data-row="${rowNum}"]`);
             if (cftInput) cftInput.value = log.cft;
         });
@@ -1146,10 +966,6 @@ async function loadListForEditing(listId) {
     }
 }
 
-// 
-// --- THIS FUNCTION HAS BEEN UPDATED ---
-//
-// Print list (async)
 async function printList(listId) {
     showLoadingSpinner();
     try {
@@ -1162,56 +978,25 @@ async function printList(listId) {
             list.productType, list.logs, list.totalCFT
         );
         
-        // UPDATED: Added new print styles for page breaks, font size, and margins
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
             <!DOCTYPE html>
             <html>
             <head><title>Print - ${list.listNumber}</title>
             <style>
-                body { 
-                    font-family: Arial, sans-serif; 
-                    margin: 5px; 
-                    font-size: 10px; /* Smaller font */
-                }
+                body { font-family: Arial, sans-serif; margin: 5px; font-size: 10px; }
                 .print-header { text-align: center; margin-bottom: 10px; }
                 .header-info { display: flex; justify-content: space-between; margin-bottom: 10px; }
                 .header-left, .header-right { text-align: left; width: 48%; }
                 .two-column-table { display: flex; justify-content: space-between; }
                 .column-table { width: 48%; }
-                .print-table { 
-                    width: 100%; 
-                    border-collapse: collapse; 
-                    margin-bottom: 20px; 
-                    font-size: 10px; /* Smaller font */
-                }
-                .print-table th, .print-table td { 
-                    border: 1px solid #000; 
-                    padding: 2px; /* Less padding */
-                    text-align: center; 
-                }
+                .print-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; }
+                .print-table th, .print-table td { border: 1px solid #000; padding: 2px; text-align: center; }
                 .print-table th { background-color: #f2f2f2; }
                 .print-footer { margin-top: 20px; text-align: center; }
-                
-                /* Page break logic */
-                .print-page { 
-                    page-break-after: always;
-                    display: block;
-                    overflow: hidden;
-                }
-                
-                /* This stops the *last* page from page-breaking,
-                   so the footer stays on the same page. */
-                .print-page:last-child {
-                    page-break-after: auto;
-                }
-                
-                @media print { 
-                    @page { 
-                        size: A4; 
-                        margin: 0.5cm; /* Smaller margins */
-                    } 
-                }
+                .print-page { page-break-after: always; display: block; overflow: hidden; }
+                .print-page:last-child { page-break-after: auto; }
+                @media print { @page { size: A4; margin: 0.5cm; } }
             </style>
             </head>
             <body>${printHTML}</body>
@@ -1234,7 +1019,6 @@ async function printList(listId) {
     }
 }
 
-// Export list to Excel (async)
 async function exportListToExcel(listId) {
     showLoadingSpinner();
     try {
@@ -1259,7 +1043,7 @@ async function exportListToExcel(listId) {
         
         data.push([]);
         data.push(['Total CFT:', '', '', '', list.totalCFT.toFixed(2)]);
-        data.push(['Total CBM:', '', '', '', list.totalCBM.toFixed(3)]);
+        data.push(['Total CBM:', '', '', '', list.totalCBM.toFixed(3)]); // Updated to 3 decimals
         data.push(['Total PCS:', '', '', '', list.totalPCS]);
         
         const wsData = [...header, ...data];
@@ -1279,19 +1063,23 @@ async function exportListToExcel(listId) {
     }
 }
 
-// Reset form
 function resetForm() {
     const logForm = document.getElementById('logForm');
     if (logForm) {
         logForm.reset();
     }
+    currentListId = null;
+    if(document.getElementById('inputListNumber')) {
+        document.getElementById('inputListNumber').value = ''; 
+        updateListNumber();
+    }
+    if(document.getElementById('inputListDate')) document.getElementById('inputListDate').value = '';
+    
     setTodayDate();
-    updateListNumber();
     generateInitialRows();
     updateTotals();
 }
 
-// Show notification
 function showNotification(message, type) {
     const notification = document.getElementById('notification');
     if (notification) {
@@ -1301,7 +1089,6 @@ function showNotification(message, type) {
     }
 }
 
-// Loading spinner
 function showLoadingSpinner() {
     const spinner = document.getElementById('loadingSpinner');
     if (spinner) {
@@ -1316,7 +1103,6 @@ function hideLoadingSpinner() {
     }
 }
 
-// Sign out user
 function signOutUser() {
     showLoadingSpinner();
     firebase.auth().signOut()
@@ -1330,36 +1116,27 @@ function signOutUser() {
             hideLoadingSpinner();
         });
 }
+
 // Delete list with Password Protection
 async function deleteList(listId) {
-    // 1. Ask for PIN / Password
     const pin = prompt("🔒 Enter Admin PIN to DELETE this list:");
-
-    // 2. Check if user pressed Cancel
     if (pin === null) return;
 
-    // 3. Validate PIN (Change '1234' to whatever password you want)
+    // Default PIN is 1234
     if (pin !== "1234") {
         alert("❌ Incorrect PIN! Deletion cancelled.");
         return;
     }
 
-    // 4. Double Confirmation
     if (!confirm("⚠️ Are you sure you want to permanently delete this list? This cannot be undone.")) {
         return;
     }
 
     showLoadingSpinner();
     try {
-        // Delete from Firestore
         await db.collection('lists').doc(listId).delete();
-        
-        // Remove from local cache so we don't need to reload from server
         allFetchedLists = allFetchedLists.filter(list => list.id !== listId);
-        
         showNotification('List deleted successfully', 'success');
-        
-        // Refresh the table
         updateDashboard(); 
     } catch (error) {
         console.error("Error deleting list:", error);
