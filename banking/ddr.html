@@ -148,9 +148,9 @@
                         <input type="date" id="dueDate" required class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
                     </div>
 
-                    <div>
-                        <label for="usanceDays" class="block text-sm font-medium text-gray-700">Usance Days (Auto)</label>
-                        <input type="text" id="usanceDays" disabled class="mt-1 block w-full rounded-md shadow-sm sm:text-sm">
+                   <div>
+                        <label for="usanceDays" class="block text-sm font-medium text-gray-700">Usance Days</label>
+                        <input type="text" id="usanceDays" class="mt-1 block w-full rounded-md shadow-sm sm:text-sm" placeholder="e.g., 90 Days">
                     </div>
                     
                     <div>
@@ -472,10 +472,10 @@
             [usdAmountEl, openExRateEl, interestUsdEl, debitChargesAmountEl].forEach(el => {
                 el.addEventListener('input', updateFormCalculations);
             });
-            lcOpenDateEl.addEventListener('input', calculateUsanceDays);
-            dueDateEl.addEventListener('input', calculateUsanceDays);
-
-
+           [usdAmountEl, openExRateEl, interestUsdEl, debitChargesAmountEl].forEach(el => {
+                el.addEventListener('input', updateFormCalculations);
+            });
+         
             // --- PDF Parsing Logic ---
             function formatDateYYMMDD(dateStr) {
                 if (!dateStr || dateStr.length !== 6) return null;
