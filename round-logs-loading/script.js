@@ -895,7 +895,7 @@ function generatePrintHTML(listNumber, date, partyName, vehicleNumber, productTy
                 <div class="print-footer">
                     <h3>Grand Total</h3>
                     <p><strong>Total CFT:</strong> ${totalCFT.toFixed(2)}</p>
-                    <p><strong>Total CBM:</strong> ${(totalCFT / 27.74).toFixed(2)}</p>
+                    <p><strong>Total CBM:</strong> ${(totalCFT / 27.74).toFixed(3)}</p>
                     <p><strong>Total PCS:</strong> ${logs.length}</p>
                 </div>
             `;
