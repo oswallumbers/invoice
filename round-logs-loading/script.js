@@ -574,91 +574,108 @@ function setTodayDate() {
     }
 }
 
-// Save data (async)
 async function saveData() {
-    showLoadingSpinner();
+    // 1. Find the Save button and disable it to prevent double-clicks
+    const saveBtn = document.querySelector("button[onclick='saveData()']") || document.querySelector(".btn-primary");
+    const originalBtnText = saveBtn ? saveBtn.textContent : "Save";
     
-    const listNumber = document.getElementById('listNumber').value;
-    const date = document.getElementById('date').value;
-    const partyName = document.getElementById('partyName').value;
-    const vehicleNumber = document.getElementById('vehicleNumber').value;
-    const productType = document.getElementById('productType').value;
-    
-    if (!date || !partyName || !vehicleNumber || !productType) {
-        showNotification('Please fill all required fields', 'error');
-        hideLoadingSpinner();
-        return;
+    if (saveBtn) {
+        if (saveBtn.disabled) return; // Stop if already processing
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving...";
     }
-    
-    const logs = [];
-    let totalCFT = 0;
-    let totalPCS = 0;
-    
-    const allRows = document.querySelectorAll('#logsTableBody tr');
-    allRows.forEach((row, index) => {
-        const rowNum = row.querySelector('.delete-row-btn').dataset.row;
-        const length = parseFloat(document.querySelector(`.length-input[data-row="${rowNum}"]`).value) || 0;
-        const allowance = parseFloat(document.querySelector(`.allowance-input[data-row="${rowNum}"]`).value) || 0;
-        const girth = parseFloat(document.querySelector(`.girth-input[data-row="${rowNum}"]`).value) || 0;
-        const cft = parseFloat(document.querySelector(`.cft-input[data-row="${rowNum}"]`).value) || 0;
-        
-        if (length > 0 && girth > 0) {
-            logs.push({
-                srNo: index + 1, // Save the sequential Sr No
-                length: length,
-                allowance: allowance,
-                girth: girth,
-                cft: cft
-            });
-            
-            totalCFT += cft;
-            totalPCS++;
-        }
-    });
-    
-    if (logs.length === 0) {
-        showNotification('Please enter at least one log entry', 'error');
-        hideLoadingSpinner();
-        return;
-    }
-    
-    const list = {
-        listNumber: listNumber,
-        date: date,
-        partyName: partyName,
-        vehicleNumber: vehicleNumber,
-        productType: productType,
-        logs: logs,
-        totalCFT: totalCFT,
-        totalCBM: totalCFT / 27.74,
-        totalPCS: totalPCS,
-        createdAt: new Date().toISOString()
-    };
-    
+
     try {
-        if (currentListId) {
-            await db.collection('lists').doc(currentListId).update(list);
-            showNotification('Data updated successfully', 'success');
-        } else {
-            const docRef = await db.collection('lists').add(list);
-            await db.collection('lists').doc(docRef.id).update({ id: docRef.id });
-            nextListNumber++;
-            await db.collection('metadata').doc('counter').set({ nextListNumber: nextListNumber });
-            
-            updateListNumber();
-            resetForm();
-            showNotification('Data saved successfully', 'success');
+        const listNumberVal = document.getElementById('listNumber').value;
+        const listDate = document.getElementById('listDate').value;
+
+        if (!listNumberVal || !listDate) {
+            alert('Please fill in List Number and Date.');
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = originalBtnText; }
+            return;
         }
-        
-        allFetchedLists = []; 
-        await updateDashboard();
+
+        const rows = document.querySelectorAll('#logsTableBody tr');
+        const logs = [];
+        let totalCFT = 0;
+
+        rows.forEach(row => {
+            const inputs = row.querySelectorAll('input');
+            if (inputs[0].value) {
+                const len = parseFloat(inputs[1].value) || 0;
+                const girth = parseFloat(inputs[2].value) || 0;
+                const cft = parseFloat(inputs[3].value) || 0;
+                
+                logs.push({
+                    logNo: inputs[0].value,
+                    length: len,
+                    girth: girth,
+                    cft: cft
+                });
+                totalCFT += cft;
+            }
+        });
+
+        const listData = {
+            listNumber: parseInt(listNumberVal),
+            listDate: listDate,
+            containerNo: document.getElementById('containerNo').value,
+            wagonNo: document.getElementById('wagonNo').value,
+            logs: logs,
+            totalCFT: totalCFT,
+            totalCBM: totalCFT / 27.74,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        // 2. Check for duplicates (prevents two lists with same number)
+        const duplicateCheck = await db.collection('loadingLists')
+            .where('listNumber', '==', listData.listNumber)
+            .get();
+
+        let isDuplicate = false;
+        if (!duplicateCheck.empty) {
+            duplicateCheck.forEach(doc => {
+                // It's a duplicate if it exists AND it's not the one we are currently editing
+                if (doc.id !== currentListId) {
+                    isDuplicate = true;
+                }
+            });
+        }
+
+        if (isDuplicate) {
+            alert(`List Number ${listData.listNumber} already exists! Please use a different number.`);
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = originalBtnText; }
+            return;
+        }
+
+        // 3. Save Data
+        if (currentListId) {
+            await db.collection('loadingLists').doc(currentListId).update(listData);
+            showNotification('List updated successfully!', 'success');
+        } else {
+            listData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            await db.collection('loadingLists').add(listData);
+            
+            // Update counter logic
+            if (listData.listNumber >= nextListNumber) {
+                db.collection('metadata').doc('counter').set({ nextListNumber: listData.listNumber + 1 })
+                  .catch(err => console.log("Counter update error", err));
+            }
+            showNotification('List saved successfully!', 'success');
+        }
+
+        resetForm();
+        updateDashboard();
 
     } catch (error) {
-        console.error("Error saving data: ", error);
-        showNotification('Error saving data. See console for details.', 'error');
+        console.error("Error saving:", error);
+        alert('Error saving data. Please try again.');
     } finally {
-        currentListId = null;
-        hideLoadingSpinner();
+        // 4. Always re-enable the button when done
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = originalBtnText;
+        }
     }
 }
 
