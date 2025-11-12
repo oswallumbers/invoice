@@ -597,39 +597,42 @@
             }
 
             // --- Firebase Initialization & Auth ---
-            async function initializeFirebase() {
-                try {
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-                    const app = initializeApp(firebaseConfig);
-                    const analytics = getAnalytics(app);
-                    auth = getAuth(app);
-                    db = getFirestore(app);
-                    setLogLevel('debug');
+        // ... existing imports ...
 
-                    onAuthStateChanged(auth, (user) => {
-                        if (user) {
-                            console.log("User is signed in:", user.uid);
-                            currentUserId = user.uid;
-                            
-                            // **FIXED**: This line was removed, as the 'user-id' element no longer exists.
-                            // document.getElementById('user-id').textContent = currentUserId; 
-                            
-                            // This line will now run, fixing the database connection error.
-                            lcCollectionRef = collection(db, `users/${currentUserId}/lc_records`);
-                            loadLcRecords();
-                        } else {
-                            console.log("User is signed out.");
-                            // If user is somehow logged out, clear session and go to login
-                            localStorage.removeItem('isLoggedIn');
-                            window.location.href = 'login.html';
-                        }
-                    });
-                } catch (error) {
-                    console.error("Error initializing Firebase:", error);
-                    alert("Firebase Init Error: " + error.message);
-                }
+async function initializeFirebase() {
+    try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        auth = getAuth(app);
+        db = getFirestore(app);
+        setLogLevel('debug');
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log("User is signed in:", user.uid);
+                currentUserId = user.uid;
+                
+                lcCollectionRef = collection(db, `users/${currentUserId}/lc_records`);
+                loadLcRecords();
+            } else {
+                // --- FIXED SECTION STARTS HERE ---
+                // Instead of redirecting immediately, we attempt to sign in anonymously
+                console.log("User not detected. Attempting auto-signin...");
+                signInAnonymously(auth).catch((error) => {
+                    console.error("Auto-signin failed:", error);
+                    // ONLY if sign-in fails do we redirect back
+                    localStorage.removeItem('isLoggedIn');
+                    window.location.href = 'index.html';
+                });
+                // --- FIXED SECTION ENDS HERE ---
             }
-
+        });
+    } catch (error) {
+        console.error("Error initializing Firebase:", error);
+        alert("Firebase Init Error: " + error.message);
+    }
+}
             async function signIn() {
                 // This function is no longer called by default,
                 // but is kept here in case you need to re-authenticate.
