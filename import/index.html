@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Import Costing App</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+        // We use browserLocalPersistence so login survives refresh
+        import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+        // Added updateDoc for Edit functionality
+        import { getFirestore, doc, addDoc, updateDoc, onSnapshot, collection, query, deleteDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+        // --- Firebase Configuration ---
+        let db, auth, userId;
+        let shipmentsData = []; 
+        let filteredData = []; // For storing filtered results
+        let currentSort = 'high-low'; 
+        
+        // State for Edit Mode
+        let editingShipmentId = null;
+
+        // Local cache for dropdowns
+        let shippersList = [];
+        let chaAgentsList = [];
+        let lineAgentsList = [];
+
+        const APP_PIN = "1234";
+
+        // --- UI Element References ---
+        const pinLoginScreen = document.getElementById('pinLoginScreen');
+        const mainApp = document.getElementById('mainApp');
+        const pinInput = document.getElementById('pinInput');
+        const pinError = document.getElementById('pinError');
+        const loginButton = document.getElementById('loginButton');
+        
+        // Forms & Buttons
+        const shipmentForm = document.getElementById('shipmentForm');
+        const saveButton = document.getElementById('saveButton');
+        const cancelButton = document.getElementById('cancelButton');
+        const formTitle = document.getElementById('formTitle');
+        
+        // Lists & Displays
+        const summaryList = document.getElementById('summaryList');
+        const sortButton = document.getElementById('sortButton');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const appLoading = document.getElementById('appLoading');
+
+        // Dropdowns
+        const shipperNameSelect = document.getElementById('shipperName');
+        const chaAgentSelect = document.getElementById('chaAgent');
+        const lineAgentSelect = document.getElementById('lineAgent');
+
+        // Filters
+        const filterContract = document.getElementById('filterContract');
+        const filterShipper = document.getElementById('filterShipper');
+        const filterCha = document.getElementById('filterCha');
+        
+        // Export
+        const exportStartDate = document.getElementById('exportStartDate');
+        const exportEndDate = document.getElementById('exportEndDate');
+        const exportBtn = document.getElementById('exportBtn');
+
+        // Modals
+        const manageShipperForm = document.getElementById('manageShipperForm');
+        const manageChaAgentForm = document.getElementById('manageChaAgentForm');
+        const manageLineAgentForm = document.getElementById('manageLineAgentForm');
+        const shippersListDiv = document.getElementById('shippersListDiv');
+        const chaAgentsListDiv = document.getElementById('chaAgentsListDiv');
+        const lineAgentsListDiv = document.getElementById('lineAgentsListDiv');
+        const chaAnalysisList = document.getElementById('chaAnalysisList');
+        const lineAnalysisList = document.getElementById('lineAnalysisList');
+
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // YOUR FIREBASE CONFIG
+            const firebaseConfig = {
+              apiKey: "AIzaSyA6t2J_A1z8vqlo4Za305BQz7jcCG5x8HA",
+              authDomain: "import-costing-838b9.firebaseapp.com",
+              projectId: "import-costing-838b9",
+              storageBucket: "import-costing-838b9.firebasestorage.app",
+              messagingSenderId: "564675593328",
+              appId: "1:564675593328:web:8afd8d6e41250f46d020b5"
+            };
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Persist Login
+                setPersistence(auth, browserLocalPersistence).then(() => {
+                    handleAuthentication();
+                }).catch((error) => {
+                    console.error("Error setting persistence:", error);
+                    handleAuthentication(); 
+                });
+
+                // --- Event Listeners ---
+                loginButton.addEventListener('click', handlePinLogin);
+                shipmentForm.addEventListener('submit', handleSaveShipment);
+                cancelButton.addEventListener('click', resetFormState);
+                sortButton.addEventListener('click', toggleSort);
+                
+                // Filter Listeners
+                filterContract.addEventListener('input', applyFilters);
+                filterShipper.addEventListener('input', applyFilters);
+                filterCha.addEventListener('input', applyFilters);
+
+                // Export Listener
+                exportBtn.addEventListener('click', exportToExcel);
+                
+                // Modal Forms
+                manageShipperForm.addEventListener('submit', handleSaveMasterData);
+                manageChaAgentForm.addEventListener('submit', handleSaveMasterData);
+                manageLineAgentForm.addEventListener('submit', handleSaveMasterData);
+
+                pinInput.addEventListener('keyup', (e) => {
+                    if (e.key === 'Enter') { handlePinLogin(); }
+                });
+
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                appLoading.innerHTML = "Error: Could not initialize Firebase.";
+            }
+        });
+
+        // --- Authentication ---
+        async function handleAuthentication() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    userIdDisplay.textContent = `User ID: ${userId}`;
+                    
+                    // Fetch Data
+                    fetchShipments();
+                    fetchMasterData('shippers', (data) => {
+                        shippersList = data;
+                        populateDropdown(shipperNameSelect, shippersList, 'name');
+                        renderMasterList(shippersListDiv, shippersList, 'deleteShipper', 'name');
+                    });
+                    fetchMasterData('chaAgents', (data) => {
+                        chaAgentsList = data;
+                        populateDropdown(chaAgentSelect, chaAgentsList, 'name');
+                        renderMasterList(chaAgentsListDiv, chaAgentsList, 'deleteChaAgent', 'name');
+                    });
+                    fetchMasterData('lineAgents', (data) => {
+                        lineAgentsList = data;
+                        populateDropdown(lineAgentSelect, lineAgentsList, 'name');
+                        renderMasterList(lineAgentsListDiv, lineAgentsList, 'deleteLineAgent', 'name');
+                    });
+
+                } else {
+                    try {
+                        await signInAnonymously(auth);
+                    } catch (error) {
+                        console.error("Error during sign-in:", error);
+                    }
+                }
+            });
+        }
+
+        function handlePinLogin() {
+            if (pinInput.value === APP_PIN) {
+                pinLoginScreen.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+            } else {
+                pinError.classList.remove('hidden');
+                pinInput.value = "";
+            }
+        }
+
+        // --- Firestore (Master Data) ---
+        function fetchMasterData(collectionName, callback) {
+            if (!db || !userId) return;
+            const collectionPath = `users/${userId}/${collectionName}`;
+            const q = query(collection(db, collectionPath));
+            
+            onSnapshot(q, (querySnapshot) => {
+                const dataList = [];
+                querySnapshot.forEach((doc) => {
+                    dataList.push({ id: doc.id, ...doc.data() });
+                });
+                callback(dataList.sort((a, b) => a.name.localeCompare(b.name)));
+            });
+        }
+
+        async function handleSaveMasterData(e) {
+            e.preventDefault();
+            const form = e.target;
+            const input = form.querySelector('input');
+            const collectionName = form.dataset.collection;
+            const name = input.value.trim();
+            if (!name || !db || !userId) return;
+
+            const button = form.querySelector('button');
+            button.disabled = true;
+            try {
+                await addDoc(collection(db, `users/${userId}/${collectionName}`), { name: name });
+                input.value = "";
+            } catch (error) { console.error("Error", error); } 
+            finally { button.disabled = false; }
+        }
+
+        async function deleteMasterData(collectionName, id) {
+            if (!db || !userId) return;
+            await deleteDoc(doc(db, `users/${userId}/${collectionName}/${id}`));
+        }
+
+        // --- Firestore (Shipments) ---
+        function fetchShipments() {
+            if (!db || !userId) { setTimeout(fetchShipments, 1000); return; }
+
+            appLoading.classList.add('hidden'); 
+            loadingSpinner.classList.remove('hidden');
+
+            const q = query(collection(db, `users/${userId}/shipments`));
+
+            onSnapshot(q, (querySnapshot) => {
+                shipmentsData = [];
+                querySnapshot.forEach((doc) => {
+                    shipmentsData.push({ id: doc.id, ...doc.data() });
+                });
+                // Apply filters initially (or reset them)
+                applyFilters();
+                loadingSpinner.classList.add('hidden');
+            });
+        }
+
+        async function handleSaveShipment(e) {
+            e.preventDefault();
+            saveButton.disabled = true;
+            saveButton.textContent = editingShipmentId ? 'Updating...' : 'Saving...';
+
+            try {
+                const formData = new FormData(shipmentForm);
+                const data = {
+                    // NEW Fields
+                    contractNumber: formData.get('contractNumber') || "",
+                    importDate: formData.get('importDate') || "", // YYYY-MM-DD
+                    totalContainers: parseFloat(formData.get('totalContainers')) || 0,
+
+                    shipperName: formData.get('shipperName') || "N/A",
+                    chaAgent: formData.get('chaAgent') || "N/A",
+                    lineAgent: formData.get('lineAgent') || "N/A",
+                    productType: formData.get('productType') || "N/A",
+                    
+                    cbm: parseFloat(formData.get('cbm')) || 0,
+                    importUSD: parseFloat(formData.get('importUSD')) || 0,
+                    exchangeRate: parseFloat(formData.get('exchangeRate')) || 0,
+                    
+                    customDuty: parseFloat(formData.get('customDuty')) || 0,
+                    lineExpenses: parseFloat(formData.get('lineExpenses')) || 0,
+                    clearingForwarding: parseFloat(formData.get('clearingForwarding')) || 0,
+                    customPPQ: parseFloat(formData.get('customPPQ')) || 0,
+                    transportation: parseFloat(formData.get('transportation')) || 0,
+                    
+                    otherCharges1: parseFloat(formData.get('otherCharges1')) || 0,
+                    remarks1: formData.get('remarks1') || "",
+                    otherCharges2: parseFloat(formData.get('otherCharges2')) || 0,
+                    remarks2: formData.get('remarks2') || "",
+                    
+                    // Keep original createdAt if editing, else new Date
+                    createdAt: editingShipmentId ? (shipmentsData.find(s=>s.id === editingShipmentId)?.createdAt) : new Date().toISOString()
+                };
+
+                // Calculations
+                const basicCostINR = data.importUSD * data.exchangeRate;
+                const totalExpenses = data.customDuty + data.lineExpenses + data.clearingForwarding + data.customPPQ + data.transportation + data.otherCharges1 + data.otherCharges2;
+                const totalCostINR = basicCostINR + totalExpenses;
+                const costPerCBM = data.cbm > 0 ? (totalCostINR / data.cbm) : 0;
+
+                data.basicCostINR = basicCostINR;
+                data.totalExpenses = totalExpenses;
+                data.totalCostINR = totalCostINR;
+                data.costPerCBM = costPerCBM;
+
+                if (editingShipmentId) {
+                    // Update Existing
+                    await updateDoc(doc(db, `users/${userId}/shipments`, editingShipmentId), data);
+                    console.log("Shipment updated!");
+                    alert("Shipment Updated Successfully");
+                } else {
+                    // Add New
+                    await addDoc(collection(db, `users/${userId}/shipments`), data);
+                    console.log("Shipment saved!");
+                }
+                
+                resetFormState();
+
+            } catch (error) {
+                console.error("Error saving:", error);
+                alert("Error saving shipment.");
+            } finally {
+                saveButton.disabled = false;
+                saveButton.textContent = editingShipmentId ? 'Update Shipment' : 'Save Shipment';
+            }
+        }
+
+        function handleEditShipment(id) {
+            const shipment = shipmentsData.find(s => s.id === id);
+            if (!shipment) return;
+
+            editingShipmentId = id;
+            formTitle.textContent = "Edit Shipment";
+            saveButton.textContent = "Update Shipment";
+            cancelButton.classList.remove('hidden');
+            
+            // Scroll to form
+            document.getElementById('mainApp').scrollIntoView({ behavior: 'smooth' });
+
+            // Populate Fields
+            document.getElementById('contractNumber').value = shipment.contractNumber || "";
+            document.getElementById('importDate').value = shipment.importDate || "";
+            document.getElementById('totalContainers').value = shipment.totalContainers || "";
+            
+            // Dropdowns
+            // We need to make sure the options exist, or select the value directly
+            shipperNameSelect.value = shipment.shipperName;
+            document.getElementById('productType').value = shipment.productType;
+            chaAgentSelect.value = shipment.chaAgent;
+            lineAgentSelect.value = shipment.lineAgent;
+
+            // Numbers
+            document.getElementById('cbm').value = shipment.cbm;
+            document.getElementById('importUSD').value = shipment.importUSD;
+            document.getElementById('exchangeRate').value = shipment.exchangeRate;
+            
+            document.getElementById('customDuty').value = shipment.customDuty;
+            document.getElementById('lineExpenses').value = shipment.lineExpenses;
+            document.getElementById('clearingForwarding').value = shipment.clearingForwarding;
+            document.getElementById('customPPQ').value = shipment.customPPQ;
+            document.getElementById('transportation').value = shipment.transportation;
+            
+            document.getElementById('otherCharges1').value = shipment.otherCharges1;
+            document.getElementById('remarks1').value = shipment.remarks1;
+            document.getElementById('otherCharges2').value = shipment.otherCharges2;
+            document.getElementById('remarks2').value = shipment.remarks2;
+        }
+
+        function resetFormState() {
+            editingShipmentId = null;
+            shipmentForm.reset();
+            formTitle.textContent = "Add New Shipment";
+            saveButton.textContent = "Save Shipment";
+            cancelButton.classList.add('hidden');
+        }
+
+        async function deleteShipment(id) {
+            if (!confirm("Are you sure you want to delete?")) return;
+            try {
+                await deleteDoc(doc(db, `users/${userId}/shipments/${id}`));
+            } catch (error) { console.error(error); }
+        }
+
+        // --- Filtering & Export ---
+        function applyFilters() {
+            const contractTerm = filterContract.value.toLowerCase();
+            const shipperTerm = filterShipper.value.toLowerCase();
+            const chaTerm = filterCha.value.toLowerCase();
+
+            filteredData = shipmentsData.filter(item => {
+                const matchContract = (item.contractNumber || "").toLowerCase().includes(contractTerm);
+                const matchShipper = (item.shipperName || "").toLowerCase().includes(shipperTerm);
+                const matchCha = (item.chaAgent || "").toLowerCase().includes(chaTerm);
+                return matchContract && matchShipper && matchCha;
+            });
+
+            renderShipments();
+        }
+
+        function exportToExcel() {
+            const startDateStr = exportStartDate.value;
+            const endDateStr = exportEndDate.value;
+
+            if (!startDateStr || !endDateStr) {
+                alert("Please select both Start and End dates.");
+                return;
+            }
+
+            const start = new Date(startDateStr);
+            const end = new Date(endDateStr);
+            end.setHours(23, 59, 59); // Include the whole end day
+
+            // Filter by Date Range
+            const dataToExport = shipmentsData.filter(item => {
+                if (!item.importDate) return false;
+                const itemDate = new Date(item.importDate);
+                return itemDate >= start && itemDate <= end;
+            });
+
+            if (dataToExport.length === 0) {
+                alert("No shipments found in this date range.");
+                return;
+            }
+
+            // Flatten Data for Excel
+            const excelRows = dataToExport.map(item => ({
+                "Date": item.importDate,
+                "Contract No": item.contractNumber,
+                "Shipper": item.shipperName,
+                "CHA Agent": item.chaAgent,
+                "Line Agent": item.lineAgent,
+                "Containers": item.totalContainers,
+                "Product": item.productType,
+                "CBM": item.cbm,
+                "USD Rate": item.importUSD,
+                "Ex. Rate": item.exchangeRate,
+                "Basic Cost (INR)": item.basicCostINR,
+                "Custom Duty": item.customDuty,
+                "Line Exp.": item.lineExpenses,
+                "Clg & Fwd": item.clearingForwarding,
+                "Custom & PPQ": item.customPPQ,
+                "Transport": item.transportation,
+                "Other 1": item.otherCharges1,
+                "Other 2": item.otherCharges2,
+                "Total Expenses": item.totalExpenses,
+                "Total Cost (INR)": item.totalCostINR,
+                "Rate Per CBM": item.costPerCBM
+            }));
+
+            // Generate Sheet
+            const ws = XLSX.utils.json_to_sheet(excelRows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Import Data");
+
+            // Save File
+            XLSX.writeFile(wb, `Import_Costing_${startDateStr}_to_${endDateStr}.xlsx`);
+        }
+
+        // --- Rendering ---
+        function populateDropdown(selectElement, list, valueKey) {
+            const currentVal = selectElement.value;
+            selectElement.innerHTML = `<option value="">-- Select --</option>`; 
+            list.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item[valueKey];
+                option.textContent = item[valueKey];
+                selectElement.appendChild(option);
+            });
+            if (currentVal && list.some(i => i[valueKey] === currentVal)) {
+                selectElement.value = currentVal;
+            }
+        }
+        
+        function renderMasterList(divElement, list, deleteFunctionName, valueKey) {
+            divElement.innerHTML = ""; 
+            if (list.length === 0) {
+                divElement.innerHTML = `<p class="text-xs text-gray-500">No items.</p>`;
+                return;
+            }
+            const ul = document.createElement('ul');
+            ul.className = 'space-y-2';
+            list.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center bg-gray-50 p-2 rounded';
+                li.innerHTML = `
+                    <span class="text-sm text-gray-800">${item[valueKey]}</span>
+                    <button onclick="window.${deleteFunctionName}('${item.id}')" class="text-red-400 hover:text-red-600 p-1">✕</button>
+                `;
+                ul.appendChild(li);
+            });
+            divElement.appendChild(ul);
+        }
+
+        function toggleSort() {
+            currentSort = (currentSort === 'high-low') ? 'low-high' : 'high-low';
+            sortButton.textContent = (currentSort === 'high-low') ? "Sort: High to Low" : "Sort: Low to High";
+            renderShipments();
+        }
+
+        function renderShipments() {
+            summaryList.innerHTML = ""; 
+
+            // Use filteredData instead of shipmentsData
+            if (filteredData.length === 0) {
+                summaryList.innerHTML = `<p class="text-gray-500 text-center p-4">No shipments found.</p>`;
+                return;
+            }
+
+            const sortedData = [...filteredData].sort((a, b) => {
+                return currentSort === 'high-low' ? b.costPerCBM - a.costPerCBM : a.costPerCBM - b.costPerCBM;
+            });
+            
+            const formatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
+
+            sortedData.forEach((shipment) => {
+                const card = document.createElement('div');
+                card.className = `bg-white p-4 rounded-lg shadow-md border border-gray-200 relative`;
+                
+                card.innerHTML = `
+                    <div class="absolute top-3 right-3 flex gap-2">
+                         <button onclick="window.handleEditShipment('${shipment.id}')" class="text-blue-500 hover:text-blue-700 p-1" title="Edit">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                        </button>
+                        <button onclick="window.deleteShipment('${shipment.id}')" class="text-red-500 hover:text-red-700 p-1" title="Delete">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="pr-16">
+                        <h3 class="text-lg font-bold text-gray-800">${shipment.shipperName}</h3>
+                        <div class="text-sm text-gray-600 mb-1">
+                            <span class="font-medium text-gray-800">Contract:</span> ${shipment.contractNumber || 'N/A'} 
+                            | <span class="font-medium text-gray-800">Date:</span> ${shipment.importDate || 'N/A'}
+                        </div>
+                        <p class="text-sm text-gray-500">${shipment.productType} • ${shipment.cbm.toFixed(3)} CBM • ${shipment.totalContainers || 0} Cont.</p>
+                        <p class="text-xs text-gray-500 mt-1">CHA: <span class="text-blue-600 font-medium">${shipment.chaAgent}</span> | Line: ${shipment.lineAgent}</p>
+                    </div>
+                    
+                    <div class="mt-3 pt-3 border-t flex justify-between items-end">
+                        <div class="text-left">
+                            <p class="text-xs text-gray-500">Total Expenses</p>
+                             <p class="font-semibold text-gray-700">₹${formatter.format(shipment.totalExpenses)}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-gray-500">Cost / CBM</p>
+                            <p class="text-2xl font-bold text-blue-700">₹${formatter.format(shipment.costPerCBM)}</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-2 text-xs text-center">
+                         <details>
+                            <summary class="cursor-pointer text-blue-500 hover:underline">View Breakdown</summary>
+                            <div class="text-left mt-2 space-y-1 bg-gray-50 p-2 rounded">
+                                <p>USD: $${formatter.format(shipment.importUSD)} @ ₹${shipment.exchangeRate}</p>
+                                <p>Custom Duty: ₹${formatter.format(shipment.customDuty)}</p>
+                                <p>Line Exp: ₹${formatter.format(shipment.lineExpenses)}</p>
+                                <p>Clg & Fwd: ₹${formatter.format(shipment.clearingForwarding)}</p>
+                                <p>Transport: ₹${formatter.format(shipment.transportation)}</p>
+                                <p>Others: ₹${formatter.format(shipment.otherCharges1 + shipment.otherCharges2)}</p>
+                            </div>
+                        </details>
+                    </div>
+                `;
+                summaryList.appendChild(card);
+            });
+        }
+
+        // --- Agent Analysis ---
+        function showAgentAnalysis() {
+            const chaCosts = {}; 
+            const lineCosts = {}; 
+            const formatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
+
+            filteredData.forEach(shipment => {
+                const chaAgent = shipment.chaAgent || "N/A";
+                const chaCharge = (shipment.clearingForwarding || 0) + (shipment.customPPQ || 0);
+                const lineAgent = shipment.lineAgent || "N/A";
+                const lineCharge = shipment.lineExpenses || 0;
+
+                if (!chaCosts[chaAgent]) { chaCosts[chaAgent] = { total: 0, count: 0 }; }
+                chaCosts[chaAgent].total += chaCharge;
+                chaCosts[chaAgent].count++;
+
+                if (!lineCosts[lineAgent]) { lineCosts[lineAgent] = { total: 0, count: 0 }; }
+                lineCosts[lineAgent].total += lineCharge;
+                lineCosts[lineAgent].count++;
+            });
+
+            // Render Functions...
+            const renderList = (list, element) => {
+                 element.innerHTML = "";
+                 if (list.length === 0) element.innerHTML = `<p class="text-sm text-gray-500">No data in current filter.</p>`;
+                 else {
+                     list.forEach((agent, index) => {
+                        element.innerHTML += `
+                            <li class="p-2 rounded border bg-white flex justify-between items-center">
+                                <div>
+                                    <span class="font-medium text-gray-800">${index+1}. ${agent.name}</span>
+                                    <div class="text-xs text-gray-500">${agent.count} shipments</div>
+                                </div>
+                                <span class="font-bold text-red-600">₹${formatter.format(agent.total)}</span>
+                            </li>`;
+                     });
+                 }
+            };
+
+            renderList(Object.entries(chaCosts).map(([n,d])=>({name:n,...d})).sort((a,b)=>b.total-a.total), chaAnalysisList);
+            renderList(Object.entries(lineCosts).map(([n,d])=>({name:n,...d})).sort((a,b)=>b.total-a.total), lineAnalysisList);
+            
+            openModal('analysisModal');
+        }
+        
+        // --- Modal Utils ---
+        function openModal(modalId) { document.getElementById(modalId)?.classList.remove('hidden'); }
+        function closeModal(modalId) { document.getElementById(modalId)?.classList.add('hidden'); }
+
+        // --- Global Access ---
+        window.deleteShipment = deleteShipment;
+        window.handleEditShipment = handleEditShipment;
+        window.deleteShipper = (id) => deleteMasterData('shippers', id);
+        window.deleteChaAgent = (id) => deleteMasterData('chaAgents', id);
+        window.deleteLineAgent = (id) => deleteMasterData('lineAgents', id);
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.showAgentAnalysis = showAgentAnalysis;
+
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+        .modal-list-container { max-height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="pinLoginScreen" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm text-center">
+            <h2 class="text-2xl font-bold mb-4">Enter PIN</h2>
+            <input type="password" id="pinInput" inputmode="numeric" maxlength="4" class="w-full p-4 text-center text-3xl tracking-[0.5em] border rounded-md mb-4" placeholder="••••">
+            <p id="pinError" class="text-red-500 text-sm hidden mb-2">Invalid PIN.</p>
+            <button id="loginButton" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold">Login</button>
+        </div>
+    </div>
+
+    <div id="mainApp" class="hidden pb-20">
+
+        <header class="bg-white shadow-md sticky top-0 z-30">
+            <div class="max-w-3xl mx-auto p-4 flex justify-between items-center">
+                <h1 class="text-xl font-bold">Timber Costing</h1>
+                <div class="text-xs text-right text-gray-400">
+                    <div id="userIdDisplay"></div>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-3xl mx-auto p-4 space-y-6">
+            
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h2 id="formTitle" class="text-lg font-semibold text-gray-700">Add New Shipment</h2>
+                    <button onclick="window.openModal('manageDataModal')" class="text-xs bg-gray-100 px-3 py-1.5 rounded border">Manage Data</button>
+                </div>
+                
+                <form id="shipmentForm" class="space-y-3">
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="col-span-1">
+                            <label class="text-xs font-medium text-gray-500">Contract No</label>
+                            <input type="text" name="contractNumber" id="contractNumber" class="w-full p-2 border rounded text-sm uppercase" placeholder="ABC-123">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="text-xs font-medium text-gray-500">Import Date</label>
+                            <input type="date" name="importDate" id="importDate" class="w-full p-2 border rounded text-sm">
+                        </div>
+                        <div class="col-span-1">
+                             <label class="text-xs font-medium text-gray-500">Containers</label>
+                            <input type="number" name="totalContainers" id="totalContainers" class="w-full p-2 border rounded text-sm" placeholder="0">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Shipper</label>
+                            <select name="shipperName" id="shipperName" class="w-full p-2 border rounded text-sm bg-white"></select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Product</label>
+                            <select name="productType" id="productType" class="w-full p-2 border rounded text-sm bg-white">
+                                <option>Imported Timber Sawn Size</option>
+                                <option>Imported Round Logs</option>
+                                <option>Eucalyptus Core Veneer</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Total CBM</label>
+                            <input type="number" name="cbm" id="cbm" step="0.001" class="w-full p-2 border rounded text-sm" placeholder="0.000">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Imp. USD ($)</label>
+                            <input type="number" name="importUSD" id="importUSD" step="0.01" class="w-full p-2 border rounded text-sm" placeholder="$">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Ex. Rate (₹)</label>
+                            <input type="number" name="exchangeRate" id="exchangeRate" step="0.01" class="w-full p-2 border rounded text-sm" placeholder="₹">
+                        </div>
+                    </div>
+
+                    <hr class="border-dashed">
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">CHA Agent</label>
+                            <select name="chaAgent" id="chaAgent" class="w-full p-2 border rounded text-sm bg-white"></select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Line Agent</label>
+                            <select name="lineAgent" id="lineAgent" class="w-full p-2 border rounded text-sm bg-white"></select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" name="customDuty" id="customDuty" step="0.01" class="p-2 border rounded text-sm" placeholder="Custom Duty">
+                        <input type="number" name="lineExpenses" id="lineExpenses" step="0.01" class="p-2 border rounded text-sm" placeholder="Line Exp.">
+                        <input type="number" name="clearingForwarding" id="clearingForwarding" step="0.01" class="p-2 border rounded text-sm" placeholder="Clear & Fwd">
+                        <input type="number" name="customPPQ" id="customPPQ" step="0.01" class="p-2 border rounded text-sm" placeholder="Custom & PPQ">
+                        <input type="number" name="transportation" id="transportation" step="0.01" class="p-2 border rounded text-sm" placeholder="Transport">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" name="otherCharges1" id="otherCharges1" step="0.01" class="p-2 border rounded text-sm" placeholder="Other Chg 1">
+                        <input type="text" name="remarks1" id="remarks1" class="p-2 border rounded text-sm" placeholder="Remark 1">
+                        <input type="number" name="otherCharges2" id="otherCharges2" step="0.01" class="p-2 border rounded text-sm" placeholder="Other Chg 2">
+                        <input type="text" name="remarks2" id="remarks2" class="p-2 border rounded text-sm" placeholder="Remark 2">
+                    </div>
+
+                    <div class="flex gap-2 pt-2">
+                        <button type="submit" id="saveButton" class="flex-1 bg-blue-600 text-white p-3 rounded-lg font-semibold shadow-sm hover:bg-blue-700">Save Shipment</button>
+                        <button type="button" id="cancelButton" class="hidden px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-semibold text-gray-700">Data & Reports</h3>
+                    <button onclick="window.showAgentAnalysis()" class="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded border border-blue-100 font-medium">Analysis View</button>
+                </div>
+
+                <div class="bg-green-50 p-3 rounded-lg mb-4 border border-green-100">
+                    <p class="text-xs font-bold text-green-800 mb-2">Export Summary to Excel</p>
+                    <div class="flex gap-2 items-end">
+                        <div class="flex-1">
+                            <label class="text-[10px] text-gray-500">From</label>
+                            <input type="date" id="exportStartDate" class="w-full p-1.5 border rounded text-xs">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] text-gray-500">To</label>
+                            <input type="date" id="exportEndDate" class="w-full p-1.5 border rounded text-xs">
+                        </div>
+                        <button id="exportBtn" class="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold h-[30px]">Export</button>
+                    </div>
+                </div>
+
+                <p class="text-xs font-bold text-gray-600 mb-2">Live Filters (Type to search)</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <input type="text" id="filterContract" class="p-2 border rounded text-xs bg-gray-50" placeholder="Contract No...">
+                    <input type="text" id="filterShipper" class="p-2 border rounded text-xs bg-gray-50" placeholder="Shipper...">
+                    <input type="text" id="filterCha" class="p-2 border rounded text-xs bg-gray-50" placeholder="CHA Agent...">
+                </div>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-2 px-1">
+                    <h2 class="text-lg font-bold text-gray-800">Shipments</h2>
+                    <button id="sortButton" class="text-xs text-gray-500 bg-white border px-2 py-1 rounded">Sort: High to Low</button>
+                </div>
+                
+                <div id="appLoading" class="text-center py-10 text-gray-400">Starting...</div>
+                <div id="loadingSpinner" class="hidden text-center py-10"><div class="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>
+                
+                <div id="summaryList" class="space-y-3 pb-10"></div>
+            </div>
+
+        </main>
+    </div>
+
+    <div id="manageDataModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg w-full max-w-md p-5 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between mb-4"><h3 class="font-bold">Manage Data</h3><button onclick="closeModal('manageDataModal')">✕</button></div>
+            
+            <div class="space-y-4">
+                <div>
+                    <h4 class="text-xs font-bold text-gray-500 uppercase mb-1">Shippers</h4>
+                    <form id="manageShipperForm" data-collection="shippers" class="flex gap-2 mb-2"><input required class="flex-1 border p-1 rounded text-sm"><button class="bg-blue-600 text-white px-3 rounded text-sm">+</button></form>
+                    <div id="shippersListDiv" class="modal-list-container bg-gray-50 border rounded p-2"></div>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-gray-500 uppercase mb-1">CHA Agents</h4>
+                    <form id="manageChaAgentForm" data-collection="chaAgents" class="flex gap-2 mb-2"><input required class="flex-1 border p-1 rounded text-sm"><button class="bg-blue-600 text-white px-3 rounded text-sm">+</button></form>
+                    <div id="chaAgentsListDiv" class="modal-list-container bg-gray-50 border rounded p-2"></div>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-gray-500 uppercase mb-1">Line Agents</h4>
+                    <form id="manageLineAgentForm" data-collection="lineAgents" class="flex gap-2 mb-2"><input required class="flex-1 border p-1 rounded text-sm"><button class="bg-blue-600 text-white px-3 rounded text-sm">+</button></form>
+                    <div id="lineAgentsListDiv" class="modal-list-container bg-gray-50 border rounded p-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="analysisModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg w-full max-w-md p-5 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between mb-4"><h3 class="font-bold">Agent Analysis</h3><button onclick="closeModal('analysisModal')">✕</button></div>
+            <div class="space-y-4">
+                <div><h4 class="font-bold text-sm">CHA Charges (High to Low)</h4><ul id="chaAnalysisList" class="space-y-2 mt-2"></ul></div>
+                <hr>
+                <div><h4 class="font-bold text-sm">Line Charges (High to Low)</h4><ul id="lineAnalysisList" class="space-y-2 mt-2"></ul></div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
