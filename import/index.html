@@ -11,21 +11,16 @@
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-        // We use browserLocalPersistence so login survives refresh
         import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-        // Added updateDoc for Edit functionality
         import { getFirestore, doc, addDoc, updateDoc, onSnapshot, collection, query, deleteDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
         // --- Firebase Configuration ---
         let db, auth, userId;
         let shipmentsData = []; 
-        let filteredData = []; // For storing filtered results
+        let filteredData = []; 
         let currentSort = 'high-low'; 
-        
-        // State for Edit Mode
         let editingShipmentId = null;
 
-        // Local cache for dropdowns
         let shippersList = [];
         let chaAgentsList = [];
         let lineAgentsList = [];
@@ -39,35 +34,29 @@
         const pinError = document.getElementById('pinError');
         const loginButton = document.getElementById('loginButton');
         
-        // Forms & Buttons
         const shipmentForm = document.getElementById('shipmentForm');
         const saveButton = document.getElementById('saveButton');
         const cancelButton = document.getElementById('cancelButton');
         const formTitle = document.getElementById('formTitle');
         
-        // Lists & Displays
         const summaryList = document.getElementById('summaryList');
         const sortButton = document.getElementById('sortButton');
         const userIdDisplay = document.getElementById('userIdDisplay');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const appLoading = document.getElementById('appLoading');
 
-        // Dropdowns
         const shipperNameSelect = document.getElementById('shipperName');
         const chaAgentSelect = document.getElementById('chaAgent');
         const lineAgentSelect = document.getElementById('lineAgent');
 
-        // Filters
         const filterContract = document.getElementById('filterContract');
         const filterShipper = document.getElementById('filterShipper');
         const filterCha = document.getElementById('filterCha');
         
-        // Export
         const exportStartDate = document.getElementById('exportStartDate');
         const exportEndDate = document.getElementById('exportEndDate');
         const exportBtn = document.getElementById('exportBtn');
 
-        // Modals
         const manageShipperForm = document.getElementById('manageShipperForm');
         const manageChaAgentForm = document.getElementById('manageChaAgentForm');
         const manageLineAgentForm = document.getElementById('manageLineAgentForm');
@@ -81,7 +70,6 @@
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
             
-            // YOUR FIREBASE CONFIG
             const firebaseConfig = {
               apiKey: "AIzaSyA6t2J_A1z8vqlo4Za305BQz7jcCG5x8HA",
               authDomain: "import-costing-838b9.firebaseapp.com",
@@ -96,7 +84,6 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Persist Login
                 setPersistence(auth, browserLocalPersistence).then(() => {
                     handleAuthentication();
                 }).catch((error) => {
@@ -104,21 +91,17 @@
                     handleAuthentication(); 
                 });
 
-                // --- Event Listeners ---
                 loginButton.addEventListener('click', handlePinLogin);
                 shipmentForm.addEventListener('submit', handleSaveShipment);
                 cancelButton.addEventListener('click', resetFormState);
                 sortButton.addEventListener('click', toggleSort);
                 
-                // Filter Listeners
                 filterContract.addEventListener('input', applyFilters);
                 filterShipper.addEventListener('input', applyFilters);
                 filterCha.addEventListener('input', applyFilters);
 
-                // Export Listener
                 exportBtn.addEventListener('click', exportToExcel);
                 
-                // Modal Forms
                 manageShipperForm.addEventListener('submit', handleSaveMasterData);
                 manageChaAgentForm.addEventListener('submit', handleSaveMasterData);
                 manageLineAgentForm.addEventListener('submit', handleSaveMasterData);
@@ -140,7 +123,6 @@
                     userId = user.uid;
                     userIdDisplay.textContent = `User ID: ${userId}`;
                     
-                    // Fetch Data
                     fetchShipments();
                     fetchMasterData('shippers', (data) => {
                         shippersList = data;
@@ -229,7 +211,6 @@
                 querySnapshot.forEach((doc) => {
                     shipmentsData.push({ id: doc.id, ...doc.data() });
                 });
-                // Apply filters initially (or reset them)
                 applyFilters();
                 loadingSpinner.classList.add('hidden');
             });
@@ -243,9 +224,8 @@
             try {
                 const formData = new FormData(shipmentForm);
                 const data = {
-                    // NEW Fields
                     contractNumber: formData.get('contractNumber') || "",
-                    importDate: formData.get('importDate') || "", // YYYY-MM-DD
+                    importDate: formData.get('importDate') || "", 
                     totalContainers: parseFloat(formData.get('totalContainers')) || 0,
 
                     shipperName: formData.get('shipperName') || "N/A",
@@ -268,11 +248,9 @@
                     otherCharges2: parseFloat(formData.get('otherCharges2')) || 0,
                     remarks2: formData.get('remarks2') || "",
                     
-                    // Keep original createdAt if editing, else new Date
                     createdAt: editingShipmentId ? (shipmentsData.find(s=>s.id === editingShipmentId)?.createdAt) : new Date().toISOString()
                 };
 
-                // Calculations
                 const basicCostINR = data.importUSD * data.exchangeRate;
                 const totalExpenses = data.customDuty + data.lineExpenses + data.clearingForwarding + data.customPPQ + data.transportation + data.otherCharges1 + data.otherCharges2;
                 const totalCostINR = basicCostINR + totalExpenses;
@@ -284,12 +262,9 @@
                 data.costPerCBM = costPerCBM;
 
                 if (editingShipmentId) {
-                    // Update Existing
                     await updateDoc(doc(db, `users/${userId}/shipments`, editingShipmentId), data);
-                    console.log("Shipment updated!");
                     alert("Shipment Updated Successfully");
                 } else {
-                    // Add New
                     await addDoc(collection(db, `users/${userId}/shipments`), data);
                     console.log("Shipment saved!");
                 }
@@ -314,22 +289,17 @@
             saveButton.textContent = "Update Shipment";
             cancelButton.classList.remove('hidden');
             
-            // Scroll to form
             document.getElementById('mainApp').scrollIntoView({ behavior: 'smooth' });
 
-            // Populate Fields
             document.getElementById('contractNumber').value = shipment.contractNumber || "";
             document.getElementById('importDate').value = shipment.importDate || "";
             document.getElementById('totalContainers').value = shipment.totalContainers || "";
             
-            // Dropdowns
-            // We need to make sure the options exist, or select the value directly
             shipperNameSelect.value = shipment.shipperName;
             document.getElementById('productType').value = shipment.productType;
             chaAgentSelect.value = shipment.chaAgent;
             lineAgentSelect.value = shipment.lineAgent;
 
-            // Numbers
             document.getElementById('cbm').value = shipment.cbm;
             document.getElementById('importUSD').value = shipment.importUSD;
             document.getElementById('exchangeRate').value = shipment.exchangeRate;
@@ -361,7 +331,6 @@
             } catch (error) { console.error(error); }
         }
 
-        // --- Filtering & Export ---
         function applyFilters() {
             const contractTerm = filterContract.value.toLowerCase();
             const shipperTerm = filterShipper.value.toLowerCase();
@@ -388,9 +357,8 @@
 
             const start = new Date(startDateStr);
             const end = new Date(endDateStr);
-            end.setHours(23, 59, 59); // Include the whole end day
+            end.setHours(23, 59, 59); 
 
-            // Filter by Date Range
             const dataToExport = shipmentsData.filter(item => {
                 if (!item.importDate) return false;
                 const itemDate = new Date(item.importDate);
@@ -402,7 +370,6 @@
                 return;
             }
 
-            // Flatten Data for Excel
             const excelRows = dataToExport.map(item => ({
                 "Date": item.importDate,
                 "Contract No": item.contractNumber,
@@ -427,12 +394,9 @@
                 "Rate Per CBM": item.costPerCBM
             }));
 
-            // Generate Sheet
             const ws = XLSX.utils.json_to_sheet(excelRows);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Import Data");
-
-            // Save File
             XLSX.writeFile(wb, `Import_Costing_${startDateStr}_to_${endDateStr}.xlsx`);
         }
 
@@ -480,7 +444,6 @@
         function renderShipments() {
             summaryList.innerHTML = ""; 
 
-            // Use filteredData instead of shipmentsData
             if (filteredData.length === 0) {
                 summaryList.innerHTML = `<p class="text-gray-500 text-center p-4">No shipments found.</p>`;
                 return;
@@ -539,6 +502,7 @@
                                 <p>Custom Duty: ₹${formatter.format(shipment.customDuty)}</p>
                                 <p>Line Exp: ₹${formatter.format(shipment.lineExpenses)}</p>
                                 <p>Clg & Fwd: ₹${formatter.format(shipment.clearingForwarding)}</p>
+                                <p>Custom & PPQ: ₹${formatter.format(shipment.customPPQ)}</p>
                                 <p>Transport: ₹${formatter.format(shipment.transportation)}</p>
                                 <p>Others: ₹${formatter.format(shipment.otherCharges1 + shipment.otherCharges2)}</p>
                             </div>
@@ -549,7 +513,6 @@
             });
         }
 
-        // --- Agent Analysis ---
         function showAgentAnalysis() {
             const chaCosts = {}; 
             const lineCosts = {}; 
@@ -570,7 +533,6 @@
                 lineCosts[lineAgent].count++;
             });
 
-            // Render Functions...
             const renderList = (list, element) => {
                  element.innerHTML = "";
                  if (list.length === 0) element.innerHTML = `<p class="text-sm text-gray-500">No data in current filter.</p>`;
@@ -594,11 +556,9 @@
             openModal('analysisModal');
         }
         
-        // --- Modal Utils ---
         function openModal(modalId) { document.getElementById(modalId)?.classList.remove('hidden'); }
         function closeModal(modalId) { document.getElementById(modalId)?.classList.add('hidden'); }
 
-        // --- Global Access ---
         window.deleteShipment = deleteShipment;
         window.handleEditShipment = handleEditShipment;
         window.deleteShipper = (id) => deleteMasterData('shippers', id);
@@ -707,18 +667,45 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="number" name="customDuty" id="customDuty" step="0.01" class="p-2 border rounded text-sm" placeholder="Custom Duty">
-                        <input type="number" name="lineExpenses" id="lineExpenses" step="0.01" class="p-2 border rounded text-sm" placeholder="Line Exp.">
-                        <input type="number" name="clearingForwarding" id="clearingForwarding" step="0.01" class="p-2 border rounded text-sm" placeholder="Clear & Fwd">
-                        <input type="number" name="customPPQ" id="customPPQ" step="0.01" class="p-2 border rounded text-sm" placeholder="Custom & PPQ">
-                        <input type="number" name="transportation" id="transportation" step="0.01" class="p-2 border rounded text-sm" placeholder="Transport">
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Custom Duty</label>
+                            <input type="number" name="customDuty" id="customDuty" step="0.01" class="w-full p-2 border rounded text-sm" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Line Exp.</label>
+                            <input type="number" name="lineExpenses" id="lineExpenses" step="0.01" class="w-full p-2 border rounded text-sm" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Clg & Fwd</label>
+                            <input type="number" name="clearingForwarding" id="clearingForwarding" step="0.01" class="w-full p-2 border rounded text-sm" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Custom & PPQ</label>
+                            <input type="number" name="customPPQ" id="customPPQ" step="0.01" class="w-full p-2 border rounded text-sm" placeholder="0">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="text-xs font-medium text-gray-500">Transport</label>
+                            <input type="number" name="transportation" id="transportation" step="0.01" class="w-full p-2 border rounded text-sm" placeholder="0">
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="number" name="otherCharges1" id="otherCharges1" step="0.01" class="p-2 border rounded text-sm" placeholder="Other Chg 1">
-                        <input type="text" name="remarks1" id="remarks1" class="p-2 border rounded text-sm" placeholder="Remark 1">
-                        <input type="number" name="otherCharges2" id="otherCharges2" step="0.01" class="p-2 border rounded text-sm" placeholder="Other Chg 2">
-                        <input type="text" name="remarks2" id="remarks2" class="p-2 border rounded text-sm" placeholder="Remark 2">
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Other Chg 1</label>
+                            <input type="number" name="otherCharges1" id="otherCharges1" step="0.01" class="w-full p-2 border rounded text-sm" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Remark 1</label>
+                            <input type="text" name="remarks1" id="remarks1" class="w-full p-2 border rounded text-sm" placeholder="Remark">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Other Chg 2</label>
+                            <input type="number" name="otherCharges2" id="otherCharges2" step="0.01" class="w-full p-2 border rounded text-sm" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Remark 2</label>
+                            <input type="text" name="remarks2" id="remarks2" class="w-full p-2 border rounded text-sm" placeholder="Remark">
+                        </div>
                     </div>
 
                     <div class="flex gap-2 pt-2">
