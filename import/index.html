@@ -163,7 +163,7 @@
         // --- Firestore (Master Data) ---
         function fetchMasterData(collectionName, callback) {
             if (!db || !userId) return;
-            const collectionPath = `users/${userId}/${collectionName}`;
+            const collectionPath = collectionName;
             const q = query(collection(db, collectionPath));
             
             onSnapshot(q, (querySnapshot) => {
@@ -186,7 +186,7 @@
             const button = form.querySelector('button');
             button.disabled = true;
             try {
-                await addDoc(collection(db, `users/${userId}/${collectionName}`), { name: name });
+                await addDoc(collection(db, collectionName), { name: name });
                 input.value = "";
             } catch (error) { console.error("Error", error); } 
             finally { button.disabled = false; }
@@ -194,7 +194,7 @@
 
         async function deleteMasterData(collectionName, id) {
             if (!db || !userId) return;
-            await deleteDoc(doc(db, `users/${userId}/${collectionName}/${id}`));
+            await deleteDoc(doc(db, collectionName, id));
         }
 
         // --- Firestore (Shipments) ---
@@ -204,7 +204,7 @@
             appLoading.classList.add('hidden'); 
             loadingSpinner.classList.remove('hidden');
 
-            const q = query(collection(db, `users/${userId}/shipments`));
+            const q = query(collection(db, 'shipments'));
 
             onSnapshot(q, (querySnapshot) => {
                 shipmentsData = [];
@@ -261,11 +261,11 @@
                 data.totalCostINR = totalCostINR;
                 data.costPerCBM = costPerCBM;
 
-                if (editingShipmentId) {
-                    await updateDoc(doc(db, `users/${userId}/shipments`, editingShipmentId), data);
+               if (editingShipmentId) {
+                    await updateDoc(doc(db, 'shipments', editingShipmentId), data);
                     alert("Shipment Updated Successfully");
                 } else {
-                    await addDoc(collection(db, `users/${userId}/shipments`), data);
+                    await addDoc(collection(db, 'shipments'), data);
                     console.log("Shipment saved!");
                 }
                 
@@ -327,7 +327,7 @@
         async function deleteShipment(id) {
             if (!confirm("Are you sure you want to delete?")) return;
             try {
-                await deleteDoc(doc(db, `users/${userId}/shipments/${id}`));
+                await deleteDoc(doc(db, 'shipments', id));
             } catch (error) { console.error(error); }
         }
 
