@@ -1,16 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- FIREBASE CONFIGURATION ---
-    // REPLACE THIS WITH YOUR OWN FIREBASE CONFIGURATION
-    const firebaseConfig = {
-        apiKey: "AIza...",
-        authDomain: "your-project-id.firebaseapp.com",
-        projectId: "your-project-id",
-        storageBucket: "your-project-id.appspot.com",
-        messagingSenderId: "...",
-        appId: "..."
-    };
-
+ const firebaseConfig = {
+    apiKey: "AIzaSyB67fJm6K7kLHaITD77YDOQiiABYwXTJ7I",
+    authDomain: "export-costing.firebaseapp.com",
+    projectId: "export-costing",
+    storageBucket: "export-costing.firebasestorage.app",
+    messagingSenderId: "542008738422",
+    appId: "1:542008738422:web:f8831e950e92f13c159557"
+  };
     // --- FIREBASE INITIALIZATION ---
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
