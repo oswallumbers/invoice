@@ -756,7 +756,8 @@ async function initializeFirebase() {
                         totalOutstandingUsd += parseFloat(data.bankLiabilityUsd) || 0;
                     }
 
-                   tr.innerHTML = `
+                    // Corrected Template Literal
+                    tr.innerHTML = `
                         <td class="px-4 py-3">${formatDate(data.openDate)}</td>
                         <td class="px-4 py-3">${formatDate(data.dueDate)}</td>
                         <td class="px-4 py-3">${data.party || 'N/A'}</td>
@@ -803,6 +804,7 @@ async function initializeFirebase() {
                         </td>
                     `;
                     tableBody.appendChild(tr);
+                });
 
                 totalOutstandingEl.textContent = formatCurrency(totalOutstandingUsd);
                 
@@ -820,7 +822,6 @@ async function initializeFirebase() {
                     }
                 });
             }
-
          function sortData(records) {
                 const key = currentSort.key;
                 const order = currentSort.order;
