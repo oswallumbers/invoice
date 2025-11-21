@@ -27,11 +27,46 @@
             position: relative;
         }
 
-        /* Custom Scrollbar Styling */
-        .table-container::-webkit-scrollbar { height: 12px; width: 12px; }
-        .table-container::-webkit-scrollbar-track { background: #f1f1f1; }
-        .table-container::-webkit-scrollbar-thumb { background: #888; border-radius: 6px; border: 3px solid #f1f1f1; }
-        .table-container::-webkit-scrollbar-thumb:hover { background: #555; }
+        /* --- UPDATED SCROLLBAR STYLES --- */
+        /* 1. Thicker and more visible scrollbar */
+        .table-container::-webkit-scrollbar,
+        #top-scroll-container::-webkit-scrollbar { 
+            height: 16px; /* Increased height */
+            width: 16px;  
+        }
+        
+        .table-container::-webkit-scrollbar-track,
+        #top-scroll-container::-webkit-scrollbar-track { 
+            background: #e5e7eb; /* Lighter grey track */
+        }
+        
+        .table-container::-webkit-scrollbar-thumb,
+        #top-scroll-container::-webkit-scrollbar-thumb { 
+            background: #6b7280; /* Darker grey handle for visibility */
+            border-radius: 8px; 
+            border: 3px solid #e5e7eb; /* Creates padding around the handle */
+        }
+        
+        .table-container::-webkit-scrollbar-thumb:hover,
+        #top-scroll-container::-webkit-scrollbar-thumb:hover { 
+            background: #4b5563; /* Even darker on hover */
+        }
+
+        /* Remove bottom border from top scroll container to blend it */
+        #top-scroll-container {
+            border-bottom: none;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+        }
+        
+        /* Adjust table container to connect with top scrollbar */
+        .table-container {
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+            border-top: none;
+            /* max-height is important so the bottom bar is visible on screen */
+            max-height: 65vh; 
+        }
 
         /* --- 2. BORDER LINES (Grid Look) --- */
         table { border-collapse: separate; border-spacing: 0; width: 100%; }
@@ -251,7 +286,12 @@
                      <button type="button" id="export-excel-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none">Export to Excel</button>
                 </div>
             </div>
-            
+            <div id="top-scroll-container" class="overflow-x-auto bg-gray-50 border border-gray-300">
+                <div id="top-scroll-content" style="height: 1px;"></div> </div>
+
+            <div class="table-container" id="real-table-container">
+                <table id="lc-table" class="min-w-full text-sm text-left">
+                    
             <div class="table-container">
                 <table id="lc-table" class="min-w-full text-sm text-left">
                     <thead>
@@ -686,6 +726,7 @@ async function initializeFirebase() {
                     tableBody.innerHTML = `<tr><td colspan="18" class="px-6 py-10 text-center text-red-500">Error loading data.</td></tr>`;
                 });
             }
+            
 function renderTable(records) {
                 tableBody.innerHTML = '';
                 let totalOutstandingUsd = 0;
@@ -694,6 +735,8 @@ function renderTable(records) {
                 if (records.length === 0) {
                     tableBody.innerHTML = `<tr><td colspan="18" class="text-center py-10 text-gray-500">No records found.</td></tr>`;
                     totalOutstandingEl.textContent = '0.00';
+                    // Reset top scrollbar if empty
+                    document.getElementById('top-scroll-content').style.width = '0px';
                     return;
                 }
 
@@ -723,10 +766,8 @@ function renderTable(records) {
                         totalOutstandingUsd += parseFloat(data.bankLiabilityUsd) || 0;
                     }
                     
-                    // Helper to make comma-separated values wrap nicely
                     const formatWrap = (text) => {
                         if(!text) return 'N/A';
-                        // Replace comma with comma+space to ensure wrapping works
                         return text.replace(/,/g, ', '); 
                     };
 
@@ -742,9 +783,7 @@ function renderTable(records) {
                         <td class="px-4 py-3">${(Number(data.openExRate) || 0).toFixed(4)}</td>
                         <td class="px-4 py-3">${formatCurrency(data.inrAmount)}</td>
                         <td class="px-4 py-3">${data.usanceDays || 'N/A'}</td>
-                        
                         <td class="px-4 py-3 wrap-text">${formatWrap(data.lodgementNumber)}</td>
-                        
                         <td class="px-4 py-3 wrap-text">${formatWrap(data.invoiceDetails)}</td>
                         <td class="px-4 py-3">${formatCurrency(data.debitChargesAmount)}</td>
                         <td class="px-4 py-3">${(Number(data.chargesPercent) || 0).toFixed(2)} %</td>
@@ -790,7 +829,27 @@ function renderTable(records) {
                     toast.classList.add('hidden');
                 }
                 
-                // Re-apply sorting classes
+                // --- SYNC SCROLLBAR LOGIC (NEW) ---
+                setTimeout(() => {
+                    const topScrollContainer = document.getElementById('top-scroll-container');
+                    const topScrollContent = document.getElementById('top-scroll-content');
+                    const tableContainer = document.querySelector('.table-container');
+                    const table = document.getElementById('lc-table');
+                    
+                    if(topScrollContent && table) {
+                        // Set the width of the dummy top content to match the real table width
+                        topScrollContent.style.width = table.offsetWidth + 'px';
+                        
+                        // Sync Logic
+                        topScrollContainer.onscroll = function() {
+                            tableContainer.scrollLeft = topScrollContainer.scrollLeft;
+                        };
+                        tableContainer.onscroll = function() {
+                            topScrollContainer.scrollLeft = tableContainer.scrollLeft;
+                        };
+                    }
+                }, 100); // Small delay to ensure DOM is painted
+
                  document.querySelectorAll('th[data-sort-key]').forEach(th => {
                     th.classList.remove('sort-asc', 'sort-desc');
                     if (th.dataset.sortKey === currentSort.key) {
