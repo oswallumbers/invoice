@@ -19,29 +19,26 @@
             background-color: #f4f7f6; 
             scroll-behavior: smooth;
         }
-
-        /* --- 1. TOP SCROLLBAR CONTAINER (The Fix) --- */
-        #top-scroll-container {
-            /* Critical: Force height so it doesn't collapse to 0px */
-            min-height: 20px; 
-            height: 20px;
-            
-            /* Enable horizontal scrolling */
-            overflow-x: auto; 
-            overflow-y: hidden;
-            
-            /* Visual blending with the table */
-            background-color: #f9fafb;
-            border: 1px solid #d1d5db;
-            border-bottom: none; 
-            border-top-left-radius: 0.5rem;
-            border-top-right-radius: 0.5rem;
-            
-            /* Hidden by default, JS will show it if needed */
-            display: none; 
+       /* --- NEW: Fix for Ghost Scrollbar --- */
+        #top-scroll-content {
+            height: 1px; /* Must have height to trigger scrollbar */
+            display: block;
         }
 
-        /* --- 2. MAIN TABLE CONTAINER --- */
+        /* Ensure the container is visible */
+        #top-scroll-container {
+            min-height: 16px; /* Match scrollbar height */
+            height: 16px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            background-color: #f9fafb;
+            border: 1px solid #d1d5db;
+            border-bottom: none;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            display: none; /* JS will toggle this */
+        } 
+       /* --- 2. MAIN TABLE CONTAINER --- */
         .table-container {
             /* Limit height to keep bottom scrollbar visible on screen */
             max-height: 65vh; 
@@ -89,7 +86,8 @@
         table { 
             border-collapse: separate; 
             border-spacing: 0; 
-           
+            
+            /* CRITICAL: This forces the table to be wide */
             width: max-content; 
             min-width: 100%; 
         }
@@ -501,7 +499,7 @@
             const formatCurrency = (value) => {
                 return (Number(value) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
-// --- SCROLLBAR SYNC MANAGER (Always Visible Version) ---
+// --- SCROLLBAR SYNC MANAGER ---
             const updateScrollbars = () => {
                 const topScrollContainer = document.getElementById('top-scroll-container');
                 const topScrollContent = document.getElementById('top-scroll-content');
@@ -509,17 +507,20 @@
                 const table = document.getElementById('lc-table');
                 
                 if(topScrollContent && table && tableContainer && topScrollContainer) {
-                    // 1. Get the REAL width of the table (which is now huge due to max-content)
+                    // 1. Get Widths
                     const realWidth = Math.ceil(table.scrollWidth);
-                    
-                    // 2. Set the dummy content width to match
+                    const containerWidth = Math.ceil(tableContainer.clientWidth);
+
+                    // 2. Apply Width to Dummy Div
                     topScrollContent.style.width = realWidth + 'px';
                     
-                    // 3. ALWAYS SHOW the container
-                    // The browser will automatically handle the scrollbar handle visibility
+                    // Debugging: Check Console (F12) if scrollbar is missing
+                    console.log(`TopBar: Table ${realWidth}px | Container ${containerWidth}px`);
+
+                    // 3. Logic: Always show container if table exists
                     topScrollContainer.style.display = 'block';
 
-                    // 4. Sync Scroll Positions
+                    // 4. Sync Scrolling
                     topScrollContainer.onscroll = function() {
                         tableContainer.scrollLeft = topScrollContainer.scrollLeft;
                     };
@@ -529,7 +530,7 @@
                 }
             };
 
-            // Run sync on Resize
+            // Run on Resize
             window.addEventListener('resize', () => {
                 window.requestAnimationFrame(updateScrollbars);
             });
