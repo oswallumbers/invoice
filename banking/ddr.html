@@ -500,40 +500,43 @@
             const formatCurrency = (value) => {
                 return (Number(value) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
-// --- SCROLLBAR SYNC MANAGER (Define this once) ---
-           const updateScrollbars = () => {
+// --- SCROLLBAR SYNC MANAGER (Debug Version) ---
+            const updateScrollbars = () => {
                 const topScrollContainer = document.getElementById('top-scroll-container');
                 const topScrollContent = document.getElementById('top-scroll-content');
                 const tableContainer = document.querySelector('.table-container');
                 const table = document.getElementById('lc-table');
                 
                 if(topScrollContent && table && tableContainer && topScrollContainer) {
-                    // Get accurate widths (Math.ceil fixes decimal rounding errors)
-                    const realWidth = Math.ceil(table.scrollWidth);
-                    const containerWidth = Math.ceil(tableContainer.clientWidth);
+                    // 1. Get precise widths
+                    const tableScrollWidth = table.scrollWidth;
+                    const containerClientWidth = tableContainer.clientWidth;
 
-                    // Set the dummy content width to match the table
-                    topScrollContent.style.width = realWidth + 'px';
+                    // DEBUG LOG: This will print to your console
+                    console.log(`Checking Scrollbar: Table Width (${tableScrollWidth}) vs Container Width (${containerClientWidth})`);
+
+                    // 2. Set the dummy content width
+                    topScrollContent.style.width = tableScrollWidth + 'px';
                     
-                    // LOGIC: Only show if table is wider than container (with 1px buffer)
-                    if (realWidth > containerWidth + 1) {
+                    // 3. LOGIC: Show only if table is wider
+                    // We add a buffer of 1px to prevent rounding errors
+                    if (tableScrollWidth > containerClientWidth) {
+                        console.log("-> Showing Top Scrollbar");
                         topScrollContainer.style.display = 'block';
-                        
-                        // Sync Scroll Event Listeners
-                        // Remove old ones first to avoid duplicates (optional but good practice)
-                        topScrollContainer.onscroll = null;
-                        tableContainer.onscroll = null;
-
-                        topScrollContainer.onscroll = function() {
-                            tableContainer.scrollLeft = topScrollContainer.scrollLeft;
-                        };
-                        tableContainer.onscroll = function() {
-                            topScrollContainer.scrollLeft = tableContainer.scrollLeft;
-                        };
-                        
                     } else {
+                        console.log("-> Hiding Top Scrollbar (Not needed)");
                         topScrollContainer.style.display = 'none';
                     }
+
+                    // 4. Sync Scroll Positions
+                    topScrollContainer.onscroll = function() {
+                        tableContainer.scrollLeft = topScrollContainer.scrollLeft;
+                    };
+                    tableContainer.onscroll = function() {
+                        topScrollContainer.scrollLeft = tableContainer.scrollLeft;
+                    };
+                } else {
+                    console.error("Scrollbar Elements not found!");
                 }
             };
 
