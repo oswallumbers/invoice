@@ -728,6 +728,10 @@ async function initializeFirebase() {
             }
             
 function renderTable(records) {
+                const tableBody = document.getElementById('lc-table-body');
+                const totalOutstandingEl = document.getElementById('total-outstanding-usd');
+                const toast = document.getElementById('toast');
+                
                 tableBody.innerHTML = '';
                 let totalOutstandingUsd = 0;
                 let hasUrgentDues = false;
@@ -735,8 +739,8 @@ function renderTable(records) {
                 if (records.length === 0) {
                     tableBody.innerHTML = `<tr><td colspan="18" class="text-center py-10 text-gray-500">No records found.</td></tr>`;
                     totalOutstandingEl.textContent = '0.00';
-                    // Reset top scrollbar if empty
-                    document.getElementById('top-scroll-content').style.width = '0px';
+                    // Hide top scrollbar if empty
+                    document.getElementById('top-scroll-container').style.display = 'none';
                     return;
                 }
 
@@ -829,18 +833,26 @@ function renderTable(records) {
                     toast.classList.add('hidden');
                 }
                 
-                // --- SYNC SCROLLBAR LOGIC (NEW) ---
-                setTimeout(() => {
+                // --- UPDATED SCROLLBAR SYNC LOGIC ---
+                const updateScrollbars = () => {
                     const topScrollContainer = document.getElementById('top-scroll-container');
                     const topScrollContent = document.getElementById('top-scroll-content');
                     const tableContainer = document.querySelector('.table-container');
                     const table = document.getElementById('lc-table');
                     
-                    if(topScrollContent && table) {
-                        // Set the width of the dummy top content to match the real table width
-                        topScrollContent.style.width = table.offsetWidth + 'px';
+                    if(topScrollContent && table && tableContainer) {
+                        // 1. Use scrollWidth to get the REAL width (including hidden columns)
+                        const realWidth = table.scrollWidth;
+                        topScrollContent.style.width = realWidth + 'px';
                         
-                        // Sync Logic
+                        // 2. Toggle Visibility: Only show top bar if scrolling is actually needed
+                        if (realWidth > tableContainer.clientWidth) {
+                            topScrollContainer.style.display = 'block';
+                        } else {
+                            topScrollContainer.style.display = 'none';
+                        }
+
+                        // 3. Sync Logic
                         topScrollContainer.onscroll = function() {
                             tableContainer.scrollLeft = topScrollContainer.scrollLeft;
                         };
@@ -848,8 +860,15 @@ function renderTable(records) {
                             topScrollContainer.scrollLeft = tableContainer.scrollLeft;
                         };
                     }
-                }, 100); // Small delay to ensure DOM is painted
+                };
 
+                // Run immediately after render
+                setTimeout(updateScrollbars, 100);
+
+                // Run whenever window is resized (Fixes the full screen issue)
+                window.addEventListener('resize', updateScrollbars);
+
+                // Re-apply sort icons
                  document.querySelectorAll('th[data-sort-key]').forEach(th => {
                     th.classList.remove('sort-asc', 'sort-desc');
                     if (th.dataset.sortKey === currentSort.key) {
@@ -857,6 +876,7 @@ function renderTable(records) {
                     }
                 });
             }
+            
          function sortData(records) {
                 const key = currentSort.key;
                 const order = currentSort.order;
