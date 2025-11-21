@@ -458,7 +458,42 @@
             const formatCurrency = (value) => {
                 return (Number(value) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
+// --- SCROLLBAR SYNC MANAGER (Define this once) ---
+            const updateScrollbars = () => {
+                const topScrollContainer = document.getElementById('top-scroll-container');
+                const topScrollContent = document.getElementById('top-scroll-content');
+                const tableContainer = document.querySelector('.table-container');
+                const table = document.getElementById('lc-table');
+                
+                if(topScrollContent && table && tableContainer) {
+                    // 1. Get widths
+                    const realWidth = table.scrollWidth;
+                    const containerWidth = tableContainer.clientWidth;
 
+                    // 2. Set dummy width
+                    topScrollContent.style.width = realWidth + 'px';
+                    
+                    // 3. Toggle Visibility
+                    // If table is wider than container, SHOW top bar. Otherwise HIDE it.
+                    if (realWidth > containerWidth) {
+                        topScrollContainer.style.display = 'block';
+                    } else {
+                        topScrollContainer.style.display = 'none';
+                    }
+
+                    // 4. Sync Scroll Positions
+                    topScrollContainer.onscroll = function() {
+                        tableContainer.scrollLeft = topScrollContainer.scrollLeft;
+                    };
+                    tableContainer.onscroll = function() {
+                        topScrollContainer.scrollLeft = tableContainer.scrollLeft;
+                    };
+                }
+            };
+
+            // Add the resize listener ONLY ONCE
+            window.addEventListener('resize', updateScrollbars);
+            
             const formatDate = (timestamp) => {
                 if (!timestamp) return 'N/A';
                 if (typeof timestamp.toDate !== 'function') {
@@ -833,42 +868,9 @@ function renderTable(records) {
                     toast.classList.add('hidden');
                 }
                 
-                // --- UPDATED SCROLLBAR SYNC LOGIC ---
-                const updateScrollbars = () => {
-                    const topScrollContainer = document.getElementById('top-scroll-container');
-                    const topScrollContent = document.getElementById('top-scroll-content');
-                    const tableContainer = document.querySelector('.table-container');
-                    const table = document.getElementById('lc-table');
-                    
-                    if(topScrollContent && table && tableContainer) {
-                        // 1. Use scrollWidth to get the REAL width (including hidden columns)
-                        const realWidth = table.scrollWidth;
-                        topScrollContent.style.width = realWidth + 'px';
-                        
-                        // 2. Toggle Visibility: Only show top bar if scrolling is actually needed
-                        if (realWidth > tableContainer.clientWidth) {
-                            topScrollContainer.style.display = 'block';
-                        } else {
-                            topScrollContainer.style.display = 'none';
-                        }
-
-                        // 3. Sync Logic
-                        topScrollContainer.onscroll = function() {
-                            tableContainer.scrollLeft = topScrollContainer.scrollLeft;
-                        };
-                        tableContainer.onscroll = function() {
-                            topScrollContainer.scrollLeft = tableContainer.scrollLeft;
-                        };
-                    }
-                };
-
-                // Run immediately after render
+                // Recalculate scrollbars after render (with a small delay for DOM paint)
                 setTimeout(updateScrollbars, 100);
 
-                // Run whenever window is resized (Fixes the full screen issue)
-                window.addEventListener('resize', updateScrollbars);
-
-                // Re-apply sort icons
                  document.querySelectorAll('th[data-sort-key]').forEach(th => {
                     th.classList.remove('sort-asc', 'sort-desc');
                     if (th.dataset.sortKey === currentSort.key) {
