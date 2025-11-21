@@ -459,40 +459,46 @@
                 return (Number(value) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
 // --- SCROLLBAR SYNC MANAGER (Define this once) ---
-            const updateScrollbars = () => {
+           const updateScrollbars = () => {
                 const topScrollContainer = document.getElementById('top-scroll-container');
                 const topScrollContent = document.getElementById('top-scroll-content');
                 const tableContainer = document.querySelector('.table-container');
                 const table = document.getElementById('lc-table');
                 
-                if(topScrollContent && table && tableContainer) {
-                    // 1. Get widths
-                    const realWidth = table.scrollWidth;
-                    const containerWidth = tableContainer.clientWidth;
+                if(topScrollContent && table && tableContainer && topScrollContainer) {
+                    // Get accurate widths (Math.ceil fixes decimal rounding errors)
+                    const realWidth = Math.ceil(table.scrollWidth);
+                    const containerWidth = Math.ceil(tableContainer.clientWidth);
 
-                    // 2. Set dummy width
+                    // Set the dummy content width to match the table
                     topScrollContent.style.width = realWidth + 'px';
                     
-                    // 3. Toggle Visibility
-                    // If table is wider than container, SHOW top bar. Otherwise HIDE it.
-                    if (realWidth > containerWidth) {
+                    // LOGIC: Only show if table is wider than container (with 1px buffer)
+                    if (realWidth > containerWidth + 1) {
                         topScrollContainer.style.display = 'block';
+                        
+                        // Sync Scroll Event Listeners
+                        // Remove old ones first to avoid duplicates (optional but good practice)
+                        topScrollContainer.onscroll = null;
+                        tableContainer.onscroll = null;
+
+                        topScrollContainer.onscroll = function() {
+                            tableContainer.scrollLeft = topScrollContainer.scrollLeft;
+                        };
+                        tableContainer.onscroll = function() {
+                            topScrollContainer.scrollLeft = tableContainer.scrollLeft;
+                        };
+                        
                     } else {
                         topScrollContainer.style.display = 'none';
                     }
-
-                    // 4. Sync Scroll Positions
-                    topScrollContainer.onscroll = function() {
-                        tableContainer.scrollLeft = topScrollContainer.scrollLeft;
-                    };
-                    tableContainer.onscroll = function() {
-                        topScrollContainer.scrollLeft = tableContainer.scrollLeft;
-                    };
                 }
             };
 
-            // Add the resize listener ONLY ONCE
-            window.addEventListener('resize', updateScrollbars);
+            // Run sync on Resize
+            window.addEventListener('resize', () => {
+                window.requestAnimationFrame(updateScrollbars);
+            });
             
             const formatDate = (timestamp) => {
                 if (!timestamp) return 'N/A';
@@ -774,11 +780,11 @@ function renderTable(records) {
                 if (records.length === 0) {
                     tableBody.innerHTML = `<tr><td colspan="18" class="text-center py-10 text-gray-500">No records found.</td></tr>`;
                     totalOutstandingEl.textContent = '0.00';
-                    // Hide top scrollbar if empty
-                    document.getElementById('top-scroll-container').style.display = 'none';
+                    updateScrollbars(); // Update even if empty
                     return;
                 }
 
+                // [ ... DATE CALCULATION LOGIC HERE ... ]
                 const today = getStartOfDay(new Date());
                 const tomorrow = getStartOfDay(new Date());
                 tomorrow.setDate(today.getDate() + 1);
@@ -810,6 +816,7 @@ function renderTable(records) {
                         return text.replace(/,/g, ', '); 
                     };
 
+                    // [ ... TR.INNERHTML TEMPLATE HERE (Same as before) ... ]
                     tr.innerHTML = `
                         <td class="px-4 py-3">${formatDate(data.openDate)}</td>
                         <td class="px-4 py-3">${formatDate(data.dueDate)}</td>
@@ -867,9 +874,10 @@ function renderTable(records) {
                 } else {
                     toast.classList.add('hidden');
                 }
-                
-                // Recalculate scrollbars after render (with a small delay for DOM paint)
-                setTimeout(updateScrollbars, 100);
+
+                // FORCE SCROLLBAR RECALCULATION
+                setTimeout(updateScrollbars, 100); 
+                setTimeout(updateScrollbars, 500); // Double check for slow rendering
 
                  document.querySelectorAll('th[data-sort-key]').forEach(th => {
                     th.classList.remove('sort-asc', 'sort-desc');
@@ -878,6 +886,7 @@ function renderTable(records) {
                     }
                 });
             }
+            
             
          function sortData(records) {
                 const key = currentSort.key;
