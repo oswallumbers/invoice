@@ -1056,44 +1056,80 @@ async function initializeFirebase() {
                 
                 renderTable(processedRecords);
             });
-
-// --- IMPORT EXCEL LOGIC STARTS HERE ---
+            // --- IMPORT EXCEL LOGIC STARTS HERE ---
 
             const importInput = document.getElementById('import-excel-input');
             const triggerImportBtn = document.getElementById('trigger-import-btn');
 
-            // 1. Trigger the hidden file input when button is clicked
             triggerImportBtn.addEventListener('click', () => {
                 importInput.click();
             });
 
-            // 2. Helper: Convert Excel Serial Date to JS Date Object
-            function excelDateToJSDate(serial) {
-                // Excel dates are days since Dec 30, 1899. 
-                // If it's already a string (e.g. "2025-10-01"), try to parse it directly.
-                if (!serial) return null;
-                
-                if (typeof serial === 'string') {
-                    // Try parsing DD/MM/YYYY or YYYY-MM-DD
-                    const d = new Date(serial);
-                    if (!isNaN(d)) return d;
-                    return null; // Failed to parse
+            // --- UPDATED SMART DATE PARSER ---
+            function parseFlexibleDate(input) {
+                if (!input) return null;
+
+                // 1. Handle Excel Serial Numbers (e.g., 45234)
+                if (typeof input === 'number') {
+                    const utc_days  = Math.floor(input - 25569);
+                    const utc_value = utc_days * 86400;                                        
+                    const date_info = new Date(utc_value * 1000);
+                    return new Date(date_info.getFullYear(), date_info.getMonth(), date_info.getDate());
                 }
 
-                // Excel serial number logic
-                const utc_days  = Math.floor(serial - 25569);
-                const utc_value = utc_days * 86400;                                        
-                const date_info = new Date(utc_value * 1000);
-                
-                // Adjust for timezone offset to keep it accurate to the day
-                const fractional_day = serial - Math.floor(serial) + 0.0000001;
-                let total_seconds = Math.floor(86400 * fractional_day);
-                const seconds = total_seconds % 60;
-                total_seconds -= seconds;
-                const hours = Math.floor(total_seconds / (60 * 60));
-                const minutes = Math.floor(total_seconds / 60) % 60;
+                // 2. Handle Strings
+                if (typeof input === 'string') {
+                    let str = input.trim();
 
-                return new Date(date_info.getFullYear(), date_info.getMonth(), date_info.getDate(), hours, minutes, seconds);
+                    // --- NEW: Handle dd.MM.yyyy (e.g., 15.11.2025) ---
+                    // This regex looks for digits, a DOT, digits, a DOT, and digits
+                    const dotDateRegex = /^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/;
+                    const matchDot = str.match(dotDateRegex);
+                    
+                    if (matchDot) {
+                        const day = parseInt(matchDot[1]);
+                        const month = parseInt(matchDot[2]) - 1; // Javascript months are 0-11
+                        let year = parseInt(matchDot[3]);
+                        
+                        // Handle 2 digit years (e.g. "25" -> 2025)
+                        if (year < 100) year += 2000;
+                        
+                        return new Date(year, month, day);
+                    }
+                    // -------------------------------------------------
+
+                    // Handle dd-Mon-yy (e.g., 04-Oct-24)
+                    const monthStrRegex = /^(\d{1,2})[-/\s]([A-Za-z]{3})[-/\s](\d{2,4})$/;
+                    const matchStr = str.match(monthStrRegex);
+                    if (matchStr) {
+                        const day = parseInt(matchStr[1]);
+                        const monthStr = matchStr[2].toLowerCase();
+                        let year = parseInt(matchStr[3]);
+                        if (year < 100) year += 2000; 
+
+                        const months = {jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11};
+                        if (months.hasOwnProperty(monthStr)) {
+                            return new Date(year, months[monthStr], day);
+                        }
+                    }
+
+                    // Handle dd/MM/yyyy or dd-MM-yyyy (e.g., 01/11/2025)
+                    const numDateRegex = /^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/;
+                    const matchNum = str.match(numDateRegex);
+                    if (matchNum) {
+                        const day = parseInt(matchNum[1]);
+                        const month = parseInt(matchNum[2]) - 1; 
+                        let year = parseInt(matchNum[3]);
+                        if (year < 100) year += 2000;
+                        return new Date(year, month, day);
+                    }
+
+                    // Fallback
+                    const d = new Date(str);
+                    if (!isNaN(d)) return d;
+                }
+
+                return null; 
             }
 
             // 3. Handle File Selection
@@ -1101,12 +1137,11 @@ async function initializeFirebase() {
                 const file = e.target.files[0];
                 if (!file) return;
 
-                if (!confirm("Are you sure you want to import this file? This will add new records to your database.")) {
-                    importInput.value = ''; // Reset
+                if (!confirm("Are you sure you want to import this file?")) {
+                    importInput.value = ''; 
                     return;
                 }
 
-                // Show loading state
                 triggerImportBtn.textContent = "Importing...";
                 triggerImportBtn.disabled = true;
 
@@ -1116,15 +1151,10 @@ async function initializeFirebase() {
                     try {
                         const data = new Uint8Array(event.target.result);
                         const workbook = XLSX.read(data, { type: 'array' });
-                        
-                        // Assume data is in the first sheet
                         const firstSheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[firstSheetName];
                         
-                        // Convert to JSON
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-                        console.log("Raw Excel Data:", jsonData);
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: true });
 
                         if (jsonData.length === 0) {
                             alert("Excel file appears empty.");
@@ -1134,60 +1164,51 @@ async function initializeFirebase() {
                         let successCount = 0;
                         let errorCount = 0;
 
-                        // Loop through data and push to Firestore
-                        // Using simple loop instead of batch for easier error handling per row
                         for (const row of jsonData) {
                             try {
-                                // --- MAPPING LOGIC ---
-                                // Adjust these keys ('LC Open Date', etc) to match your Excel Header names exactly
-                                
-                                // 1. Basic Fields
-                                const lcOpenDate = excelDateToJSDate(row['LC Open Date'] || row['Open Date']);
-                                const dueDate = excelDateToJSDate(row['Due Date']);
-                                const party = row['Party'] || 'OLPL'; // Default to OLPL if missing
+                                // --- MAPPING ---
+                                const rawOpenDate = row['LC Open Date'] || row['Open Date'] || row['Date'];
+                                const rawDueDate = row['Due Date'] || row['Maturity Date'];
+
+                                const lcOpenDate = parseFlexibleDate(rawOpenDate);
+                                const dueDate = parseFlexibleDate(rawDueDate);
+
+                                const party = row['Party'] || 'OLPL';
                                 const lcNumber = row['LC Number'] ? String(row['LC Number']) : 'Unknown';
                                 const shipperName = row['Shipper Name'] || 'Unknown';
                                 const usanceDays = row['Usance Days'] ? String(row['Usance Days']) : '';
                                 const lodgementNumber = row['Lodgement No.'] || row['Lodgement Number'] || '';
                                 const invoiceDetails = row['Invoice Details'] || '';
 
-                                // 2. Financials (Parse numbers safely)
-                                const usdAmount = parseFloat(row['USD Amount']) || 0;
-                                const openExRate = parseFloat(row['Opening Ex. Rate'] || row['Ex Rate']) || 0;
-                                const interestUsd = parseFloat(row['Interest (USD)'] || row['Interest']) || 0;
-                                const debitChargesAmount = parseFloat(row['Debit Charges']) || 0;
+                                const cleanNumber = (val) => {
+                                    if (typeof val === 'number') return val;
+                                    if (typeof val === 'string') return parseFloat(val.replace(/,/g, '')) || 0;
+                                    return 0;
+                                };
 
-                                // 3. Calculations (Re-calculate to ensure database consistency)
+                                const usdAmount = cleanNumber(row['USD Amount']);
+                                const openExRate = cleanNumber(row['Opening Ex. Rate'] || row['Ex Rate']);
+                                const interestUsd = cleanNumber(row['Interest (USD)'] || row['Interest']);
+                                const debitChargesAmount = cleanNumber(row['Debit Charges']);
+
                                 const bankLiabilityUsd = usdAmount + interestUsd;
                                 const liabilityInr = bankLiabilityUsd * openExRate;
-                                const inrAmount = liabilityInr + debitChargesAmount; // Total INR
+                                const inrAmount = liabilityInr + debitChargesAmount;
                                 const totalChargesInr = (interestUsd * openExRate) + debitChargesAmount;
                                 const chargesPercent = (inrAmount > 0) ? (totalChargesInr / inrAmount) * 100 : 0;
 
-                                // 4. Prepare Firestore Object
                                 const newRecord = {
                                     createdAt: serverTimestamp(),
-                                    status: 'Pending', // Default to Pending on import
-                                    lcNumber: lcNumber,
-                                    shipperName: shipperName,
-                                    party: party,
-                                    usdAmount: usdAmount,
-                                    openExRate: openExRate,
-                                    usanceDays: usanceDays,
-                                    lodgementNumber: lodgementNumber,
-                                    invoiceDetails: invoiceDetails,
-                                    interestUsd: interestUsd,
-                                    debitChargesAmount: debitChargesAmount,
-                                    inrAmount: inrAmount,
-                                    bankLiabilityUsd: bankLiabilityUsd,
-                                    chargesPercent: chargesPercent
+                                    status: 'Pending', 
+                                    lcNumber, shipperName, party, usanceDays, 
+                                    lodgementNumber, invoiceDetails,
+                                    usdAmount, openExRate, interestUsd, debitChargesAmount, 
+                                    inrAmount, bankLiabilityUsd, chargesPercent
                                 };
 
-                                // Handle Dates (Firestore requires Timestamp)
                                 if (lcOpenDate) newRecord.openDate = Timestamp.fromDate(lcOpenDate);
                                 if (dueDate) newRecord.dueDate = Timestamp.fromDate(dueDate);
 
-                                // 5. Add to Firestore
                                 if (lcCollectionRef) {
                                     await addDoc(lcCollectionRef, newRecord);
                                     successCount++;
@@ -1200,14 +1221,11 @@ async function initializeFirebase() {
                         }
 
                         alert(`Import Complete!\nSuccessfully added: ${successCount}\nErrors/Skipped: ${errorCount}`);
-                        
-                        // Refresh the view is handled automatically by onSnapshot
 
                     } catch (error) {
                         console.error("File Read Error:", error);
                         alert("Error reading file: " + error.message);
                     } finally {
-                        // Reset UI
                         triggerImportBtn.textContent = "Import Data";
                         triggerImportBtn.disabled = false;
                         importInput.value = ''; 
@@ -1216,7 +1234,6 @@ async function initializeFirebase() {
 
                 reader.readAsArrayBuffer(file);
             });
-
             // --- IMPORT EXCEL LOGIC ENDS HERE ---
             // --- Excel Export Logic ---
             function exportToExcel() {
