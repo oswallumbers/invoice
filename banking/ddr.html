@@ -11,171 +11,150 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+    /* Base Font */
+    body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; }
 
-   <style>
-        /* Base Font & Body */
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #f4f7f6; 
-            scroll-behavior: smooth;
-        }
-       /* --- NEW: Fix for Ghost Scrollbar --- */
-        #top-scroll-content {
-            height: 1px; /* Must have height to trigger scrollbar */
-            display: block;
-        }
-
-        /* Ensure the container is visible */
-        #top-scroll-container {
-            min-height: 16px; /* Match scrollbar height */
-            height: 16px;
-            overflow-x: auto;
-            overflow-y: hidden;
-            background-color: #f9fafb;
-            border: 1px solid #d1d5db;
-            border-bottom: none;
-            border-top-left-radius: 0.5rem;
-            border-top-right-radius: 0.5rem;
-            display: none; /* JS will toggle this */
-        } 
-       /* --- 2. MAIN TABLE CONTAINER --- */
-        .table-container {
-            /* Limit height to keep bottom scrollbar visible on screen */
-            max-height: 65vh; 
-            
-            /* Enable scrolling */
-            overflow: auto;   
-            
-            /* Visuals */
-            border: 1px solid #d1d5db;
-            background-color: white;
-            position: relative;
-            
-            /* Remove top corners/border to merge with top scrollbar */
-            border-top: none;
-            border-top-left-radius: 0;
-            border-top-right-radius: 0;
-            border-bottom-left-radius: 0.5rem;
-            border-bottom-right-radius: 0.5rem;
-        }
-
-        /* --- 3. CUSTOM SCROLLBAR STYLES (Thick & Visible) --- */
-        .table-container::-webkit-scrollbar,
-        #top-scroll-container::-webkit-scrollbar { 
-            height: 16px; /* Thick horizontal scrollbar */
-            width: 16px;  /* Thick vertical scrollbar */
-        }
+    /* --- 1. TOP SCROLLBAR (The Fix) --- */
+    #top-scroll-container {
+        /* Increased height to 20px to prevent browser from clipping the scrollbar */
+        min-height: 20px; 
+        height: 20px; 
         
-        .table-container::-webkit-scrollbar-track,
-        #top-scroll-container::-webkit-scrollbar-track { 
-            background: #e5e7eb; /* Light grey track */
-        }
+        /* Enable horizontal scrolling */
+        overflow-x: auto; 
+        overflow-y: hidden;
         
-        .table-container::-webkit-scrollbar-thumb,
-        #top-scroll-container::-webkit-scrollbar-thumb { 
-            background: #9ca3af; /* Visible grey handle */
-            border-radius: 8px; 
-            border: 3px solid #e5e7eb; /* Padding effect */
-        }
+        /* Visuals */
+        background-color: #f9fafb;
+        border: 1px solid #d1d5db;
+        border-bottom: none;
+        border-top-left-radius: 0.5rem;
+        border-top-right-radius: 0.5rem;
         
-        .table-container::-webkit-scrollbar-thumb:hover,
-        #top-scroll-container::-webkit-scrollbar-thumb:hover { 
-            background: #6b7280; /* Darker on hover */
-        }
+        /* Hidden by default, JS will show it */
+        display: none;
+    }
 
-        table { 
-            border-collapse: separate; 
-            border-spacing: 0; 
-            
-            /* CRITICAL: This forces the table to be wide */
-            width: max-content; 
-            min-width: 100%; 
-        }
-        
-        /* Borders for every cell */
-        th, td {
-            border-bottom: 1px solid #d1d5db;
-            border-right: 1px solid #d1d5db;
-            padding: 0.75rem 1rem;
-            white-space: nowrap; /* Default: no wrapping */
-        }
-        /* Remove right border from last column */
-        th:last-child, td:last-child { 
-            border-right: none; 
-        }
+    /* CRITICAL: This inner div needs height to trigger the scrollbar */
+    #top-scroll-content {
+        height: 1px; 
+        display: block;
+    }
 
-        /* --- 5. STICKY HEADER (Top) --- */
-        thead th {
-            position: sticky;
-            top: 0;
-            background-color: #f3f4f6;
-            z-index: 20;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-
-        /* --- 6. STICKY ACTION COLUMN (Right) --- */
-        th.sticky-action, td.sticky-action {
-            position: sticky;
-            right: 0;
-            background-color: #fff;
-            z-index: 10;
-            border-left: 1px solid #d1d5db; /* Separator line */
-        }
-        /* Header corner needs higher index */
-        th.sticky-action { 
-            z-index: 30; 
-            background-color: #f3f4f6; 
-        }
-
-        /* Sticky Column Colors matching Rows */
-        tr.due-soon td.sticky-action { background-color: #e0f2fe !important; }
-        tr.due-tomorrow td.sticky-action { background-color: #fefcbf !important; }
-        tr.due-today td.sticky-action { background-color: #fee2e2 !important; }
-        tr.overdue td.sticky-action { background-color: #fca5a5 !important; }
-
-        /* --- 7. UTILITY & ROW COLORS --- */
-        .due-soon { background-color: #e0f2fe !important; }
-        .due-tomorrow { background-color: #fefcbf !important; }
-        .due-today { background-color: #fee2e2 !important; }
-        .overdue { background-color: #fca5a5 !important; font-weight: 600; }
-
-        /* Text Wrapping Helper */
-        .wrap-text {
-            white-space: normal !important;
-            min-width: 180px;
-            max-width: 250px;
-            word-break: break-word;
-            font-size: 0.9rem;
-            line-height: 1.4;
-        }
+    /* --- 2. MAIN TABLE CONTAINER --- */
+    .table-container {
+        /* Limit height to keep bottom scrollbar visible on screen */
+        max-height: 70vh; 
+        overflow: auto;   
+        border: 1px solid #d1d5db;
+        background-color: white;
+        position: relative;
         
-        /* --- 8. FORM INPUTS --- */
-        input:focus, select:focus { 
-            outline: 2px solid transparent; 
-            outline-offset: 2px; 
-            box-shadow: 0 0 0 2px #4f46e5; 
-            border-color: #4f46e5; 
-        }
+        /* Merge with top bar */
+        border-top: none;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+        border-bottom-left-radius: 0.5rem;
+        border-bottom-right-radius: 0.5rem;
+    }
+
+    /* --- 3. CUSTOM SCROLLBAR STYLES --- */
+    .table-container::-webkit-scrollbar,
+    #top-scroll-container::-webkit-scrollbar { 
+        height: 16px; /* Thick enough to grab */
+        width: 16px;  
+    }
+    
+    .table-container::-webkit-scrollbar-track,
+    #top-scroll-container::-webkit-scrollbar-track { 
+        background: #e5e7eb; 
+    }
+    
+    .table-container::-webkit-scrollbar-thumb,
+    #top-scroll-container::-webkit-scrollbar-thumb { 
+        background: #9ca3af; /* Visible Grey */
+        border-radius: 8px; 
+        border: 3px solid #e5e7eb; 
+    }
+    
+    .table-container::-webkit-scrollbar-thumb:hover,
+    #top-scroll-container::-webkit-scrollbar-thumb:hover { 
+        background: #6b7280; /* Darker on hover */
+    }
+
+    /* --- 4. TABLE GRID STYLING --- */
+    table { 
+        border-collapse: separate; 
+        border-spacing: 0; 
         
-        input[type="text"], 
-        input[type="date"], 
-        input[type="number"], 
-        select {
-             height: 40px; 
-             border: 1px solid #d1d5db; 
-             padding: 0.5rem; 
-             border-radius: 0.375rem; 
-             width: 100%;
-        }
-        
-        /* Sort Icons */
-        th[data-sort-key] { cursor: pointer; user-select: none; }
-        th[data-sort-key]:hover { background-color: #e5e7eb; }
-        
-        .sort-icon { display: inline-block; margin-left: 5px; font-size: 0.7em; }
-        th.sort-asc .sort-icon::after { content: '▲'; }
-        th.sort-desc .sort-icon::after { content: '▼'; }
-    </style>
+        /* CRITICAL FIX: Forces table to extend so data doesn't hide behind Action buttons */
+        width: max-content; 
+        min-width: 100%; 
+    }
+    
+    th, td {
+        border-bottom: 1px solid #d1d5db;
+        border-right: 1px solid #d1d5db;
+        padding: 0.75rem 1rem;
+        white-space: nowrap;
+    }
+    th:last-child, td:last-child { border-right: none; }
+
+    /* --- 5. STICKY COLUMNS --- */
+    thead th {
+        position: sticky;
+        top: 0;
+        background-color: #f3f4f6;
+        z-index: 20;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    th.sticky-action, td.sticky-action {
+        position: sticky;
+        right: 0;
+        background-color: #fff;
+        z-index: 10;
+        border-left: 1px solid #d1d5db;
+    }
+    th.sticky-action { z-index: 30; background-color: #f3f4f6; }
+
+    /* Row Colors */
+    tr.due-soon td.sticky-action { background-color: #e0f2fe !important; }
+    tr.due-tomorrow td.sticky-action { background-color: #fefcbf !important; }
+    tr.due-today td.sticky-action { background-color: #fee2e2 !important; }
+    tr.overdue td.sticky-action { background-color: #fca5a5 !important; }
+
+    .due-soon { background-color: #e0f2fe !important; }
+    .due-tomorrow { background-color: #fefcbf !important; }
+    .due-today { background-color: #fee2e2 !important; }
+    .overdue { background-color: #fca5a5 !important; font-weight: 600; }
+
+    /* Text Wrap Helper */
+    .wrap-text {
+        white-space: normal !important;
+        min-width: 180px;
+        max-width: 250px;
+        word-break: break-word;
+        line-height: 1.4;
+    }
+    
+    /* Inputs */
+    input:focus, select:focus { 
+        outline: 2px solid transparent; outline-offset: 2px; 
+        box-shadow: 0 0 0 2px #4f46e5; border-color: #4f46e5; 
+    }
+    input[type="text"], input[type="date"], input[type="number"], select {
+            height: 40px; border: 1px solid #d1d5db; padding: 0.5rem; 
+            border-radius: 0.375rem; width: 100%;
+    }
+    
+    th[data-sort-key] { cursor: pointer; user-select: none; }
+    th[data-sort-key]:hover { background-color: #e5e7eb; }
+    .sort-icon { display: inline-block; margin-left: 5px; font-size: 0.7em; }
+    th.sort-asc .sort-icon::after { content: '▲'; }
+    th.sort-desc .sort-icon::after { content: '▼'; }
+</style>
 </head>
 <body class="antialiased text-gray-800">
 
