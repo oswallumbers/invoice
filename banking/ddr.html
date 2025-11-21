@@ -234,11 +234,26 @@
 
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
             <div class="flex justify-between items-center p-6">
-                <h2 class="text-2xl font-semibold">Current LC / BC Records</h2>
-                <button type="button" id="export-excel-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none">
-                    Export to Excel
-                </button>
-            </div>
+    <h2 class="text-2xl font-semibold">Current LC / BC Records</h2>
+    <button type="button" id="export-excel-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none">
+        Export to Excel
+    </button>
+</div>
+
+<div class="flex justify-between items-center p-6">
+    <h2 class="text-2xl font-semibold">Current LC / BC Records</h2>
+    <div class="flex space-x-2">
+        <input type="file" id="import-excel-input" accept=".xlsx, .xls" class="hidden" />
+        
+        <button type="button" id="trigger-import-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
+            Import Data
+        </button>
+
+        <button type="button" id="export-excel-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none">
+            Export to Excel
+        </button>
+    </div>
+</div>
             <div class="overflow-x-auto">
                 <table id="lc-table" class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -1042,7 +1057,167 @@ async function initializeFirebase() {
                 renderTable(processedRecords);
             });
 
+// --- IMPORT EXCEL LOGIC STARTS HERE ---
 
+            const importInput = document.getElementById('import-excel-input');
+            const triggerImportBtn = document.getElementById('trigger-import-btn');
+
+            // 1. Trigger the hidden file input when button is clicked
+            triggerImportBtn.addEventListener('click', () => {
+                importInput.click();
+            });
+
+            // 2. Helper: Convert Excel Serial Date to JS Date Object
+            function excelDateToJSDate(serial) {
+                // Excel dates are days since Dec 30, 1899. 
+                // If it's already a string (e.g. "2025-10-01"), try to parse it directly.
+                if (!serial) return null;
+                
+                if (typeof serial === 'string') {
+                    // Try parsing DD/MM/YYYY or YYYY-MM-DD
+                    const d = new Date(serial);
+                    if (!isNaN(d)) return d;
+                    return null; // Failed to parse
+                }
+
+                // Excel serial number logic
+                const utc_days  = Math.floor(serial - 25569);
+                const utc_value = utc_days * 86400;                                        
+                const date_info = new Date(utc_value * 1000);
+                
+                // Adjust for timezone offset to keep it accurate to the day
+                const fractional_day = serial - Math.floor(serial) + 0.0000001;
+                let total_seconds = Math.floor(86400 * fractional_day);
+                const seconds = total_seconds % 60;
+                total_seconds -= seconds;
+                const hours = Math.floor(total_seconds / (60 * 60));
+                const minutes = Math.floor(total_seconds / 60) % 60;
+
+                return new Date(date_info.getFullYear(), date_info.getMonth(), date_info.getDate(), hours, minutes, seconds);
+            }
+
+            // 3. Handle File Selection
+            importInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (!confirm("Are you sure you want to import this file? This will add new records to your database.")) {
+                    importInput.value = ''; // Reset
+                    return;
+                }
+
+                // Show loading state
+                triggerImportBtn.textContent = "Importing...";
+                triggerImportBtn.disabled = true;
+
+                const reader = new FileReader();
+
+                reader.onload = async (event) => {
+                    try {
+                        const data = new Uint8Array(event.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // Assume data is in the first sheet
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // Convert to JSON
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                        console.log("Raw Excel Data:", jsonData);
+
+                        if (jsonData.length === 0) {
+                            alert("Excel file appears empty.");
+                            return;
+                        }
+
+                        let successCount = 0;
+                        let errorCount = 0;
+
+                        // Loop through data and push to Firestore
+                        // Using simple loop instead of batch for easier error handling per row
+                        for (const row of jsonData) {
+                            try {
+                                // --- MAPPING LOGIC ---
+                                // Adjust these keys ('LC Open Date', etc) to match your Excel Header names exactly
+                                
+                                // 1. Basic Fields
+                                const lcOpenDate = excelDateToJSDate(row['LC Open Date'] || row['Open Date']);
+                                const dueDate = excelDateToJSDate(row['Due Date']);
+                                const party = row['Party'] || 'OLPL'; // Default to OLPL if missing
+                                const lcNumber = row['LC Number'] ? String(row['LC Number']) : 'Unknown';
+                                const shipperName = row['Shipper Name'] || 'Unknown';
+                                const usanceDays = row['Usance Days'] ? String(row['Usance Days']) : '';
+                                const lodgementNumber = row['Lodgement No.'] || row['Lodgement Number'] || '';
+                                const invoiceDetails = row['Invoice Details'] || '';
+
+                                // 2. Financials (Parse numbers safely)
+                                const usdAmount = parseFloat(row['USD Amount']) || 0;
+                                const openExRate = parseFloat(row['Opening Ex. Rate'] || row['Ex Rate']) || 0;
+                                const interestUsd = parseFloat(row['Interest (USD)'] || row['Interest']) || 0;
+                                const debitChargesAmount = parseFloat(row['Debit Charges']) || 0;
+
+                                // 3. Calculations (Re-calculate to ensure database consistency)
+                                const bankLiabilityUsd = usdAmount + interestUsd;
+                                const liabilityInr = bankLiabilityUsd * openExRate;
+                                const inrAmount = liabilityInr + debitChargesAmount; // Total INR
+                                const totalChargesInr = (interestUsd * openExRate) + debitChargesAmount;
+                                const chargesPercent = (inrAmount > 0) ? (totalChargesInr / inrAmount) * 100 : 0;
+
+                                // 4. Prepare Firestore Object
+                                const newRecord = {
+                                    createdAt: serverTimestamp(),
+                                    status: 'Pending', // Default to Pending on import
+                                    lcNumber: lcNumber,
+                                    shipperName: shipperName,
+                                    party: party,
+                                    usdAmount: usdAmount,
+                                    openExRate: openExRate,
+                                    usanceDays: usanceDays,
+                                    lodgementNumber: lodgementNumber,
+                                    invoiceDetails: invoiceDetails,
+                                    interestUsd: interestUsd,
+                                    debitChargesAmount: debitChargesAmount,
+                                    inrAmount: inrAmount,
+                                    bankLiabilityUsd: bankLiabilityUsd,
+                                    chargesPercent: chargesPercent
+                                };
+
+                                // Handle Dates (Firestore requires Timestamp)
+                                if (lcOpenDate) newRecord.openDate = Timestamp.fromDate(lcOpenDate);
+                                if (dueDate) newRecord.dueDate = Timestamp.fromDate(dueDate);
+
+                                // 5. Add to Firestore
+                                if (lcCollectionRef) {
+                                    await addDoc(lcCollectionRef, newRecord);
+                                    successCount++;
+                                }
+
+                            } catch (err) {
+                                console.error("Error importing row:", row, err);
+                                errorCount++;
+                            }
+                        }
+
+                        alert(`Import Complete!\nSuccessfully added: ${successCount}\nErrors/Skipped: ${errorCount}`);
+                        
+                        // Refresh the view is handled automatically by onSnapshot
+
+                    } catch (error) {
+                        console.error("File Read Error:", error);
+                        alert("Error reading file: " + error.message);
+                    } finally {
+                        // Reset UI
+                        triggerImportBtn.textContent = "Import Data";
+                        triggerImportBtn.disabled = false;
+                        importInput.value = ''; 
+                    }
+                };
+
+                reader.readAsArrayBuffer(file);
+            });
+
+            // --- IMPORT EXCEL LOGIC ENDS HERE ---
             // --- Excel Export Logic ---
             function exportToExcel() {
                 if (processedRecords.length === 0) {
