@@ -86,11 +86,12 @@
             background: #6b7280; /* Darker on hover */
         }
 
-        /* --- 4. TABLE GRID STYLING --- */
         table { 
             border-collapse: separate; 
             border-spacing: 0; 
-            width: 100%; 
+           
+            width: max-content; 
+            min-width: 100%; 
         }
         
         /* Borders for every cell */
@@ -500,7 +501,7 @@
             const formatCurrency = (value) => {
                 return (Number(value) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
-// --- SCROLLBAR SYNC MANAGER (Debug Version) ---
+// --- SCROLLBAR SYNC MANAGER (Always Visible Version) ---
             const updateScrollbars = () => {
                 const topScrollContainer = document.getElementById('top-scroll-container');
                 const topScrollContent = document.getElementById('top-scroll-content');
@@ -508,25 +509,15 @@
                 const table = document.getElementById('lc-table');
                 
                 if(topScrollContent && table && tableContainer && topScrollContainer) {
-                    // 1. Get precise widths
-                    const tableScrollWidth = table.scrollWidth;
-                    const containerClientWidth = tableContainer.clientWidth;
-
-                    // DEBUG LOG: This will print to your console
-                    console.log(`Checking Scrollbar: Table Width (${tableScrollWidth}) vs Container Width (${containerClientWidth})`);
-
-                    // 2. Set the dummy content width
-                    topScrollContent.style.width = tableScrollWidth + 'px';
+                    // 1. Get the REAL width of the table (which is now huge due to max-content)
+                    const realWidth = Math.ceil(table.scrollWidth);
                     
-                    // 3. LOGIC: Show only if table is wider
-                    // We add a buffer of 1px to prevent rounding errors
-                    if (tableScrollWidth > containerClientWidth) {
-                        console.log("-> Showing Top Scrollbar");
-                        topScrollContainer.style.display = 'block';
-                    } else {
-                        console.log("-> Hiding Top Scrollbar (Not needed)");
-                        topScrollContainer.style.display = 'none';
-                    }
+                    // 2. Set the dummy content width to match
+                    topScrollContent.style.width = realWidth + 'px';
+                    
+                    // 3. ALWAYS SHOW the container
+                    // The browser will automatically handle the scrollbar handle visibility
+                    topScrollContainer.style.display = 'block';
 
                     // 4. Sync Scroll Positions
                     topScrollContainer.onscroll = function() {
@@ -535,8 +526,6 @@
                     tableContainer.onscroll = function() {
                         topScrollContainer.scrollLeft = tableContainer.scrollLeft;
                     };
-                } else {
-                    console.error("Scrollbar Elements not found!");
                 }
             };
 
