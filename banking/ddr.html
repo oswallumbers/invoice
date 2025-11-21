@@ -17,15 +17,15 @@
 
     /* --- 1. TOP SCROLLBAR (The Fix) --- */
     #top-scroll-container {
-        /* Increased height to 20px to prevent browser from clipping the scrollbar */
-        min-height: 20px; 
-        height: 20px; 
+        /* Fixed height matching the scrollbar size exactly */
+        min-height: 16px; 
+        height: 16px; 
         
         /* Enable horizontal scrolling */
         overflow-x: auto; 
         overflow-y: hidden;
         
-        /* Visuals */
+        /* Visuals to match table */
         background-color: #f9fafb;
         border: 1px solid #d1d5db;
         border-bottom: none;
@@ -36,15 +36,16 @@
         display: none;
     }
 
-    /* CRITICAL: This inner div needs height to trigger the scrollbar */
+    /* The "Ghost" div that forces the scrollbar to appear */
     #top-scroll-content {
         height: 1px; 
         display: block;
+        /* transition ensures smooth updates */
+        transition: width 0.1s;
     }
 
     /* --- 2. MAIN TABLE CONTAINER --- */
     .table-container {
-        /* Limit height to keep bottom scrollbar visible on screen */
         max-height: 70vh; 
         overflow: auto;   
         border: 1px solid #d1d5db;
@@ -59,10 +60,11 @@
         border-bottom-right-radius: 0.5rem;
     }
 
-    /* --- 3. CUSTOM SCROLLBAR STYLES --- */
+    /* --- 3. SCROLLBAR STYLING --- */
+    /* Setting both container and top-scroll to match exactly */
     .table-container::-webkit-scrollbar,
     #top-scroll-container::-webkit-scrollbar { 
-        height: 16px; /* Thick enough to grab */
+        height: 16px;
         width: 16px;  
     }
     
@@ -73,22 +75,21 @@
     
     .table-container::-webkit-scrollbar-thumb,
     #top-scroll-container::-webkit-scrollbar-thumb { 
-        background: #9ca3af; /* Visible Grey */
+        background: #9ca3af; 
         border-radius: 8px; 
         border: 3px solid #e5e7eb; 
     }
     
     .table-container::-webkit-scrollbar-thumb:hover,
     #top-scroll-container::-webkit-scrollbar-thumb:hover { 
-        background: #6b7280; /* Darker on hover */
+        background: #6b7280; 
     }
 
-    /* --- 4. TABLE GRID STYLING --- */
+    /* --- 4. TABLE GRID & STICKY COLUMNS --- */
     table { 
         border-collapse: separate; 
         border-spacing: 0; 
-        
-        /* CRITICAL FIX: Forces table to extend so data doesn't hide behind Action buttons */
+        /* This forces the table to be as wide as it needs to be */
         width: max-content; 
         min-width: 100%; 
     }
@@ -101,7 +102,7 @@
     }
     th:last-child, td:last-child { border-right: none; }
 
-    /* --- 5. STICKY COLUMNS --- */
+    /* Sticky Header */
     thead th {
         position: sticky;
         top: 0;
@@ -110,27 +111,30 @@
         box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
 
+    /* Sticky Action Column */
     th.sticky-action, td.sticky-action {
         position: sticky;
         right: 0;
-        background-color: #fff;
+        /* Important: Background must be opaque so text slides UNDER it */
+        background-color: #fff; 
         z-index: 10;
         border-left: 1px solid #d1d5db;
+        box-shadow: -2px 0 5px rgba(0,0,0,0.05); /* Shadow to show separation */
     }
     th.sticky-action { z-index: 30; background-color: #f3f4f6; }
 
-    /* Row Colors */
+    /* Row Colors & Text Wrap */
+    .due-soon { background-color: #e0f2fe !important; }
+    .due-tomorrow { background-color: #fefcbf !important; }
+    .due-today { background-color: #fee2e2 !important; }
+    .overdue { background-color: #fca5a5 !important; font-weight: 600; }
+    
+    /* Fix sticky background for colored rows */
     tr.due-soon td.sticky-action { background-color: #e0f2fe !important; }
     tr.due-tomorrow td.sticky-action { background-color: #fefcbf !important; }
     tr.due-today td.sticky-action { background-color: #fee2e2 !important; }
     tr.overdue td.sticky-action { background-color: #fca5a5 !important; }
 
-    .due-soon { background-color: #e0f2fe !important; }
-    .due-tomorrow { background-color: #fefcbf !important; }
-    .due-today { background-color: #fee2e2 !important; }
-    .overdue { background-color: #fca5a5 !important; font-weight: 600; }
-
-    /* Text Wrap Helper */
     .wrap-text {
         white-space: normal !important;
         min-width: 180px;
@@ -139,18 +143,11 @@
         line-height: 1.4;
     }
     
-    /* Inputs */
-    input:focus, select:focus { 
-        outline: 2px solid transparent; outline-offset: 2px; 
-        box-shadow: 0 0 0 2px #4f46e5; border-color: #4f46e5; 
-    }
-    input[type="text"], input[type="date"], input[type="number"], select {
-            height: 40px; border: 1px solid #d1d5db; padding: 0.5rem; 
-            border-radius: 0.375rem; width: 100%;
-    }
+    /* Form Inputs */
+    input:focus, select:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2); }
+    input, select { height: 40px; border: 1px solid #d1d5db; padding: 0.5rem; border-radius: 0.375rem; width: 100%; }
     
-    th[data-sort-key] { cursor: pointer; user-select: none; }
-    th[data-sort-key]:hover { background-color: #e5e7eb; }
+    th[data-sort-key] { cursor: pointer; }
     .sort-icon { display: inline-block; margin-left: 5px; font-size: 0.7em; }
     th.sort-asc .sort-icon::after { content: '▲'; }
     th.sort-desc .sort-icon::after { content: '▼'; }
