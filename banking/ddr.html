@@ -302,6 +302,7 @@
                      <button type="button" id="export-excel-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none">Export to Excel</button>
                 </div>
             </div>
+            
             <div id="top-scroll-container">
                 <div id="top-scroll-content"></div> 
                 </div>
@@ -475,36 +476,29 @@
             const formatCurrency = (value) => {
                 return (Number(value) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
-// --- SCROLLBAR SYNC MANAGER ---
-            const updateScrollbars = () => {
-                const topScrollContainer = document.getElementById('top-scroll-container');
-                const topScrollContent = document.getElementById('top-scroll-content');
-                const tableContainer = document.querySelector('.table-container');
-                const table = document.getElementById('lc-table');
-                
-                if(topScrollContent && table && tableContainer && topScrollContainer) {
-                    // 1. Get Widths
-                    const realWidth = Math.ceil(table.scrollWidth);
-                    const containerWidth = Math.ceil(tableContainer.clientWidth);
+const updateScrollbars = () => {
+    const topScrollContainer = document.getElementById('top-scroll-container');
+    const topScrollContent  = document.getElementById('top-scroll-content');
+    const tableContainer    = document.getElementById('real-table-container'); // ← changed
+    const table             = document.getElementById('lc-table');
 
-                    // 2. Apply Width to Dummy Div
-                    topScrollContent.style.width = realWidth + 'px';
-                    
-                    // Debugging: Check Console (F12) if scrollbar is missing
-                    console.log(`TopBar: Table ${realWidth}px | Container ${containerWidth}px`);
+    if (topScrollContent && table && tableContainer && topScrollContainer) {
+        const realWidth      = Math.ceil(table.scrollWidth);
+        const containerWidth = Math.ceil(tableContainer.clientWidth);
 
-                    // 3. Logic: Always show container if table exists
-                    topScrollContainer.style.display = 'block';
+        topScrollContent.style.width = realWidth + 'px';
+        console.log(`TopBar: Table ${realWidth}px | Container ${containerWidth}px`);
 
-                    // 4. Sync Scrolling
-                    topScrollContainer.onscroll = function() {
-                        tableContainer.scrollLeft = topScrollContainer.scrollLeft;
-                    };
-                    tableContainer.onscroll = function() {
-                        topScrollContainer.scrollLeft = tableContainer.scrollLeft;
-                    };
-                }
-            };
+        topScrollContainer.style.display = 'block';
+
+        topScrollContainer.onscroll = function () {
+            tableContainer.scrollLeft = topScrollContainer.scrollLeft;
+        };
+        tableContainer.onscroll = function () {
+            topScrollContainer.scrollLeft = tableContainer.scrollLeft;
+        };
+    }
+};
 
             // Run on Resize
             window.addEventListener('resize', () => {
