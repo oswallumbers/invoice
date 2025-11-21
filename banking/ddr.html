@@ -90,6 +90,43 @@
             content: '▼';
             color: #111827; /* text-gray-900 */
         }
+        /* --- NEW: Custom Scrollbar Styles --- */
+        /* This makes the scrollbar always visible and thicker */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 12px; /* Taller horizontal scrollbar */
+            width: 12px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888; /* Grey color handle */
+            border-radius: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555; /* Darker on hover */
+        }
+        
+        /* Make the Action column 'Sticky' to the right side */
+        /* This ensures the Edit buttons are always visible */
+        th.sticky-action, td.sticky-action {
+            position: sticky;
+            right: 0;
+            background-color: #f9fafb; /* Match header/row bg */
+            z-index: 10;
+            border-left: 1px solid #e5e7eb; /* Separator line */
+            box-shadow: -2px 0 5px rgba(0,0,0,0.05);
+        }
+        /* Adjust background for body rows to match white */
+        tbody td.sticky-action {
+            background-color: #ffffff;
+        }
+        /* Adjust background for colored rows (overdue/due-soon) */
+        tr.due-soon td.sticky-action { background-color: #e0f2fe !important; }
+        tr.due-tomorrow td.sticky-action { background-color: #fefcbf !important; }
+        tr.due-today td.sticky-action { background-color: #fee2e2 !important; }
+        tr.overdue td.sticky-action { background-color: #fca5a5 !important; }
     </style>
 </head>
 <body class="antialiased text-gray-800">
@@ -246,7 +283,7 @@
         </button>
     </div>
 </div>
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto custom-scrollbar pb-4">
                 <table id="lc-table" class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -267,7 +304,7 @@
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="chargesPercent">Charges %<span class="sort-icon"></span></th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="status">Status<span class="sort-icon"></span></th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Details</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky-action">Action</th>
                         </tr>
                     </thead>
                     <tbody id="lc-table-body" class="bg-white divide-y divide-gray-200">
@@ -719,7 +756,7 @@ async function initializeFirebase() {
                         totalOutstandingUsd += parseFloat(data.bankLiabilityUsd) || 0;
                     }
 
-                    tr.innerHTML = `
+                   tr.innerHTML = `
                         <td class="px-4 py-3">${formatDate(data.openDate)}</td>
                         <td class="px-4 py-3">${formatDate(data.dueDate)}</td>
                         <td class="px-4 py-3">${data.party || 'N/A'}</td>
@@ -747,7 +784,7 @@ async function initializeFirebase() {
                                 @: ${(Number(data.paymentFinalExRate) || 0).toFixed(4)}
                             ` : 'N/A'}
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-4 py-3 sticky-action">
                             ${data.status === 'Pending' ? `
                                 <button data-id="${docId}" class="edit-btn text-white bg-blue-600 hover:bg-blue-700 text-xs font-medium py-1 px-3 rounded-md shadow-sm">
                                     Edit
@@ -766,7 +803,6 @@ async function initializeFirebase() {
                         </td>
                     `;
                     tableBody.appendChild(tr);
-                });
 
                 totalOutstandingEl.textContent = formatCurrency(totalOutstandingUsd);
                 
@@ -785,20 +821,28 @@ async function initializeFirebase() {
                 });
             }
 
-            function sortData(records) {
+         function sortData(records) {
                 const key = currentSort.key;
                 const order = currentSort.order;
                 
                 records.sort((a, b) => {
+                    // --- 1. PRIMARY SORT: STATUS (Pending always first, Paid always last) ---
+                    if (a.status === 'Pending' && b.status === 'Paid') return -1;
+                    if (a.status === 'Paid' && b.status === 'Pending') return 1;
+
+                    // --- 2. SECONDARY SORT: Selected Column (Date, Amount, etc.) ---
                     let valA = a[key];
                     let valB = b[key];
 
+                    // Handle Timestamps (Firebase objects)
                     if (valA && typeof valA.toMillis === 'function') valA = valA.toMillis();
                     if (valB && typeof valB.toMillis === 'function') valB = valB.toMillis();
                     
+                    // Handle nulls/undefined
                     valA = valA || 0;
                     valB = valB || 0;
                     
+                    // Handle Strings (Case insensitive)
                     if (typeof valA === 'string') {
                         valA = valA.toLowerCase();
                         valB = valB.toLowerCase();
@@ -809,7 +853,6 @@ async function initializeFirebase() {
                     return 0;
                 });
             }
-            
             // --- Collect Form Data ---
             function getFormData() {
                 const openDateVal = document.getElementById('lcOpenDate').value;
