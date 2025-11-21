@@ -13,120 +13,93 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* Custom styles */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f4f7f6;
-            scroll-behavior: smooth;
-        }
-        /* Due date highlighting */
-        .due-soon { background-color: #e0f2fe !important; } /* bg-sky-100 */
-        .due-tomorrow { background-color: #fefcbf !important; } /* bg-yellow-100 */
-        .due-today { background-color: #fee2e2 !important; } /* bg-red-100 */
-        .overdue { background-color: #fca5a5 !important; font-weight: 600; } /* bg-red-300 */
-        
-        /* Disabled fields */
-        input:disabled, select:disabled { 
-            background-color: #f3f4f6; 
-            color: #6b7280; 
-            cursor: not-allowed;
-            border-color: #e5e7eb;
-        }
-        
-        /* Table layout */
-        #lc-table {
-            table-layout: auto; /* Let browser decide column widths */
-            width: 100%;
-        }
-        #lc-table th, #lc-table td {
-            padding: 0.75rem 1rem; /* Reduced padding */
-            white-space: nowrap; /* Keep table compact */
-        }
-        /* Allow specific columns to wrap */
-        #lc-table th.wrap, #lc-table td.wrap {
-            white-space: normal;
+        /* Base Font */
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; }
+
+        /* --- 1. SCROLLBAR FIX (Container) --- */
+        /* This limits the table height to 70% of the screen so the scrollbar is always visible */
+        .table-container {
+            max-height: 70vh; /* Adjust this if you want it taller/shorter */
+            overflow: auto;   /* Enables both X and Y scrolling */
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background-color: white;
+            position: relative;
         }
 
-    /* FIXED: Styles for Input fields to make them taller and cleaner */
-        input[type="text"], 
-        input[type="date"], 
-        input[type="number"], 
-        select {
-             height: 45px;
-             border: 1px solid #d1d5db;   /* Explicit 1px border */
-             padding: 0.6rem 0.75rem;     /* Adds internal space (Height & Width padding) */
-             border-radius: 0.375rem;     /* Smooth rounded corners */
-             font-size: 0.95rem;          /* Slightly clearer text size */
-             line-height: 1.5;            /* Prevents text from being cut off */
-             width: 100%;                 /* Ensures it fills the container */
-             background-color: #fff;      /* White background */
+        /* Custom Scrollbar Styling */
+        .table-container::-webkit-scrollbar { height: 12px; width: 12px; }
+        .table-container::-webkit-scrollbar-track { background: #f1f1f1; }
+        .table-container::-webkit-scrollbar-thumb { background: #888; border-radius: 6px; border: 3px solid #f1f1f1; }
+        .table-container::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* --- 2. BORDER LINES (Grid Look) --- */
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        
+        /* Add borders to every cell */
+        th, td {
+            border-bottom: 1px solid #d1d5db;
+            border-right: 1px solid #d1d5db;
+            padding: 0.75rem 1rem;
+        }
+        /* Remove right border from the last column to prevent double borders */
+        th:last-child, td:last-child { border-right: none; }
+
+        /* --- 3. STICKY HEADER (So headers don't disappear when scrolling down) --- */
+        thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f3f4f6; /* Light gray header bg */
+            z-index: 20; /* Above regular cells */
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
-        /* Focus state (when you click inside) */
-        input:focus, select:focus {
-            outline: none;
-            border-color: #4f46e5;        /* Indigo border on focus */
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); /* Soft glow effect */
-        }
-        /* NEW: Sortable header styles */
-        th[data-sort-key] {
-            cursor: pointer;
-            user-select: none;
-        }
-        th[data-sort-key]:hover {
-            background-color: #e5e7eb; /* bg-gray-200 */
-        }
-        .sort-icon {
-            display: inline-block;
-            margin-left: 0.5rem;
-            color: #9ca3af; /* text-gray-400 */
-            font-size: 0.65rem;
-        }
-        th.sort-asc .sort-icon::after {
-            content: '▲';
-            color: #111827; /* text-gray-900 */
-        }
-        th.sort-desc .sort-icon::after {
-            content: '▼';
-            color: #111827; /* text-gray-900 */
-        }
-        /* --- NEW: Custom Scrollbar Styles --- */
-        /* This makes the scrollbar always visible and thicker */
-        .custom-scrollbar::-webkit-scrollbar {
-            height: 12px; /* Taller horizontal scrollbar */
-            width: 12px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #888; /* Grey color handle */
-            border-radius: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #555; /* Darker on hover */
-        }
-        
-        /* Make the Action column 'Sticky' to the right side */
-        /* This ensures the Edit buttons are always visible */
+        /* --- 4. STICKY ACTION COLUMN (Right side) --- */
         th.sticky-action, td.sticky-action {
             position: sticky;
             right: 0;
-            background-color: #f9fafb; /* Match header/row bg */
+            background-color: #fff;
             z-index: 10;
-            border-left: 1px solid #e5e7eb; /* Separator line */
-            box-shadow: -2px 0 5px rgba(0,0,0,0.05);
+            border-left: 1px solid #d1d5db;
         }
-        /* Adjust background for body rows to match white */
-        tbody td.sticky-action {
-            background-color: #ffffff;
-        }
-        /* Adjust background for colored rows (overdue/due-soon) */
+        /* Ensure header action is above row action */
+        th.sticky-action { z-index: 30; background-color: #f3f4f6; }
+
+        /* Colored row backgrounds for sticky column */
         tr.due-soon td.sticky-action { background-color: #e0f2fe !important; }
         tr.due-tomorrow td.sticky-action { background-color: #fefcbf !important; }
         tr.due-today td.sticky-action { background-color: #fee2e2 !important; }
         tr.overdue td.sticky-action { background-color: #fca5a5 !important; }
+
+        /* Row Colors */
+        .due-soon { background-color: #e0f2fe !important; }
+        .due-tomorrow { background-color: #fefcbf !important; }
+        .due-today { background-color: #fee2e2 !important; }
+        .overdue { background-color: #fca5a5 !important; font-weight: 600; }
+
+        /* --- 5. WRAPPING CLASSES --- */
+        /* General No Wrap */
+        th, td { white-space: nowrap; }
+
+        /* Allow wrapping for specific columns */
+        .wrap-text {
+            white-space: normal !important; /* Force wrap */
+            min-width: 180px; /* Force width to make wrap happen */
+            max-width: 250px;
+            word-break: break-word; /* Break long numbers if needed */
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        /* Inputs */
+        input:focus { outline: 2px solid transparent; outline-offset: 2px; box-shadow: 0 0 0 2px #4f46e5; border-color: #4f46e5; }
+        input[type="text"], input[type="date"], input[type="number"], select {
+             height: 40px; border: 1px solid #d1d5db; padding: 0.5rem; border-radius: 0.375rem; width: 100%;
+        }
+        
+        /* Sort Icons */
+        th[data-sort-key] { cursor: pointer; user-select: none; }
+        th[data-sort-key]:hover { background-color: #e5e7eb; }
     </style>
 </head>
 <body class="antialiased text-gray-800">
@@ -269,42 +242,37 @@
             </form>
         </div>
 
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">    
-<div class="flex justify-between items-center p-6">
-    <h2 class="text-2xl font-semibold">Current LC / BC Records</h2>
-    <div class="flex space-x-2">
-        <input type="file" id="import-excel-input" accept=".xlsx, .xls" class="hidden" />
-        
-        <button type="button" id="trigger-import-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
-            Import Data
-        </button>
-        <button type="button" id="export-excel-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none">
-            Export to Excel
-        </button>
-    </div>
-</div>
-            <div class="overflow-x-auto custom-scrollbar pb-4">
-                <table id="lc-table" class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden mb-10">
+            <div class="flex justify-between items-center p-6">
+                <h2 class="text-2xl font-semibold">Current LC / BC Records</h2>
+                <div class="flex space-x-2">
+                     <input type="file" id="import-excel-input" accept=".xlsx, .xls" class="hidden" />
+                     <button type="button" id="trigger-import-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">Import Data</button>
+                     <button type="button" id="export-excel-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none">Export to Excel</button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="lc-table" class="min-w-full text-sm text-left">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="openDate">Open Date<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="dueDate">Due Date<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="party">Party<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="lcNumber">LC Number<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider wrap" data-sort-key="shipperName">Shipper Name<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="bankLiabilityUsd">Bank Liability (USD)<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="usdAmount">USD Amount<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="interestUsd">Interest (USD)<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="openExRate">Ex. Rate<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="inrAmount">INR Amount<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="usanceDays">Usance Days<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="lodgementNumber">Lodgement No.<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider wrap" data-sort-key="invoiceDetails">Invoice Details<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="debitChargesAmount">Debit Charges<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="chargesPercent">Charges %<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-sort-key="status">Status<span class="sort-icon"></span></th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Details</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky-action">Action</th>
+                            <th scope="col" data-sort-key="openDate">Open Date</th>
+                            <th scope="col" data-sort-key="dueDate">Due Date</th>
+                            <th scope="col" data-sort-key="party">Party</th>
+                            <th scope="col" data-sort-key="lcNumber">LC Number</th>
+                            <th scope="col" class="wrap-text" data-sort-key="shipperName">Shipper Name</th> <th scope="col" data-sort-key="bankLiabilityUsd">Bank Liability</th>
+                            <th scope="col" data-sort-key="usdAmount">USD Amount</th>
+                            <th scope="col" data-sort-key="interestUsd">Interest</th>
+                            <th scope="col" data-sort-key="openExRate">Ex. Rate</th>
+                            <th scope="col" data-sort-key="inrAmount">INR Amount</th>
+                            <th scope="col" data-sort-key="usanceDays">Usance</th>
+                            <th scope="col" class="wrap-text" data-sort-key="lodgementNumber">Lodgement No.</th>
+                            <th scope="col" class="wrap-text" data-sort-key="invoiceDetails">Invoice Details</th>
+                            <th scope="col" data-sort-key="debitChargesAmount">Debit Chg</th>
+                            <th scope="col" data-sort-key="chargesPercent">Chg %</th>
+                            <th scope="col" data-sort-key="status">Status</th>
+                            <th scope="col">Payment Details</th>
+                            <th scope="col" class="sticky-action">Action</th>
                         </tr>
                     </thead>
                     <tbody id="lc-table-body" class="bg-white divide-y divide-gray-200">
@@ -718,14 +686,13 @@ async function initializeFirebase() {
                     tableBody.innerHTML = `<tr><td colspan="18" class="px-6 py-10 text-center text-red-500">Error loading data.</td></tr>`;
                 });
             }
-
-            function renderTable(records) {
+function renderTable(records) {
                 tableBody.innerHTML = '';
                 let totalOutstandingUsd = 0;
                 let hasUrgentDues = false;
 
                 if (records.length === 0) {
-                    tableBody.innerHTML = `<tr><td colspan="18" class="px-6 py-10 text-center text-gray-500">No records found.</td></tr>`;
+                    tableBody.innerHTML = `<tr><td colspan="18" class="text-center py-10 text-gray-500">No records found.</td></tr>`;
                     totalOutstandingEl.textContent = '0.00';
                     return;
                 }
@@ -736,7 +703,7 @@ async function initializeFirebase() {
                 const dayAfterTomorrow = getStartOfDay(new Date());
                 dayAfterTomorrow.setDate(today.getDate() + 2);
                 
-                sortData(records); // Apply the current sort
+                sortData(records);
 
                 records.forEach(data => {
                     const docId = data.id;
@@ -755,22 +722,30 @@ async function initializeFirebase() {
                     if (data.status === 'Pending') {
                         totalOutstandingUsd += parseFloat(data.bankLiabilityUsd) || 0;
                     }
+                    
+                    // Helper to make comma-separated values wrap nicely
+                    const formatWrap = (text) => {
+                        if(!text) return 'N/A';
+                        // Replace comma with comma+space to ensure wrapping works
+                        return text.replace(/,/g, ', '); 
+                    };
 
-                    // Corrected Template Literal
                     tr.innerHTML = `
                         <td class="px-4 py-3">${formatDate(data.openDate)}</td>
                         <td class="px-4 py-3">${formatDate(data.dueDate)}</td>
                         <td class="px-4 py-3">${data.party || 'N/A'}</td>
                         <td class="px-4 py-3">${data.lcNumber || 'N/A'}</td>
-                        <td class="px-4 py-3 wrap">${data.shipperName || 'N/A'}</td>
+                        <td class="px-4 py-3 wrap-text">${data.shipperName || 'N/A'}</td>
                         <td class="px-4 py-3 font-medium">${formatCurrency(data.bankLiabilityUsd)}</td>
                         <td class="px-4 py-3">${formatCurrency(data.usdAmount)}</td>
                         <td class="px-4 py-3">${formatCurrency(data.interestUsd)}</td>
                         <td class="px-4 py-3">${(Number(data.openExRate) || 0).toFixed(4)}</td>
                         <td class="px-4 py-3">${formatCurrency(data.inrAmount)}</td>
                         <td class="px-4 py-3">${data.usanceDays || 'N/A'}</td>
-                        <td class="px-4 py-3">${data.lodgementNumber || 'N/A'}</td>
-                        <td class="px-4 py-3 wrap">${data.invoiceDetails || 'N/A'}</td>
+                        
+                        <td class="px-4 py-3 wrap-text">${formatWrap(data.lodgementNumber)}</td>
+                        
+                        <td class="px-4 py-3 wrap-text">${formatWrap(data.invoiceDetails)}</td>
                         <td class="px-4 py-3">${formatCurrency(data.debitChargesAmount)}</td>
                         <td class="px-4 py-3">${(Number(data.chargesPercent) || 0).toFixed(2)} %</td>
                         <td class="px-4 py-3">
@@ -791,10 +766,10 @@ async function initializeFirebase() {
                                     Edit
                                 </button>
                                 <button data-id="${docId}" data-lc-number="${data.lcNumber}" class="mark-paid-btn text-white bg-green-600 hover:bg-green-700 text-xs font-medium py-1 px-3 rounded-md shadow-sm mt-1">
-                                    Mark Paid
+                                    Paid
                                 </button>
                                 <button data-id="${docId}" class="delete-btn text-white bg-red-600 hover:bg-red-700 text-xs font-medium py-1 px-3 rounded-md shadow-sm mt-1">
-                                    Delete
+                                    Del
                                 </button>
                             ` : `
                                 <button data-id="${docId}" class="unmark-paid-btn text-white bg-gray-500 hover:bg-gray-600 text-xs font-medium py-1 px-3 rounded-md shadow-sm">
@@ -814,8 +789,9 @@ async function initializeFirebase() {
                 } else {
                     toast.classList.add('hidden');
                 }
-
-                document.querySelectorAll('th[data-sort-key]').forEach(th => {
+                
+                // Re-apply sorting classes
+                 document.querySelectorAll('th[data-sort-key]').forEach(th => {
                     th.classList.remove('sort-asc', 'sort-desc');
                     if (th.dataset.sortKey === currentSort.key) {
                         th.classList.add(currentSort.order === 'asc' ? 'sort-asc' : 'sort-desc');
