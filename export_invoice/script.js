@@ -163,11 +163,24 @@ function populateForm(data) {
         }
     }
 
-    function getFormData() {
+function getFormData() {
     const items = [];
-    let totalM3 = 0; // Keep track of M3 for the commercial invoice
+    let totalM3 = 0;
+    
+    // Allocation Map: किस Performa ID का कितना M3 इस इनवॉइस में है
+    let performaAllocation = {}; 
+
     itemsBody.querySelectorAll('tr').forEach(row => {
         const m3 = parseFloat(row.querySelector('.item-m3').value) || 0;
+        // Hidden input से source ID निकालें
+        const sourceIdInput = row.querySelector('.item-source-id');
+        const sourceId = sourceIdInput ? sourceIdInput.value : null;
+
+        if (sourceId) {
+            if (!performaAllocation[sourceId]) performaAllocation[sourceId] = 0;
+            performaAllocation[sourceId] += m3;
+        }
+
         items.push({
             sno: row.querySelector('.item-sno').value,
             desc: row.querySelector('.item-desc').value,
@@ -177,15 +190,26 @@ function populateForm(data) {
             uom: row.querySelector('.item-uom').value,
             m3: m3,
             rate: parseFloat(row.querySelector('.item-rate').value) || 0,
-            amount: parseFloat(row.querySelector('.item-amount').value) || 0
+            amount: parseFloat(row.querySelector('.item-amount').value) || 0,
+            sourcePerformaId: sourceId // आइटम लेवल पर भी सेव कर सकते हैं
         });
-        totalM3 += m3; // Add to this invoice's total
+        totalM3 += m3;
     });
 
     const selectedBuyerName = buyerSelect.options[buyerSelect.selectedIndex].text;
+    
+    // sourcePerformaId को अब हम Array के रूप में सेव करेंगे अगर मल्टीपल हैं
+    let sourceIdsValue = document.getElementById('source-performa-id').value;
+    try {
+        // अगर यह JSON string है (multi-select से), तो parse करें
+        if(sourceIdsValue.startsWith('[')) {
+            sourceIdsValue = JSON.parse(sourceIdsValue);
+        }
+    } catch(e) {}
 
     return {
-        sourcePerformaId: document.getElementById('source-performa-id').value, // <-- ADD THIS LINE
+        sourcePerformaId: sourceIdsValue, 
+        performaAllocation: performaAllocation, // यह नया फील्ड डैशबोर्ड के लिए है
         buyerName: (buyerSelect.value && selectedBuyerName !== '-- Select or Add New Buyer --') ? selectedBuyerName : '',
         sellerDetails: document.getElementById('seller-details').value,
         buyerDetails: document.getElementById('buyer-details').value,
@@ -203,7 +227,7 @@ function populateForm(data) {
         bankDetails: document.getElementById('bank-details').value,
         remarks: document.getElementById('remarks').value,
         totalAmount: parseFloat(document.getElementById('total-amount').textContent.replace('$', '')) || 0,
-        totalM3: totalM3, // <-- ADD THIS LINE to store the total M3 for this specific invoice
+        totalM3: totalM3,
         items: items
     };
 }
@@ -277,7 +301,7 @@ function populateForm(data) {
     addRowBtn.addEventListener('click', addRow);
     saveBtn.addEventListener('click', saveInvoice);
     buyerSelect.addEventListener('change', handleBuyerSelection);
-    document.getElementById('performa-select').addEventListener('change', handlePerformaSelection); // <-- ADD THIS LINE
+ 
 
     // This listener is unchanged.
     itemsBody.addEventListener('input', function(e) {
@@ -351,23 +375,110 @@ function populateForm(data) {
         }).catch(error => console.error("Error loading performa invoices: ", error));
     }
 
-    function handlePerformaSelection(e) {
-        const piId = e.target.value;
-        // Add this line to store the selected ID
-        document.getElementById('source-performa-id').value = piId;
+// --- New Logic for Merging Multiple Proforma Invoices ---
 
-        if (!piId) {
-            // Optional: You could clear the form if the user selects the default option
-            return;
-        }
-        db.collection('performaInvoices').doc(piId).get().then(doc => {
-            if (doc.exists) {
-                populateFormFromPerforma(doc.data());
-            }
-        }).catch(error => console.error("Error fetching performa invoice:", error));
+document.getElementById('load-merge-btn').addEventListener('click', loadSelectedPerformaInvoices);
+
+async function loadSelectedPerformaInvoices() {
+    const select = document.getElementById('performa-select');
+    const selectedOptions = Array.from(select.selectedOptions);
+    
+    if (selectedOptions.length === 0) {
+        alert("Please select at least one Proforma Invoice.");
+        return;
     }
 
-    // In script.js, replace the entire populateFormFromPerforma function
+    const selectedIds = selectedOptions.map(opt => opt.value);
+    
+    try {
+        // सभी सेलेक्ट किए गए डॉक्यूमेंट्स को fetch करें
+        const promises = selectedIds.map(id => db.collection('performaInvoices').doc(id).get());
+        const snapshots = await Promise.all(promises);
+        
+        const performaDocs = snapshots.map(snap => ({ id: snap.id, ...snap.data() }));
+        
+        // वैलिडेशन: चेक करें कि सभी PI का बायर (Buyer) एक ही है या नहीं
+        const firstBuyer = performaDocs[0].buyerName;
+        const isSameBuyer = performaDocs.every(doc => doc.buyerName === firstBuyer);
+        
+        if (!isSameBuyer) {
+            alert("Error: Selected Proforma Invoices belong to different buyers. You can only merge invoices for the same buyer.");
+            return;
+        }
+
+        // फॉर्म को पहले PI के डिटेल्स से भरें (Seller, Buyer, Terms etc.)
+        populateHeaderFromPerforma(performaDocs[0]);
+
+        // आइटम्स टेबल को खाली करें और सभी PI के आइटम्स जोड़ें
+        const itemsBody = document.getElementById('items-body');
+        itemsBody.innerHTML = ''; 
+        let currentSno = 0;
+
+        // यह Hidden Input हमें ट्रैक करने में मदद करेगा कि कौन सा PI जुड़ा है
+        document.getElementById('source-performa-id').value = JSON.stringify(selectedIds);
+
+        performaDocs.forEach(doc => {
+            doc.items.forEach(item => {
+                currentSno++;
+                addMergedRow(item, currentSno, doc.id, doc.performaInvoiceNo);
+            });
+        });
+
+        updateTotals();
+        alert(`Successfully merged ${selectedIds.length} Proforma Invoices.`);
+
+    } catch (error) {
+        console.error("Error merging invoices:", error);
+        alert("Error loading data.");
+    }
+}
+
+function populateHeaderFromPerforma(data) {
+    // बायर और अन्य डिटेल्स सेट करें
+    document.getElementById('buyer-details').value = data.buyerDetails || '';
+    document.getElementById('terms').value = data.terms || '';
+    
+    const buyerSelect = document.getElementById('buyer-select');
+    if (data.buyerName) {
+        for (let i = 0; i < buyerSelect.options.length; i++) {
+            if (buyerSelect.options[i].text === data.buyerName) {
+                buyerSelect.selectedIndex = i;
+                break;
+            }
+        }
+    }
+    buyerSelect.dispatchEvent(new Event('change'));
+    
+    // बाकी फील्ड्स को खाली करें जो मैनुअल भरने हैं
+    document.getElementById('container-no').value = '';
+    document.getElementById('gross-weight').value = '';
+    document.getElementById('net-weight').value = '';
+}
+
+function addMergedRow(itemData, sno, sourceId, sourceNo) {
+    const itemsBody = document.getElementById('items-body');
+    const row = document.createElement('tr');
+    
+    // यहाँ हम एक hidden attribute 'data-source-id' जोड़ रहे हैं
+    row.innerHTML = `
+        <td class="px-2 py-1 align-top">
+            <input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${sno}" readonly>
+            <input type="hidden" class="item-source-id" value="${sourceId}"> 
+        </td>
+        <td class="px-2 py-1">
+            <input type="text" class="item-desc w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemData.dimension || ''}">
+            <input type="text" class="item-comment w-full border-gray-300 rounded-md shadow-sm text-sm mt-1 px-2 py-1 text-gray-500" placeholder="Ref: ${sourceNo}" value="Ref: ${sourceNo}">
+        </td>
+        <td class="px-2 py-1 align-top"><input type="text" class="item-hsn w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemData.hsn || ''}"></td>
+        <td class="px-2 py-1 align-top"><input type="number" class="item-qty w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="" min="0" placeholder="Qty"></td>
+        <td class="px-2 py-1 align-top"><input type="text" class="item-uom w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="PCS"></td>
+        <td class="px-2 py-1 align-top"><input type="number" class="item-m3 w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemData.m3 || 0}" step="0.001"></td>
+        <td class="px-2 py-1 align-top"><input type="number" class="item-rate w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${itemData.rate || 0}" step="0.01"></td>
+        <td class="px-2 py-1 align-top"><input type="text" class="item-amount w-full bg-gray-100 border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${(itemData.m3 * itemData.rate).toFixed(2)}" readonly></td>
+        <td class="px-2 py-1 align-top text-center"><button type="button" class="delete-row-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button></td>
+    `;
+    itemsBody.appendChild(row);
+}
 
 function populateFormFromPerforma(data) {
     // Populate buyer and shipment details
