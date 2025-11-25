@@ -163,6 +163,460 @@ function populateForm(data) {
         }
     }
 
+// ==========================================
+// UPDATED EXCEL EXPORT (Fixing Height/Width)
+// ==========================================
+
+window.exportInvoiceExcel = function() {
+    const data = getFormData();
+    const wb = XLSX.utils.book_new();
+    
+    // --- 1. STYLES ---
+    const thinBorder = { style: "thin", color: { rgb: "000000" } };
+    const borderAll = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+
+    const styles = {
+        company: { font: { bold: true, sz: 18, name: "Arial" }, alignment: { horizontal: "center", vertical: "center" } },
+        address: { font: { sz: 10, name: "Arial" }, alignment: { horizontal: "center", vertical: "center" } },
+        titleBox: { font: { bold: true, sz: 14 }, alignment: { horizontal: "center", vertical: "center" }, fill: { fgColor: { rgb: "D9D9D9" } }, border: borderAll },
+        labelBold: { font: { bold: true, sz: 10 }, alignment: { horizontal: "left", vertical: "top" } },
+        textNormal: { font: { sz: 10 }, alignment: { horizontal: "left", vertical: "top", wrapText: true } }, // wrapText is key
+        tableHeader: { font: { bold: true, sz: 10 }, border: borderAll, alignment: { horizontal: "center", vertical: "center", wrapText: true }, fill: { fgColor: { rgb: "F2F2F2" } } },
+        cellBorder: { border: borderAll, alignment: { horizontal: "left", vertical: "top", wrapText: true } },
+        cellCenter: { border: borderAll, alignment: { horizontal: "center", vertical: "top", wrapText: true } },
+        cellNum: { border: borderAll, alignment: { horizontal: "right", vertical: "top" } },
+        totalRow: { font: { bold: true }, border: borderAll, alignment: { horizontal: "right", vertical: "center" } }
+    };
+
+    let ws_data = [];
+    let merges = [];
+    let rowHeights = []; // यह नया Array है Row Heights कंट्रोल करने के लिए
+    let row = 0;
+
+    // Helper: Row Add karne ke liye aur Height set karne ke liye
+    // height = pixels (e.g., 20 is standard, 40 is double)
+    const addRow = (rowData, height = 20) => {
+        ws_data.push(rowData);
+        rowHeights.push({ hpx: height });
+        row++;
+    };
+
+    const emptyRow = () => new Array(8).fill({ v: "", s: {} });
+
+    // --- HEADER ---
+    let r0 = emptyRow(); r0[0] = { v: "OSWAL LUMBERS PVT. LTD.", s: styles.company };
+    addRow(r0, 30); // Height 30
+    merges.push({ s: {r:0, c:0}, e: {r:0, c:7} });
+
+    let r1 = emptyRow(); r1[0] = { v: "SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA", s: styles.address };
+    addRow(r1, 20);
+    merges.push({ s: {r:1, c:0}, e: {r:1, c:7} });
+
+    let r2 = emptyRow(); r2[0] = { v: "E-MAIL: info@oswallumbers.com", s: styles.address };
+    addRow(r2, 20);
+    merges.push({ s: {r:2, c:0}, e: {r:2, c:7} });
+
+    addRow(emptyRow(), 15); // Gap
+
+    // --- INVOICE TITLE ---
+    let r4 = emptyRow(); r4[0] = { v: "INVOICE", s: styles.titleBox };
+    for(let i=1; i<=7; i++) r4[i] = { v: "", s: styles.titleBox };
+    addRow(r4, 25);
+    merges.push({ s: {r:4, c:0}, e: {r:4, c:7} });
+
+    addRow(emptyRow(), 15); // Gap
+
+    // --- PARTY DETAILS (Fixed Height Logic) ---
+    // समस्या यहाँ थी: टेक्स्ट लम्बा है लेकिन Row छोटी थी।
+    // हम 3 Rows का उपयोग कर रहे हैं (7, 8, 9), हम इनकी हाइट बढ़ा देंगे।
+    
+    const clean = (txt) => txt ? txt.replace(/\n/g, "\n") : "";
+    const buyerFull = data.buyerName + (data.buyerDetails ? "\n" + clean(data.buyerDetails) : "");
+
+    // Row 6
+    let r6 = emptyRow();
+    r6[0] = { v: "SELLER / SHIPPER:", s: styles.labelBold };
+    r6[4] = { v: "INVOICE NO:", s: styles.labelBold };
+    r6[5] = { v: data.invoiceNo, s: styles.textNormal };
+    addRow(r6, 20);
+    merges.push({ s: {r:6, c:5}, e: {r:6, c:7} });
+
+    // Row 7 (Seller Address Start) - **HEIGHT INCREASED TO 45**
+    let r7 = emptyRow();
+    r7[0] = { v: clean(data.sellerDetails), s: styles.textNormal };
+    r7[4] = { v: "DATE:", s: styles.labelBold };
+    r7[5] = { v: data.invoiceDate, s: styles.textNormal };
+    addRow(r7, 40); 
+    merges.push({ s: {r:7, c:0}, e: {r:9, c:3} }); // Seller Addr merge down 3 rows
+    merges.push({ s: {r:7, c:5}, e: {r:7, c:7} });
+
+    // Row 8 - **HEIGHT INCREASED TO 45**
+    let r8 = emptyRow();
+    r8[4] = { v: "TERMS:", s: styles.labelBold };
+    r8[5] = { v: data.terms, s: styles.textNormal };
+    addRow(r8, 40);
+    merges.push({ s: {r:8, c:5}, e: {r:8, c:7} });
+
+    // Row 9 - **HEIGHT INCREASED TO 45**
+    let r9 = emptyRow();
+    r9[4] = { v: "PORT LOADING:", s: styles.labelBold };
+    r9[5] = { v: data.portLoading, s: styles.textNormal };
+    addRow(r9, 40);
+    merges.push({ s: {r:9, c:5}, e: {r:9, c:7} });
+
+    // Buyer Section
+    let r10 = emptyRow();
+    r10[0] = { v: "BUYER / CONSIGNEE:", s: styles.labelBold };
+    r10[4] = { v: "PORT DISCHARGE:", s: styles.labelBold };
+    r10[5] = { v: data.portDischarge, s: styles.textNormal };
+    addRow(r10, 20);
+    merges.push({ s: {r:10, c:5}, e: {r:10, c:7} });
+
+    // Buyer Address Rows - **HEIGHT INCREASED TO 45 EACH**
+    let r11 = emptyRow();
+    r11[0] = { v: buyerFull, s: styles.textNormal };
+    r11[4] = { v: "ORIGIN:", s: styles.labelBold };
+    r11[5] = { v: data.countryOrigin, s: styles.textNormal };
+    addRow(r11, 40);
+    merges.push({ s: {r:11, c:0}, e: {r:13, c:3} }); // Buyer Addr merge
+    merges.push({ s: {r:11, c:5}, e: {r:11, c:7} });
+
+    addRow(emptyRow(), 40); // Filler for Buyer merge
+    addRow(emptyRow(), 40); // Filler for Buyer merge
+
+    addRow(emptyRow(), 20); // Gap
+
+    // --- TABLE HEADER ---
+    const headers = ["S. NO.", "DESCRIPTION OF ITEM", "HSN CODE", "QTY", "UOM", "M3", "RATE (US$)", "AMOUNT (US$)"];
+    let headRow = headers.map(h => ({ v: h, s: styles.tableHeader }));
+    addRow(headRow, 30);
+
+    // --- TABLE ITEMS (Dynamic Height) ---
+    data.items.forEach(item => {
+        let desc = item.desc;
+        if(item.comment) desc += `\n(${item.comment})`;
+
+        // Calculate needed height roughly
+        // Approx 60 chars per line roughly in that column width. 
+        // 1 line = 20px. 
+        const lineCount = desc.split('\n').length + Math.floor(desc.length / 50);
+        const rowHeight = Math.max(25, lineCount * 18); // Min 25px
+
+        let r = [
+            { v: item.sno, s: styles.cellCenter },
+            { v: desc, s: styles.cellBorder },
+            { v: item.hsn, s: styles.cellCenter },
+            { v: item.qty, s: styles.cellCenter },
+            { v: item.uom, s: styles.cellCenter },
+            { v: item.m3, s: styles.cellNum },
+            { v: item.rate, s: styles.cellNum },
+            { v: item.amount, s: styles.cellNum }
+        ];
+        addRow(r, rowHeight);
+    });
+
+    // --- TOTALS ---
+    let totalRow = emptyRow();
+    totalRow[0] = { v: "TOTAL", s: styles.totalRow };
+    totalRow[1] = { v: "", s: styles.totalRow }; 
+    totalRow[2] = { v: "", s: styles.totalRow };
+    totalRow[3] = { v: document.getElementById('total-qty').textContent, s: styles.totalRow };
+    totalRow[4] = { v: "", s: { border: borderAll } };
+    totalRow[5] = { v: document.getElementById('total-m3').textContent, s: styles.totalRow };
+    totalRow[6] = { v: "", s: { border: borderAll } };
+    totalRow[7] = { v: document.getElementById('total-amount').textContent.replace('$',''), s: styles.totalRow };
+    
+    addRow(totalRow, 25);
+    merges.push({ s: {r:row-1, c:0}, e: {r:row-1, c:2} });
+
+    addRow(emptyRow(), 20);
+
+    // --- FOOTER ---
+    const addFooterLine = (label, val) => {
+        let r = emptyRow();
+        r[0] = { v: label, s: styles.labelBold };
+        r[1] = { v: val, s: styles.textNormal };
+        addRow(r, 20);
+        merges.push({ s: {r:row-1, c:1}, e: {r:row-1, c:3} });
+    };
+
+    addFooterLine("CONTAINER NO:", data.containerNo);
+    addFooterLine("SIZE:", data.containerSize);
+    addFooterLine("TOTAL ITEMS:", data.totalItems);
+    addFooterLine("GROSS WEIGHT:", data.grossWeight);
+    addFooterLine("NET WEIGHT:", data.netWeight);
+
+    addRow(emptyRow(), 20);
+
+    let wordRow = emptyRow();
+    wordRow[0] = { v: "AMOUNT IN WORDS: " + amountToWords(data.totalAmount), s: styles.labelBold };
+    addRow(wordRow, 25);
+    merges.push({ s: {r:row-1, c:0}, e: {r:row-1, c:7} });
+
+    addRow(emptyRow(), 20);
+
+    let bankTitle = emptyRow();
+    bankTitle[0] = { v: "BANK DETAILS:", s: styles.labelBold };
+    addRow(bankTitle, 20);
+
+    const bankLines = data.bankDetails.split('\n');
+    bankLines.forEach(line => {
+        let r = emptyRow();
+        r[0] = { v: line, s: styles.textNormal };
+        addRow(r, 20);
+        merges.push({ s: {r:row-1, c:0}, e: {r:row-1, c:5} });
+    });
+
+    addRow(emptyRow(), 20);
+    addRow(emptyRow(), 20);
+
+    let signRow = emptyRow();
+    signRow[5] = { v: "For, OSWAL LUMBERS PVT. LTD.", s: { font: { bold: true }, alignment: { horizontal: "right" } } };
+    addRow(signRow, 25);
+    merges.push({ s: {r:row-1, c:5}, e: {r:row-1, c:7} });
+
+    addRow(emptyRow(), 40); // Space for sign
+    
+    let authRow = emptyRow();
+    authRow[5] = { v: "AUTHORISED SIGNATORY", s: { font: { bold: true }, alignment: { horizontal: "right" } } };
+    addRow(authRow, 25);
+    merges.push({ s: {r:row-1, c:5}, e: {r:row-1, c:7} });
+
+    // --- FILE CREATION ---
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    ws['!merges'] = merges;
+    ws['!rows'] = rowHeights; // यह है वो जादू जो Row Height ठीक करेगा
+    
+   ws['!cols'] = [
+        { wch: 25 }, // Col A: "SELLER/SHIPPER" के लिए चौड़ाई 8 से बढ़ाकर 25 कर दी है
+        { wch: 50 }, // Col B: Description
+        { wch: 12 }, // Col C: HSN
+        { wch: 10 }, // Col D: Qty
+        { wch: 25 }, // Col E: "PORT DISCHARGE" आदि के लिए चौड़ाई 8 से बढ़ाकर 25 कर दी है
+        { wch: 12 }, // Col F: M3
+        { wch: 12 }, // Col G: Rate
+        { wch: 15 }  // Col H: Amount
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Invoice");
+    XLSX.writeFile(wb, `Invoice_${data.invoiceNo.replace(/\//g, '-')}.xlsx`);
+};
+
+// ==========================================
+// PACKING LIST EXPORT (Final Fixes)
+// ==========================================
+
+window.exportPackingListExcel = function() {
+    const data = getFormData();
+    const wb = XLSX.utils.book_new();
+
+    // --- 1. Helper Functions ---
+    // Date Format Converter (YYYY-MM-DD to DD-MM-YYYY)
+    const formatDateIndian = (dateString) => {
+        if (!dateString) return "";
+        const [year, month, day] = dateString.split('-');
+        return `${day}-${month}-${year}`;
+    };
+
+    const clean = (txt) => txt ? txt.replace(/\n/g, "\n") : "";
+
+    // --- 2. STYLES ---
+    const thinBorder = { style: "thin", color: { rgb: "000000" } };
+    const borderAll = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+
+    const styles = {
+        company: { font: { bold: true, sz: 18, name: "Arial" }, alignment: { horizontal: "center", vertical: "center" } },
+        address: { font: { sz: 10, name: "Arial" }, alignment: { horizontal: "center", vertical: "center" } },
+        titleBox: { font: { bold: true, sz: 14 }, alignment: { horizontal: "center", vertical: "center" }, fill: { fgColor: { rgb: "D9D9D9" } }, border: borderAll },
+        labelBold: { font: { bold: true, sz: 10 }, alignment: { horizontal: "left", vertical: "top" } },
+        textNormal: { font: { sz: 10 }, alignment: { horizontal: "left", vertical: "top", wrapText: true } },
+        tableHeader: { font: { bold: true, sz: 10 }, border: borderAll, alignment: { horizontal: "center", vertical: "center", wrapText: true }, fill: { fgColor: { rgb: "F2F2F2" } } },
+        cellBorder: { border: borderAll, alignment: { horizontal: "left", vertical: "top", wrapText: true } },
+        cellCenter: { border: borderAll, alignment: { horizontal: "center", vertical: "top", wrapText: true } },
+        cellNum: { border: borderAll, alignment: { horizontal: "right", vertical: "top" } },
+        totalRow: { font: { bold: true }, border: borderAll, alignment: { horizontal: "right", vertical: "center" } }
+    };
+
+    let ws_data = [];
+    let merges = [];
+    let rowHeights = [];
+    let row = 0;
+
+    const addRow = (rowData, height = 20) => {
+        ws_data.push(rowData);
+        rowHeights.push({ hpx: height });
+        row++;
+    };
+    const emptyRow = () => new Array(6).fill({ v: "", s: {} });
+
+    // --- 3. HEADER SECTION ---
+    
+    // Row 0: Company Name
+    let r0 = emptyRow(); r0[0] = { v: "OSWAL LUMBERS PVT. LTD.", s: styles.company };
+    addRow(r0, 30);
+    merges.push({ s: {r:0, c:0}, e: {r:0, c:5} });
+
+    // Row 1: Company Address (जो पहले मिसिंग था)
+    let r1 = emptyRow(); r1[0] = { v: "SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA", s: styles.address };
+    addRow(r1, 20);
+    merges.push({ s: {r:1, c:0}, e: {r:1, c:5} });
+
+    // Row 2: Email (जो पहले मिसिंग था)
+    let r2 = emptyRow(); r2[0] = { v: "E-MAIL: info@oswallumbers.com", s: styles.address };
+    addRow(r2, 20);
+    merges.push({ s: {r:2, c:0}, e: {r:2, c:5} });
+
+    addRow(emptyRow(), 15);
+
+    // Row 4: Title
+    let r4 = emptyRow(); r4[0] = { v: "PACKING LIST", s: styles.titleBox };
+    for(let i=1; i<=5; i++) r4[i] = { v: "", s: styles.titleBox };
+    addRow(r4, 25);
+    merges.push({ s: {r:4, c:0}, e: {r:4, c:5} });
+
+    addRow(emptyRow(), 15);
+
+    // --- 4. SELLER / BUYER & SHIPPING DETAILS ---
+    // Layout: Col A-B (Left), Col C-F (Right)
+
+    const buyerInfo = data.buyerName + (data.buyerDetails ? "\n" + clean(data.buyerDetails) : "");
+
+    // Row 6: Seller Label | Invoice No
+    let r6 = emptyRow();
+    r6[0] = { v: "SELLER:", s: styles.labelBold };
+    r6[2] = { v: "INVOICE NO:", s: styles.labelBold };
+    r6[3] = { v: data.invoiceNo, s: styles.textNormal };
+    addRow(r6, 20);
+    merges.push({ s: {r:6, c:3}, e: {r:6, c:5} }); // Merge Invoice Value
+
+    // Row 7: Seller Address | Date
+    let r7 = emptyRow();
+    r7[0] = { v: clean(data.sellerDetails), s: styles.textNormal };
+    r7[2] = { v: "DATE:", s: styles.labelBold };
+    r7[3] = { v: formatDateIndian(data.invoiceDate), s: styles.textNormal }; // Indian Date
+    addRow(r7, 70); // HEIGHT INCREASED FOR SELLER ADDRESS
+    merges.push({ s: {r:7, c:0}, e: {r:9, c:1} }); // Merge Seller Down (3 rows) & Across
+    merges.push({ s: {r:7, c:3}, e: {r:7, c:5} });
+
+    // Row 8: (Seller cont.) | Terms
+    let r8 = emptyRow();
+    r8[2] = { v: "TERMS:", s: styles.labelBold };
+    r8[3] = { v: data.terms, s: styles.textNormal };
+    addRow(r8, 25);
+    merges.push({ s: {r:8, c:3}, e: {r:8, c:5} });
+
+    // Row 9: (Seller cont.) | Port Loading
+    let r9 = emptyRow();
+    r9[2] = { v: "PORT LOADING:", s: styles.labelBold };
+    r9[3] = { v: data.portLoading, s: styles.textNormal };
+    addRow(r9, 25);
+    merges.push({ s: {r:9, c:3}, e: {r:9, c:5} });
+
+    // Row 10: Buyer Label | Port Discharge
+    let r10 = emptyRow();
+    r10[0] = { v: "BUYER:", s: styles.labelBold };
+    r10[2] = { v: "PORT DISCHARGE:", s: styles.labelBold };
+    r10[3] = { v: data.portDischarge, s: styles.textNormal };
+    addRow(r10, 20);
+    merges.push({ s: {r:10, c:3}, e: {r:10, c:5} });
+
+    // Row 11: Buyer Address | Origin
+    let r11 = emptyRow();
+    r11[0] = { v: buyerInfo, s: styles.textNormal };
+    r11[2] = { v: "ORIGIN:", s: styles.labelBold };
+    r11[3] = { v: data.countryOrigin, s: styles.textNormal };
+    addRow(r11, 70); // HEIGHT INCREASED FOR BUYER ADDRESS
+    merges.push({ s: {r:11, c:0}, e: {r:12, c:1} }); // Merge Buyer Down
+    merges.push({ s: {r:11, c:3}, e: {r:11, c:5} });
+
+    // Spacer row for Buyer merge
+    let r12 = emptyRow();
+    addRow(r12, 20); // Dummy row for merge
+
+    addRow(emptyRow(), 20);
+
+    // --- 5. ITEMS TABLE ---
+    const headers = ["S. NO.", "DESCRIPTION", "HSN", "QTY", "UOM", "M3"];
+    let headRow = headers.map(h => ({ v: h, s: styles.tableHeader }));
+    addRow(headRow, 30);
+
+    data.items.forEach(item => {
+        let desc = item.desc;
+        if(item.comment) desc += `\n(${item.comment})`;
+
+        // Dynamic Height
+        const lineCount = desc.split('\n').length + Math.floor(desc.length / 50);
+        const h = Math.max(25, lineCount * 18);
+
+        let r = [
+            { v: item.sno, s: styles.cellCenter },
+            { v: desc, s: styles.cellBorder },
+            { v: item.hsn, s: styles.cellCenter },
+            { v: item.qty, s: styles.cellCenter },
+            { v: item.uom, s: styles.cellCenter },
+            { v: item.m3, s: styles.cellNum }
+        ];
+        addRow(r, h);
+    });
+
+    // --- 6. TOTALS ---
+    let tot = emptyRow();
+    tot[0] = { v: "TOTAL", s: styles.totalRow };
+    tot[3] = { v: document.getElementById('total-qty').textContent, s: styles.totalRow };
+    tot[4] = { v: "", s: { border: borderAll } }; // Empty border for UOM
+    tot[5] = { v: document.getElementById('total-m3').textContent, s: styles.totalRow };
+    
+    addRow(tot, 25);
+    merges.push({ s: {r:row-1, c:0}, e: {r:row-1, c:2} });
+
+    addRow(emptyRow(), 20);
+
+    // --- 7. WEIGHTS ---
+    const addWeightRow = (lbl, val) => {
+        let r = emptyRow();
+        r[0] = { v: lbl, s: styles.labelBold };
+        r[1] = { v: val, s: styles.textNormal };
+        addRow(r, 20);
+        merges.push({ s: {r:row-1, c:1}, e: {r:row-1, c:2} });
+    };
+
+    addWeightRow("GROSS WEIGHT:", data.grossWeight);
+    addWeightRow("NET WEIGHT:", data.netWeight);
+
+    addRow(emptyRow(), 20);
+
+    // Signature
+    let signRow = emptyRow();
+    signRow[3] = { v: "For, OSWAL LUMBERS PVT. LTD.", s: { font: { bold: true }, alignment: { horizontal: "right" } } };
+    addRow(signRow, 25);
+    merges.push({ s: {r:row-1, c:3}, e: {r:row-1, c:5} });
+
+    addRow(emptyRow(), 40);
+    
+    let authRow = emptyRow();
+    authRow[3] = { v: "AUTHORISED SIGNATORY", s: { font: { bold: true }, alignment: { horizontal: "right" } } };
+    addRow(authRow, 25);
+    merges.push({ s: {r:row-1, c:3}, e: {r:row-1, c:5} });
+
+    // --- 8. FILE CREATION ---
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    ws['!merges'] = merges;
+    ws['!rows'] = rowHeights;
+    
+    // Column Widths (Fixed)
+    ws['!cols'] = [
+        { wch: 25 }, // Col A: Seller Label / S.No (Increased width)
+        { wch: 50 }, // Col B: Description / Address
+        { wch: 18 }, // Col C: Labels (Inv No, Ports) / HSN
+        { wch: 12 }, // Col D: Values / Qty
+        { wch: 8 },  // Col E: UOM
+        { wch: 15 }  // Col F: M3
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "PackingList");
+    XLSX.writeFile(wb, `PackingList_${data.invoiceNo.replace(/\//g, '-')}.xlsx`);
+};
+
 function getFormData() {
     const items = [];
     let totalM3 = 0;
