@@ -143,14 +143,48 @@
                     });
                 });
 
-                commercialSnapshot.forEach(doc => {
-                    const commercialData = { id: doc.id, ...doc.data() };
-                    if (commercialData.sourcePerformaId && performaDataMap.has(commercialData.sourcePerformaId)) {
-                        const performaEntry = performaDataMap.get(commercialData.sourcePerformaId);
-                        performaEntry.invoicedM3 += (commercialData.totalM3 || 0);
-                        performaEntry.linkedInvoices.push(commercialData);
-                    }
-                });
+                // पुराने commercialSnapshot.forEach लूप को इससे बदलें:
+
+commercialSnapshot.forEach(doc => {
+    const commercialData = { id: doc.id, ...doc.data() };
+    
+    // Logic 1: अगर नई 'performaAllocation' मौजूद है (Merged Invoice)
+    if (commercialData.performaAllocation) {
+        Object.keys(commercialData.performaAllocation).forEach(pId => {
+            if (performaDataMap.has(pId)) {
+                const performaEntry = performaDataMap.get(pId);
+                // सटीक M3 जो इस PI से लिया गया है
+                performaEntry.invoicedM3 += (commercialData.performaAllocation[pId] || 0);
+                
+                // डुप्लीकेट एंट्री से बचने के लिए चेक करें
+                if (!performaEntry.linkedInvoices.some(inv => inv.id === commercialData.id)) {
+                    performaEntry.linkedInvoices.push(commercialData);
+                }
+            }
+        });
+    } 
+    // Logic 2: पुराना तरीका (Single PI के लिए, या पुराने डेटा के लिए)
+    else if (commercialData.sourcePerformaId) {
+        // अगर sourcePerformaId एक Array है (बिना allocation के)
+        const sourceIds = Array.isArray(commercialData.sourcePerformaId) 
+                          ? commercialData.sourcePerformaId 
+                          : [commercialData.sourcePerformaId];
+                          
+        sourceIds.forEach(pId => {
+            if (performaDataMap.has(pId)) {
+                const performaEntry = performaDataMap.get(pId);
+                // पुराने तरीके में हम मान लेते हैं कि पूरा totalM3 इसी PI का है
+                // (Note: Merged invoices बिना allocation के यहाँ गलत बैलेंस दिखा सकते हैं, 
+                // इसलिए getFormData में allocation save करना जरूरी है)
+                performaEntry.invoicedM3 += (commercialData.totalM3 || 0);
+                
+                if (!performaEntry.linkedInvoices.some(inv => inv.id === commercialData.id)) {
+                    performaEntry.linkedInvoices.push(commercialData);
+                }
+            }
+        });
+    }
+});
 
                 // Populate Proforma Invoices List
                 performaList.innerHTML = '';
@@ -559,11 +593,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
