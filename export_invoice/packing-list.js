@@ -92,10 +92,20 @@ function generatePackingList() {
     const body = [];
     const itemsBody = document.getElementById('items-body');
 
-    itemsBody.querySelectorAll('tr').forEach(row => {
+   itemsBody.querySelectorAll('tr').forEach(row => {
+        const description = row.querySelector('.item-desc').value;
+        // नया कमेंट (Ref PI No) यहाँ से उठाएं
+        const comment = row.querySelector('.item-comment') ? row.querySelector('.item-comment').value : ''; 
+        
+        // डिस्क्रिप्शन और कमेंट को जोड़ें
+        let fullDescription = description;
+        if (comment && comment.trim() !== '') {
+            fullDescription += `\n${comment}`;
+        }
+
         body.push([
             row.querySelector('.item-sno').value,
-            row.querySelector('.item-desc').value,
+            fullDescription, // अब इसमें PI का रेफरेंस भी आएगा
             row.querySelector('.item-hsn').value,
             row.querySelector('.item-qty').value,
             row.querySelector('.item-uom').value,
