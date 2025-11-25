@@ -20,6 +20,7 @@
      <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
 </head>
 <body class="bg-pink-50">
 
@@ -178,6 +179,13 @@ A/C NO.: 560101000092024</textarea>
                 <button type="submit" class="bg-green-600 text-white font-bold py-3 px-5 rounded-lg shadow-lg hover:bg-green-700 transition-all">Generate Invoice PDF</button>
                 <button type="button" class="bg-yellow-500 text-white font-bold py-3 px-5 rounded-lg shadow-lg hover:bg-yellow-600 transition-all" id="packing-list-btn">Generate Packing List</button>
                 <button type="button" class="bg-red-500 text-white font-bold py-3 px-5 rounded-lg shadow-lg hover:bg-red-600 transition-all" id="open-annexure-modal-btn">Generate Annexure</button>
+                <button type="button" onclick="exportInvoiceExcel()" class="bg-green-800 text-white font-bold py-3 px-5 rounded-lg shadow-lg hover:bg-green-900 transition-all">
+                    <i class="fas fa-file-excel"></i> Export Invoice Excel
+                </button>
+
+                <button type="button" onclick="exportPackingListExcel()" class="bg-yellow-600 text-white font-bold py-3 px-5 rounded-lg shadow-lg hover:bg-yellow-700 transition-all">
+                    <i class="fas fa-file-excel"></i> Export Packing List Excel
+                </button>
             </div>
         </form>
     </div>
