@@ -54,11 +54,7 @@ async function initializePage() {
 initializePage();
 loadPerformaInvoices();
 
-    /**
-     * **MODIFIED**
-     * Populates the form, including the new comment field for each item.
-     */
-    // REPLACE your old populateForm function with this complete, corrected version.
+ // export_invoice/script.js - Replace existing populateForm function with this:
 
 function populateForm(data) {
     document.getElementById('seller-details').value = data.sellerDetails;
@@ -78,6 +74,12 @@ function populateForm(data) {
     document.getElementById('bank-details').value = data.bankDetails;
     document.getElementById('remarks').value = data.remarks || '';
 
+    // Restore Source Performa IDs if they exist
+    if (data.sourcePerformaId) {
+        document.getElementById('source-performa-id').value = 
+            typeof data.sourcePerformaId === 'object' ? JSON.stringify(data.sourcePerformaId) : data.sourcePerformaId;
+    }
+
     const savedBuyerName = data.buyerName;
     if (savedBuyerName) {
         const buyerSelect = document.getElementById('buyer-select');
@@ -92,9 +94,12 @@ function populateForm(data) {
     itemsBody.innerHTML = '';
     data.items.forEach(item => {
         const row = document.createElement('tr');
+        // CHANGE IS HERE: Added hidden input for item-source-id to maintain the link
         row.innerHTML = `
-            <td class="px-2 py-1 align-top"><input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.sno}" readonly>
-            <input type="hidden" class="item-source-id" value="${item.sourcePerformaId || ''}"></td>
+            <td class="px-2 py-1 align-top">
+                <input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.sno}" readonly>
+                <input type="hidden" class="item-source-id" value="${item.sourcePerformaId || ''}">
+            </td>
             <td class="px-2 py-1">
                 <input type="text" class="item-desc w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.desc}">
                 <input type="text" class="item-comment w-full border-gray-300 rounded-md shadow-sm text-sm mt-1 px-2 py-1 text-gray-500" placeholder="Add comments/details..." value="${item.comment || ''}">
@@ -1277,4 +1282,5 @@ function amountToWords(amount) {
 }
 
 );
+
 
