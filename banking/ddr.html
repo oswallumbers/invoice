@@ -306,7 +306,11 @@
                         </div>
                         <input type="text" id="search-input" class="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border py-2" placeholder="Search anything...">
                     </div>
-            
+                    <input type="file" id="import-excel-input" accept=".xlsx, .xls" class="hidden" style="display:none;" />
+                    <button type="button" id="trigger-import-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
+                         Import
+                    </button>
+                    
                     <button type="button" id="export-excel-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none">
                         Export to Excel
                     </button>
