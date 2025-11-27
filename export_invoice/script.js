@@ -93,7 +93,8 @@ function populateForm(data) {
     data.items.forEach(item => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td class="px-2 py-1 align-top"><input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.sno}" readonly></td>
+            <td class="px-2 py-1 align-top"><input type="text" class="item-sno w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.sno}" readonly>
+            <input type="hidden" class="item-source-id" value="${item.sourcePerformaId || ''}"></td>
             <td class="px-2 py-1">
                 <input type="text" class="item-desc w-full border-gray-300 rounded-md shadow-sm text-sm px-2 py-2" value="${item.desc}">
                 <input type="text" class="item-comment w-full border-gray-300 rounded-md shadow-sm text-sm mt-1 px-2 py-1 text-gray-500" placeholder="Add comments/details..." value="${item.comment || ''}">
@@ -1276,3 +1277,4 @@ function amountToWords(amount) {
 }
 
 );
+
