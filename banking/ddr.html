@@ -319,9 +319,6 @@
 
             <div class="table-container" id="real-table-container">
                 <table id="lc-table" class="min-w-full text-sm text-left">
-                    
-            <div class="table-container">
-                <table id="lc-table" class="min-w-full text-sm text-left">
                     <thead>
                         <tr>
                             <th scope="col" data-sort-key="openDate">Open Date</th>
@@ -809,7 +806,7 @@ async function initializeFirebase() {
                     } else {
                         currentSort = { key: 'dueDate', order: 'asc' };
                         renderTable(processedRecords);
-
+                    }
                 }, (error) => {
                     console.error("Error with onSnapshot:", error);
                     tableBody.innerHTML = `<tr><td colspan="18" class="px-6 py-10 text-center text-red-500">Error loading data.</td></tr>`;
