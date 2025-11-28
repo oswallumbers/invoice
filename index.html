@@ -501,7 +501,7 @@
             faceVeneerOptions.classList.toggle('hidden', selectedProduct !== 'face-veneer');
         });
 
-       // --- AJAX form submission (Google Apps Script) ---
+// --- AJAX form submission (Google Apps Script, no-cors) ---
 quoteForm.addEventListener('submit', async function (e) {
     e.preventDefault(); // normal form submit रोक दिया
 
@@ -511,35 +511,18 @@ quoteForm.addEventListener('submit', async function (e) {
     const formData = new FormData(quoteForm);
 
     try {
-        const response = await fetch(quoteForm.action, {
+        // no-cors: CORS error नहीं आएगी, request फिर भी चलेगी
+        await fetch(quoteForm.action, {
             method: 'POST',
+            mode: 'no-cors',
             body: formData
         });
 
-        if (!response.ok) {
-            throw new Error('Network error: ' + response.status);
-        }
-
-        let data;
-        // अगर Apps Script JSON भेज रहा हो
-        try {
-            data = await response.json();
-        } catch (err) {
-            // अगर सिर्फ "OK" text भेजो तो भी चलेगा
-            data = { status: 'success' };
-        }
-
-        if (data.status === 'success') {
-            // success message दिखाओ
-            formSuccess.textContent = 'Thank you! Your quote request has been sent.';
-            formSuccess.classList.remove('hidden');
-
-            // form reset कर दो
-            quoteForm.reset();
-        } else {
-            alert('Error sending form. Please try again.');
-            console.error('Apps Script error:', data);
-        }
+        // हम response को read नहीं कर सकते (opaque रहेगा),
+        // लेकिन request चल गई = हम इसे success मान लेते हैं
+        formSuccess.textContent = 'Thank you! Your quote request has been sent.';
+        formSuccess.classList.remove('hidden');
+        quoteForm.reset();
     } catch (err) {
         console.error(err);
         alert('Something went wrong. Please try again later.');
@@ -609,6 +592,7 @@ productTypeSelect.addEventListener('change', function() {
     </script>
 </body>
 </html>
+
 
 
 
