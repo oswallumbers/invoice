@@ -460,9 +460,9 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Best Regards
         // ध्यान दें: y अब बॉक्स के बहुत पास है
-        doc.text('Best Regards,', margin, y + 3); // y+3 ताकि बॉर्डर से न चिपके (Text Baseline Adjustment)
+        doc.text('Best Regards,', margin, y + 6); // y+3 ताकि बॉर्डर से न चिपके (Text Baseline Adjustment)
         
-        y += 6; // Best Regards और Name के बीच गैप (Compact)
+        y += 10; // Best Regards और Name के बीच गैप (Compact)
 
         const signatureY = y; 
 
@@ -489,6 +489,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
