@@ -449,7 +449,7 @@ document.addEventListener('DOMContentLoaded', function () {
             
             // *** GAP REDUCED ***
             // बॉक्स के बाद "Best Regards" के लिए गैप (पहले +3 या +5 था, अब +2 है)
-            y = startY + boxHeight + 2; 
+            y = startY + boxHeight + 1; 
         }
         
         // 3. Signature Block
@@ -458,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // चेक करें: क्या सिग्नेचर के लिए जगह है?
         if (y + signatureHeightNeeded > pageHeight - margin) {
              doc.addPage();
-             y = 40; 
+             y = 35; 
         } 
         
         // Best Regards
@@ -492,6 +492,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
