@@ -415,12 +415,14 @@ document.addEventListener('DOMContentLoaded', function () {
             // पहले हाइट कैलकुलेट करें
             doc.setFont(font, 'normal');
             const textDims = doc.getTextDimensions(noteText, { maxWidth: textWidth });
-            const estimatedBoxHeight = textDims.h + 12; // बॉक्स की कुल अनुमानित हाइट
+            
+            // बॉक्स की अनुमानित हाइट (थोड़ी कम की है)
+            const estimatedBoxHeight = textDims.h + 10; 
 
-            // चेक करें: क्या जगह बची है?
+            // चेक करें: क्या जगह बची है? (Page Break Logic)
             if (y + estimatedBoxHeight > pageHeight - margin) {
                 doc.addPage();
-                y = 40; // **IMP: दूसरे पेज पर थोड़ा नीचे से शुरू करें (ताकि हेडर से न टकराए)**
+                y = 40; // हेडर से बचने के लिए नीचे से शुरू करें
             } else {
                 y += 2; // अगर उसी पेज पर है तो थोड़ा गैप
             }
@@ -438,11 +440,16 @@ document.addEventListener('DOMContentLoaded', function () {
             doc.setFont(font, 'normal');
             doc.text(noteText, startX + 3, y, { maxWidth: textWidth });
             
-            // बॉक्स
-            const boxHeight = (y - startY) + textDims.h; // टेक्स्ट की हाइट जोड़ें
-            doc.rect(startX, startY, boxWidth, boxHeight + 1); // +1 पैडिंग
+            // *** BOX HEIGHT FIX ***
+            // पहले (textDims.h) पूरा जुड़ रहा था जिससे नीचे जगह छूट रही थी।
+            // अब इसमें से '-2' करके बॉक्स को टाइट कर दिया है।
+            const boxHeight = (y - startY) + textDims.h - 2; 
             
-            y = startY + boxHeight + 3; // अगले सेक्शन के लिए गैप
+            doc.rect(startX, startY, boxWidth, boxHeight);
+            
+            // *** GAP REDUCED ***
+            // बॉक्स के बाद "Best Regards" के लिए गैप (पहले +3 या +5 था, अब +2 है)
+            y = startY + boxHeight + 2; 
         }
         
         // 3. Signature Block
@@ -451,14 +458,14 @@ document.addEventListener('DOMContentLoaded', function () {
         // चेक करें: क्या सिग्नेचर के लिए जगह है?
         if (y + signatureHeightNeeded > pageHeight - margin) {
              doc.addPage();
-             y = 40; // **IMP: दूसरे पेज पर थोड़ा नीचे से शुरू करें**
+             y = 40; 
         } 
         
         // Best Regards
-        doc.text('Best Regards,', margin, y);
+        // ध्यान दें: y अब बॉक्स के बहुत पास है
+        doc.text('Best Regards,', margin, y + 3); // y+3 ताकि बॉर्डर से न चिपके (Text Baseline Adjustment)
         
-        // *** गैप और कम किया (अब सिर्फ 5) ***
-        y += 5; 
+        y += 8; // Best Regards और Name के बीच गैप (Compact)
 
         const signatureY = y; 
 
@@ -485,6 +492,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
