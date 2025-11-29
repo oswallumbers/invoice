@@ -392,35 +392,37 @@ document.addEventListener('DOMContentLoaded', function () {
         addTerm('Documents:', 'Invoice, Packing List, BL & COO(CEPA)');
         
         // --- Code Start ---
+// --- Code Start ---
 
-        // 1. Bank Details (गैप कम किया)
-        y += 2; // पहले 3 था
+        // 1. Bank Details (गैप और कम किया ताकि जगह बचे)
+        y += 2; 
         doc.setFont(font, 'bold');
         doc.text('Our Bank details:', margin, y);
-        y += 3; // पहले 4 था
+        y += 3;
         doc.setFont(font, 'normal');
         
         const bankDetailsText = data.bankDetails;
-        const bankDetailsDims = doc.getTextDimensions(bankDetailsText, { lineHeightFactor: 1.25, maxWidth: pageWidth - margin * 2 });
-        doc.text(bankDetailsText, margin + 5, y, { lineHeightFactor: 1.25, maxWidth: pageWidth - margin * 2 });
+        // लाइन हाइट फैक्टर थोड़ा कम किया (1.15)
+        const bankDetailsDims = doc.getTextDimensions(bankDetailsText, { lineHeightFactor: 1.15, maxWidth: pageWidth - margin * 2 });
+        doc.text(bankDetailsText, margin + 5, y, { lineHeightFactor: 1.15, maxWidth: pageWidth - margin * 2 });
         y += bankDetailsDims.h;
 
-        // 2. Calculation Note (पैडिंग और मार्जिन कम किया)
+        // 2. Calculation Note (Compact Box)
         if (data.calculationNote) {
-            y += 3; // बॉक्स के ऊपर का गैप कम किया (पहले 5 था)
+            y += 3; // गैप कम
 
             const boxWidth = pageWidth - (margin * 2);
             const textWidth = boxWidth - 6; 
             const startX = margin;
             const startY = y;
             
-            // हेडिंग
-            y += 4; // टॉप पैडिंग कम की (पहले 5 थी)
+            // हेडिंग "Calculation Note:"
+            y += 4; // टॉप पैडिंग
             doc.setFont(font, 'bold');
             doc.text("Calculation Note:", startX + 3, y);
             
             // नोट टेक्स्ट
-            y += 4; // हेडिंग और टेक्स्ट के बीच का गैप कम किया (पहले 5 था)
+            y += 4; // हेडिंग और टेक्स्ट के बीच गैप
             doc.setFont(font, 'normal');
             
             const noteText = data.calculationNote;
@@ -428,34 +430,38 @@ document.addEventListener('DOMContentLoaded', function () {
             
             doc.text(noteText, startX + 3, y, { maxWidth: textWidth });
             
-            // बॉक्स बॉर्डर
-            // नीचे थोड़ी जगह (+3) देकर बॉक्स बंद किया
+            // बॉक्स खत्म
             const boxHeight = (y - startY) + textDims.h + 2; 
-            
             doc.rect(startX, startY, boxWidth, boxHeight);
             
-            // अगले सेक्शन के लिए y सेट करें (गैप कम किया)
-            y = startY + boxHeight + 3; 
+            y = startY + boxHeight + 5; // अगले सेक्शन के लिए जगह
         }
         
-        // 3. Signature Block (महत्वपूर्ण बदलाव)
-        // इसे 45 से बढ़ाकर 60 किया ताकि यह पेज के बॉटम से थोड़ा और ऊपर रहे
-        const signatureBlockHeight = 60; 
+        // 3. Signature Block Logic (Cut होने से बचाने के लिए)
         
-        // अगर जगह नहीं बची है तो नया पेज जोड़ें
-        if (y + signatureBlockHeight > pageHeight - margin) {
+        const signatureHeightNeeded = 45; // सिग्नेचर के लिए कम से कम 45mm जगह चाहिए
+        const spaceLeft = pageHeight - margin - y; // पेज पर कितनी जगह बची है
+
+        // अगर जगह कम है (45mm से कम), तो नया पेज जोड़ें
+        if (spaceLeft < signatureHeightNeeded) {
              doc.addPage();
              y = 20; // नए पेज पर ऊपर से शुरू करें
-        } else {
-            // कंटेंट के ठीक नीचे सेट करें, लेकिन पेज के बिल्कुल अंत में नहीं
-           y = pageHeight - signatureBlockHeight;
+        } 
+        // अगर जगह बहुत ज्यादा है, तो फुटर को पेज के नीचे सेट करें
+        // (लेकिन 'y' से ऊपर कभी नहीं जाएगा, ताकि ओवरलैप न हो)
+        else {
+            // हम कोशिश करेंगे कि यह 'y' के तुरंत बाद आए, बहुत नीचे नहीं
+            // लेकिन अगर आप चाहते हैं कि यह हमेशा बॉटम में रहे, तो नीचे वाली लाइन uncomment करें:
+            // y = Math.max(y, pageHeight - signatureHeightNeeded - margin);
         }
         
+        // "Best Regards" थोड़ा ऊपर खिसकाया
         doc.text('Best Regards,', margin, y);
-        y += 12; // यह गैप 15 से 12 किया (हस्ताक्षर के लिए जगह)
+        y += 12; // नाम और Best Regards के बीच का गैप
 
         const signatureY = y; 
 
+        // Director Sign
         const companyLineX1 = margin;
         const companyLineX2 = margin + 80;
         doc.setDrawColor(0);
@@ -465,6 +471,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.text('DEEPAK PAREKH', margin, signatureY + 5);
         doc.text('DIRECTOR', margin, signatureY + 10);
         
+        // Buyer Sign
         const lineX1 = pageWidth - margin - 70;
         const lineX2 = pageWidth - margin;      
         doc.setDrawColor(0);
@@ -476,5 +483,6 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
