@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const data = getFormData();
         const font = 'Helvetica';
         doc.setFont(font, 'normal');
-        const margin = 15;
+        const margin = 13;
         const pageWidth = doc.internal.pageSize.width;
         const pageHeight = doc.internal.pageSize.height;
         let y = margin;
@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
         // 3. Signature Block
-        const signatureHeightNeeded = 30; 
+        const signatureHeightNeeded = 22; 
         
         // चेक करें: क्या सिग्नेचर के लिए जगह है?
         if (y + signatureHeightNeeded > pageHeight - margin) {
@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // ध्यान दें: y अब बॉक्स के बहुत पास है
         doc.text('Best Regards,', margin, y + 3); // y+3 ताकि बॉर्डर से न चिपके (Text Baseline Adjustment)
         
-        y += 8; // Best Regards और Name के बीच गैप (Compact)
+        y += 6; // Best Regards और Name के बीच गैप (Compact)
 
         const signatureY = y; 
 
@@ -492,6 +492,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
