@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function () {
         y += 2; 
         doc.setFont(font, 'bold');
         doc.text('Our Bank details:', margin, y);
-        y += 3;
+        y += 4;
         doc.setFont(font, 'normal');
         
         const bankDetailsText = data.bankDetails;
@@ -407,22 +407,22 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.text(bankDetailsText, margin + 5, y, { lineHeightFactor: 1.15, maxWidth: pageWidth - margin * 2 });
         y += bankDetailsDims.h;
 
-        // 2. Calculation Note (Compact Box)
+       // 2. Calculation Note (Compact Box)
         if (data.calculationNote) {
-            y += 3; // गैप कम
+            y += 2; // बॉक्स के ऊपर सिर्फ 2mm जगह
 
             const boxWidth = pageWidth - (margin * 2);
             const textWidth = boxWidth - 6; 
             const startX = margin;
             const startY = y;
             
-            // हेडिंग "Calculation Note:"
-            y += 4; // टॉप पैडिंग
+            // हेडिंग
+            y += 3; // टॉप पैडिंग घटाई
             doc.setFont(font, 'bold');
             doc.text("Calculation Note:", startX + 3, y);
             
             // नोट टेक्स्ट
-            y += 4; // हेडिंग और टेक्स्ट के बीच गैप
+            y += 3; // हेडिंग और टेक्स्ट के बीच गैप घटाया
             doc.setFont(font, 'normal');
             
             const noteText = data.calculationNote;
@@ -430,59 +430,58 @@ document.addEventListener('DOMContentLoaded', function () {
             
             doc.text(noteText, startX + 3, y, { maxWidth: textWidth });
             
-            // बॉक्स खत्म
-            const boxHeight = (y - startY) + textDims.h + 2; 
+            // बॉक्स खत्म (नीचे सिर्फ 1mm जगह)
+            const boxHeight = (y - startY) + textDims.h + 1; 
+            
             doc.rect(startX, startY, boxWidth, boxHeight);
             
-            y = startY + boxHeight + 5; // अगले सेक्शन के लिए जगह
+            y = startY + boxHeight + 2; // अगले सेक्शन के लिए सिर्फ 2mm जगह
         }
         
-        // 3. Signature Block Logic (Cut होने से बचाने के लिए)
+        // 3. Signature Block (Compact Version)
         
-        const signatureHeightNeeded = 45; // सिग्नेचर के लिए कम से कम 45mm जगह चाहिए
-        const spaceLeft = pageHeight - margin - y; // पेज पर कितनी जगह बची है
+        // अब इसे सिर्फ 30mm जगह चाहिए पेज पर रहने के लिए
+        const signatureHeightNeeded = 30; 
+        const spaceLeft = pageHeight - margin - y; 
 
-        // अगर जगह कम है (45mm से कम), तो नया पेज जोड़ें
+        // चेक करें: क्या 30mm जगह बची है?
         if (spaceLeft < signatureHeightNeeded) {
              doc.addPage();
-             y = 20; // नए पेज पर ऊपर से शुरू करें
+             y = 20; 
         } 
-        // अगर जगह बहुत ज्यादा है, तो फुटर को पेज के नीचे सेट करें
-        // (लेकिन 'y' से ऊपर कभी नहीं जाएगा, ताकि ओवरलैप न हो)
-        else {
-            // हम कोशिश करेंगे कि यह 'y' के तुरंत बाद आए, बहुत नीचे नहीं
-            // लेकिन अगर आप चाहते हैं कि यह हमेशा बॉटम में रहे, तो नीचे वाली लाइन uncomment करें:
-            // y = Math.max(y, pageHeight - signatureHeightNeeded - margin);
-        }
         
-        // "Best Regards" थोड़ा ऊपर खिसकाया
+        // Best Regards प्रिंट करें
         doc.text('Best Regards,', margin, y);
-        y += 12; // नाम और Best Regards के बीच का गैप
+        
+        // *** यहाँ बड़ा बदलाव है ***
+        y += 8; // पहले 12 था, अब 8 कर दिया (पास-पास)
 
         const signatureY = y; 
 
-        // Director Sign
+        // लाइन्स और नाम
         const companyLineX1 = margin;
         const companyLineX2 = margin + 80;
         doc.setDrawColor(0);
         doc.line(companyLineX1, signatureY, companyLineX2, signatureY); 
+        
         doc.setFont(font, 'bold');
         doc.setFontSize(9);
-        doc.text('DEEPAK PAREKH', margin, signatureY + 5);
-        doc.text('DIRECTOR', margin, signatureY + 10);
+        // नाम को लाइन के थोड़ा और पास किया (+4)
+        doc.text('DEEPAK PAREKH', margin, signatureY + 4);
+        doc.text('DIRECTOR', margin, signatureY + 8);
         
-        // Buyer Sign
         const lineX1 = pageWidth - margin - 70;
         const lineX2 = pageWidth - margin;      
         doc.setDrawColor(0);
         doc.line(lineX1, signatureY, lineX2, signatureY); 
         doc.setFont(font, 'bold');
         doc.setFontSize(9);
-        doc.text('BUYER', (lineX1 + lineX2) / 2, signatureY + 5, { align: 'center' });
+        doc.text('BUYER', (lineX1 + lineX2) / 2, signatureY + 4, { align: 'center' });
 
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
