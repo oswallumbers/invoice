@@ -407,64 +407,45 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.text(bankDetailsText, margin + 5, y, { lineHeightFactor: 1.15, maxWidth: pageWidth - margin * 2 });
         y += bankDetailsDims.h;
 
-       if (data.calculationNote) {
-            const noteText = data.calculationNote;
-            const boxWidth = pageWidth - (margin * 2);
-            const textWidth = boxWidth - 6; 
-            
-            // पहले हाइट कैलकुलेट करें
-            doc.setFont(font, 'normal');
-            const textDims = doc.getTextDimensions(noteText, { maxWidth: textWidth });
-            
-            // बॉक्स की अनुमानित हाइट (थोड़ी कम की है)
-            const estimatedBoxHeight = textDims.h + 10; 
+      // --- Calculation Note Updated Code ---
+if (data.calculationNote) {
+    const noteText = data.calculationNote;
+    const boxWidth = pageWidth - (margin * 2);
+    const textWidth = boxWidth - 6;
 
-            // चेक करें: क्या जगह बची है? (Page Break Logic)
-            if (y + estimatedBoxHeight > pageHeight - margin) {
-                doc.addPage();
-                y = 40; // हेडर से बचने के लिए नीचे से शुरू करें
-            } else {
-                y += 2; // अगर उसी पेज पर है तो थोड़ा गैप
-            }
+    doc.setFont(font, 'normal');
+    const textDims = doc.getTextDimensions(noteText, { maxWidth: textWidth });
 
-            const startX = margin;
-            const startY = y;
-            // --- HEADING OUTSIDE THE BOX ---
-            doc.setFont(font, 'bold');
-            doc.text("Calculation Note:", startX, y);    // heading यहाँ होगी
-            
-            y += 4;
-            
-            // --- अब बॉक्स शुरू होगा ---
-            const startY = y;
-            
-            doc.setFont(font, 'normal');
-            doc.text(noteText, startX + 3, y, { maxWidth: textWidth });
-            
-            const boxHeight = textDims.h + 6;
-            
-            doc.rect(startX, startY, boxWidth, boxHeight);
-            
-            // बॉक्स के बाद y सेट करें
-            y = startY + boxHeight + 4;
-            
-        
-        // 3. Signature Block
-        const signatureHeightNeeded = 22; 
-        
-        // चेक करें: क्या सिग्नेचर के लिए जगह है?
-        if (y + signatureHeightNeeded > pageHeight - margin) {
-             doc.addPage();
-             y = 35; 
-        } 
-        
-        // Best Regards
-        // ध्यान दें: y अब बॉक्स के बहुत पास है
-        doc.text('Best Regards,', margin, y + 6); // y+3 ताकि बॉर्डर से न चिपके (Text Baseline Adjustment)
-        
-        y += 10; // Best Regards और Name के बीच गैप (Compact)
+    // Page Break Logic
+    const requiredHeight = textDims.h + 14; 
+    if (y + requiredHeight > pageHeight - margin) {
+        doc.addPage();
+        y = 40;
+    }
 
-        const signatureY = y; 
+    // Heading outside the box
+    doc.setFont(font, 'bold');
+    doc.text("Calculation Note:", margin, y);
+    y += 4;
+
+    // Start Box
+    const startX = margin;
+    const startY = y;
+
+    doc.setFont(font, 'normal');
+    doc.text(noteText, startX + 3, y, { maxWidth: textWidth });
+
+    const boxHeight = textDims.h + 6;
+    doc.rect(startX, startY, boxWidth, boxHeight);
+
+    y = startY + boxHeight + 4;
+}
+
+// --- Best Regards + Signature (more spacing) ---
+doc.text('Best Regards,', margin, y + 6);
+y += 14;
+
+const signatureY = y;
 
         // Director Name & Line
         const companyLineX1 = margin;
@@ -489,6 +470,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
