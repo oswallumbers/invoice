@@ -410,35 +410,36 @@ document.addEventListener('DOMContentLoaded', function () {
       // --- Calculation Note Updated Code ---
 if (data.calculationNote) {
     const noteText = data.calculationNote;
-    const boxWidth = pageWidth - (margin * 2);
-    const textWidth = boxWidth - 6;
+    // Max allowed width (margin के अंदर–अंदर)
+const maxBoxWidth = pageWidth - margin * 2 - 6;
 
-    doc.setFont(font, 'normal');
-    const textDims = doc.getTextDimensions(noteText, { maxWidth: textWidth });
+// पहले text की actual width निकालो
+const textDims = doc.getTextDimensions(noteText, { maxWidth: maxBoxWidth });
 
-    // Page Break Logic
-    const requiredHeight = textDims.h + 14; 
-    if (y + requiredHeight > pageHeight - margin) {
-        doc.addPage();
-        y = 40;
-    }
+// अब box को text के बराबर रखो (+padding)
+const paddingX = 3;
+const paddingY = 3;
 
-    // Heading outside the box
-    doc.setFont(font, 'bold');
-    doc.text("Calculation Note:", margin, y);
-    y += 4;
+const boxWidth  = Math.min(textDims.w + paddingX * 2, maxBoxWidth + paddingX * 2);
+const boxHeight = textDims.h + paddingY * 2;
 
-    // Start Box
-    const startX = margin;
-    const startY = y;
+const startX = margin;
+const startY = y;
 
-    doc.setFont(font, 'normal');
-    doc.text(noteText, startX + 3, y, { maxWidth: textWidth });
+// text को box के अंदर थोड़ा अंदर से लिखें
+doc.text(
+  noteText,
+  startX + paddingX,
+  startY + paddingY + 2,           // +2 ताकि ऊपर से touch न करे
+  { maxWidth: boxWidth - paddingX * 2 }
+);
 
-    const boxHeight = textDims.h + 6;
-    doc.rect(startX, startY, boxWidth, boxHeight);
+// अब border draw करो
+doc.rect(startX, startY, boxWidth, boxHeight);
 
-    y = startY + boxHeight + 4;
+// बॉक्स के बाद का y
+y = startY + boxHeight + 4;
+
 }
 
 // --- Best Regards + Signature (more spacing) ---
@@ -470,6 +471,7 @@ const signatureY = y;
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
