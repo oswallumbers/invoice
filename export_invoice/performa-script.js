@@ -429,28 +429,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const startX = margin;
             const startY = y;
-            
-            // हेडिंग
-            y += 4; 
+            // --- HEADING OUTSIDE THE BOX ---
             doc.setFont(font, 'bold');
-            doc.text("Calculation Note:", startX + 3, y);
+            doc.text("Calculation Note:", startX, y);    // heading यहाँ होगी
             
-            // टेक्स्ट
-            y += 3; 
+            y += 4;
+            
+            // --- अब बॉक्स शुरू होगा ---
+            const startY = y;
+            
             doc.setFont(font, 'normal');
             doc.text(noteText, startX + 3, y, { maxWidth: textWidth });
             
-            // *** BOX HEIGHT FIX ***
-            // पहले (textDims.h) पूरा जुड़ रहा था जिससे नीचे जगह छूट रही थी।
-            // अब इसमें से '-2' करके बॉक्स को टाइट कर दिया है।
-            const boxHeight = (y - startY) + textDims.h - 2; 
+            const boxHeight = textDims.h + 6;
             
             doc.rect(startX, startY, boxWidth, boxHeight);
             
-            // *** GAP REDUCED ***
-            // बॉक्स के बाद "Best Regards" के लिए गैप (पहले +3 या +5 था, अब +2 है)
-            y = startY + boxHeight + 1; 
-        }
+            // बॉक्स के बाद y सेट करें
+            y = startY + boxHeight + 4;
+            
         
         // 3. Signature Block
         const signatureHeightNeeded = 22; 
@@ -492,6 +489,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
