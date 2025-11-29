@@ -407,58 +407,62 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.text(bankDetailsText, margin + 5, y, { lineHeightFactor: 1.15, maxWidth: pageWidth - margin * 2 });
         y += bankDetailsDims.h;
 
-       // 2. Calculation Note (Compact Box)
-        if (data.calculationNote) {
-            y += 2; // बॉक्स के ऊपर सिर्फ 2mm जगह
-
+       if (data.calculationNote) {
+            const noteText = data.calculationNote;
             const boxWidth = pageWidth - (margin * 2);
             const textWidth = boxWidth - 6; 
+            
+            // पहले हाइट कैलकुलेट करें
+            doc.setFont(font, 'normal');
+            const textDims = doc.getTextDimensions(noteText, { maxWidth: textWidth });
+            const estimatedBoxHeight = textDims.h + 12; // बॉक्स की कुल अनुमानित हाइट
+
+            // चेक करें: क्या जगह बची है?
+            if (y + estimatedBoxHeight > pageHeight - margin) {
+                doc.addPage();
+                y = 40; // **IMP: दूसरे पेज पर थोड़ा नीचे से शुरू करें (ताकि हेडर से न टकराए)**
+            } else {
+                y += 2; // अगर उसी पेज पर है तो थोड़ा गैप
+            }
+
             const startX = margin;
             const startY = y;
             
             // हेडिंग
-            y += 3; // टॉप पैडिंग घटाई
+            y += 3; 
             doc.setFont(font, 'bold');
             doc.text("Calculation Note:", startX + 3, y);
             
-            // नोट टेक्स्ट
-            y += 3; // हेडिंग और टेक्स्ट के बीच गैप घटाया
+            // टेक्स्ट
+            y += 3; 
             doc.setFont(font, 'normal');
-            
-            const noteText = data.calculationNote;
-            const textDims = doc.getTextDimensions(noteText, { maxWidth: textWidth });
-            
             doc.text(noteText, startX + 3, y, { maxWidth: textWidth });
             
-            // बॉक्स खत्म (नीचे सिर्फ 1mm जगह)
-            const boxHeight = (y - startY) + textDims.h + 1; 
+            // बॉक्स
+            const boxHeight = (y - startY) + textDims.h; // टेक्स्ट की हाइट जोड़ें
+            doc.rect(startX, startY, boxWidth, boxHeight + 1); // +1 पैडिंग
             
-            doc.rect(startX, startY, boxWidth, boxHeight);
-            
-            y = startY + boxHeight + 2; // अगले सेक्शन के लिए सिर्फ 2mm जगह
+            y = startY + boxHeight + 3; // अगले सेक्शन के लिए गैप
         }
         
-        // 3. Signature Block (Compact Version)
-        
-        // अब इसे सिर्फ 30mm जगह चाहिए पेज पर रहने के लिए
+        // 3. Signature Block
         const signatureHeightNeeded = 30; 
-        const spaceLeft = pageHeight - margin - y; 
-
-        // चेक करें: क्या 30mm जगह बची है?
-        if (spaceLeft < signatureHeightNeeded) {
+        
+        // चेक करें: क्या सिग्नेचर के लिए जगह है?
+        if (y + signatureHeightNeeded > pageHeight - margin) {
              doc.addPage();
-             y = 20; 
+             y = 40; // **IMP: दूसरे पेज पर थोड़ा नीचे से शुरू करें**
         } 
         
-        // Best Regards प्रिंट करें
+        // Best Regards
         doc.text('Best Regards,', margin, y);
         
-        // *** यहाँ बड़ा बदलाव है ***
-        y += 8; // पहले 12 था, अब 8 कर दिया (पास-पास)
+        // *** गैप और कम किया (अब सिर्फ 5) ***
+        y += 5; 
 
         const signatureY = y; 
 
-        // लाइन्स और नाम
+        // Director Name & Line
         const companyLineX1 = margin;
         const companyLineX2 = margin + 80;
         doc.setDrawColor(0);
@@ -466,10 +470,10 @@ document.addEventListener('DOMContentLoaded', function () {
         
         doc.setFont(font, 'bold');
         doc.setFontSize(9);
-        // नाम को लाइन के थोड़ा और पास किया (+4)
         doc.text('DEEPAK PAREKH', margin, signatureY + 4);
         doc.text('DIRECTOR', margin, signatureY + 8);
         
+        // Buyer Name & Line
         const lineX1 = pageWidth - margin - 70;
         const lineX2 = pageWidth - margin;      
         doc.setDrawColor(0);
@@ -481,6 +485,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
