@@ -433,7 +433,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // हेडिंग
             y += 3; 
             doc.setFont(font, 'bold');
-            doc.text("Calculation Note:", startX + 3, y);
+            doc.text("Calculation Note:", startX + 4, y);
             
             // टेक्स्ट
             y += 3; 
@@ -492,6 +492,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
