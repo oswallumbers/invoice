@@ -391,10 +391,13 @@ document.addEventListener('DOMContentLoaded', function () {
         addTerm('Partial Shipment:', data.partialShipment);
         addTerm('Documents:', 'Invoice, Packing List, BL & COO(CEPA)');
         
-        y += 3;
+        // --- Code Start ---
+
+        // 1. Bank Details (गैप कम किया)
+        y += 2; // पहले 3 था
         doc.setFont(font, 'bold');
         doc.text('Our Bank details:', margin, y);
-        y += 4;
+        y += 3; // पहले 4 था
         doc.setFont(font, 'normal');
         
         const bankDetailsText = data.bankDetails;
@@ -402,51 +405,54 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.text(bankDetailsText, margin + 5, y, { lineHeightFactor: 1.25, maxWidth: pageWidth - margin * 2 });
         y += bankDetailsDims.h;
 
-       if (data.calculationNote) {
-            y += 5; // बॉक्स से ऊपर थोड़ी जगह
+        // 2. Calculation Note (पैडिंग और मार्जिन कम किया)
+        if (data.calculationNote) {
+            y += 3; // बॉक्स के ऊपर का गैप कम किया (पहले 5 था)
 
-            // बॉक्स की सेटिंग्स
             const boxWidth = pageWidth - (margin * 2);
-            const textWidth = boxWidth - 6; // अंदर 3mm की पैडिंग (Left/Right)
+            const textWidth = boxWidth - 6; 
             const startX = margin;
             const startY = y;
             
-            // 1. हेडिंग (Bold) - "Calculation Note:"
-            y += 5; // टॉप पैडिंग
+            // हेडिंग
+            y += 4; // टॉप पैडिंग कम की (पहले 5 थी)
             doc.setFont(font, 'bold');
             doc.text("Calculation Note:", startX + 3, y);
             
-            // 2. नोट टेक्स्ट (Normal)
-            y += 5; // हेडिंग और टेक्स्ट के बीच का गैप
+            // नोट टेक्स्ट
+            y += 4; // हेडिंग और टेक्स्ट के बीच का गैप कम किया (पहले 5 था)
             doc.setFont(font, 'normal');
             
-            // टेक्स्ट की हाइट मापें ताकि बॉक्स सही बने
             const noteText = data.calculationNote;
             const textDims = doc.getTextDimensions(noteText, { maxWidth: textWidth });
             
-            // टेक्स्ट प्रिंट करें
             doc.text(noteText, startX + 3, y, { maxWidth: textWidth });
             
-            // 3. बॉक्स (Border) बनाएं
-            // बॉक्स की कुल हाइट = (टेक्स्ट की लाइन तक y) - (शुरुआती y) + (टेक्स्ट की हाइट) + (थोड़ी नीचे की जगह)
-            // नोट: textDims.h टेक्स्ट ब्लॉक की पूरी ऊंचाई देता है
-            const boxHeight = (y - startY) + textDims.h; 
+            // बॉक्स बॉर्डर
+            // नीचे थोड़ी जगह (+3) देकर बॉक्स बंद किया
+            const boxHeight = (y - startY) + textDims.h + 2; 
             
             doc.rect(startX, startY, boxWidth, boxHeight);
             
-            // अगले सेक्शन के लिए y को बॉक्स के नीचे ले जाएं
-            y = startY + boxHeight + 5; 
+            // अगले सेक्शन के लिए y सेट करें (गैप कम किया)
+            y = startY + boxHeight + 3; 
         }
         
-        const signatureBlockHeight = 45; 
+        // 3. Signature Block (महत्वपूर्ण बदलाव)
+        // इसे 45 से बढ़ाकर 60 किया ताकि यह पेज के बॉटम से थोड़ा और ऊपर रहे
+        const signatureBlockHeight = 60; 
+        
+        // अगर जगह नहीं बची है तो नया पेज जोड़ें
         if (y + signatureBlockHeight > pageHeight - margin) {
-             y += 10;
+             doc.addPage();
+             y = 20; // नए पेज पर ऊपर से शुरू करें
         } else {
+            // कंटेंट के ठीक नीचे सेट करें, लेकिन पेज के बिल्कुल अंत में नहीं
            y = pageHeight - signatureBlockHeight;
         }
-       
+        
         doc.text('Best Regards,', margin, y);
-        y += 15;
+        y += 12; // यह गैप 15 से 12 किया (हस्ताक्षर के लिए जगह)
 
         const signatureY = y; 
 
@@ -460,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.text('DIRECTOR', margin, signatureY + 10);
         
         const lineX1 = pageWidth - margin - 70;
-        const lineX2 = pageWidth - margin;     
+        const lineX2 = pageWidth - margin;      
         doc.setDrawColor(0);
         doc.line(lineX1, signatureY, lineX2, signatureY); 
         doc.setFont(font, 'bold');
@@ -470,4 +476,5 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
