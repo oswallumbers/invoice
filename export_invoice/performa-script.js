@@ -402,10 +402,40 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.text(bankDetailsText, margin + 5, y, { lineHeightFactor: 1.25, maxWidth: pageWidth - margin * 2 });
         y += bankDetailsDims.h;
 
-        if (data.calculationNote) {
-            y += 5;
-            doc.text(data.calculationNote, margin, y);
-            y += 5;
+       if (data.calculationNote) {
+            y += 5; // बॉक्स से ऊपर थोड़ी जगह
+
+            // बॉक्स की सेटिंग्स
+            const boxWidth = pageWidth - (margin * 2);
+            const textWidth = boxWidth - 6; // अंदर 3mm की पैडिंग (Left/Right)
+            const startX = margin;
+            const startY = y;
+            
+            // 1. हेडिंग (Bold) - "Calculation Note:"
+            y += 5; // टॉप पैडिंग
+            doc.setFont(font, 'bold');
+            doc.text("Calculation Note:", startX + 3, y);
+            
+            // 2. नोट टेक्स्ट (Normal)
+            y += 5; // हेडिंग और टेक्स्ट के बीच का गैप
+            doc.setFont(font, 'normal');
+            
+            // टेक्स्ट की हाइट मापें ताकि बॉक्स सही बने
+            const noteText = data.calculationNote;
+            const textDims = doc.getTextDimensions(noteText, { maxWidth: textWidth });
+            
+            // टेक्स्ट प्रिंट करें
+            doc.text(noteText, startX + 3, y, { maxWidth: textWidth });
+            
+            // 3. बॉक्स (Border) बनाएं
+            // बॉक्स की कुल हाइट = (टेक्स्ट की लाइन तक y) - (शुरुआती y) + (टेक्स्ट की हाइट) + (थोड़ी नीचे की जगह)
+            // नोट: textDims.h टेक्स्ट ब्लॉक की पूरी ऊंचाई देता है
+            const boxHeight = (y - startY) + textDims.h; 
+            
+            doc.rect(startX, startY, boxWidth, boxHeight);
+            
+            // अगले सेक्शन के लिए y को बॉक्स के नीचे ले जाएं
+            y = startY + boxHeight + 5; 
         }
         
         const signatureBlockHeight = 45; 
@@ -440,3 +470,4 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
