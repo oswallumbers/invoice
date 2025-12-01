@@ -3,35 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Export Invoice & Packing List Generator</title>
+    <title>Export Invoice Generator (Firebase Connected)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
- <style>
+    <style>
         /* --- Screen UI Styles --- */
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #f3f4f6; 
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         
-        /* @apply हटाकर नार्मल CSS लिखी गयी है */
         .input-field { 
-            display: block;
-            width: 100%;
-            margin-top: 0.25rem;
-            border-radius: 0.375rem;
-            border: 1px solid #d1d5db; /* gray-300 */
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            padding: 0.5rem;
-            font-size: 0.875rem; /* text-sm */
+            display: block; width: 100%; margin-top: 0.25rem; border-radius: 0.375rem;
+            border: 1px solid #d1d5db; padding: 0.5rem; font-size: 0.875rem; 
         }
         
-        .input-field:focus {
-            outline: none;
-            border-color: #6366f1; /* indigo-500 */
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5);
-        }
+        .input-field:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5); }
         
-        /* --- PRINT STYLES (The Beautiful Part) --- */
+        /* --- PRINT STYLES --- */
         @media print {
             @page { size: A4; margin: 10mm; }
             body * { visibility: hidden; }
@@ -42,111 +28,52 @@
             }
             .no-print { display: none !important; }
             
-            /* Professional Borders & Layout */
-            .doc-container { 
-                border: 2px solid #000; 
-                padding: 10px; 
-                height: 98vh; 
-                position: relative; 
-                display: flex; 
-                flex-direction: column; 
-            }
+            .doc-container { border: 2px solid #000; padding: 10px; height: 98vh; position: relative; display: flex; flex-direction: column; }
             .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
             .company-name { font-size: 32px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
             .company-details { font-size: 11px; margin-bottom: 2px; }
             
             .doc-title { 
-                background: #e5e7eb; 
-                border: 1px solid #000; 
-                font-weight: bold; 
-                text-align: center; 
-                padding: 5px; 
-                font-size: 18px; 
-                margin: 10px 0; 
-                letter-spacing: 2px;
-                /* यहाँ दोनों प्रॉपर्टीज डाल दी गयी हैं */
-                -webkit-print-color-adjust: exact; 
-                print-color-adjust: exact; 
+                background: #e5e7eb; border: 1px solid #000; font-weight: bold; 
+                text-align: center; padding: 5px; font-size: 18px; margin: 10px 0; letter-spacing: 2px;
+                -webkit-print-color-adjust: exact; print-color-adjust: exact; 
             }
 
-            /* Grid for Addresses */
             .address-grid { display: flex; border: 1px solid #000; margin-bottom: 15px; }
             .address-box { flex: 1; padding: 8px; font-size: 12px; line-height: 1.4; }
             .address-box:first-child { border-right: 1px solid #000; }
             .box-label { font-weight: bold; text-decoration: underline; margin-bottom: 4px; display: block; }
 
-            /* Info Grid (Invoice No, Dates, etc) */
             .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid #000; margin-bottom: 15px; font-size: 12px; }
             .info-item { padding: 5px 8px; border-bottom: 1px solid #000; border-right: 1px solid #000; display: flex; justify-content: space-between; }
             .info-item:nth-child(even) { border-right: none; }
             .info-item:last-child, .info-item:nth-last-child(2) { border-bottom: none; }
             .info-label { font-weight: bold; }
 
-            /* Table Styles */
             .main-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px; flex-grow: 1; }
             .main-table th { 
-                border: 1px solid #000; 
-                padding: 6px; 
-                background: #f0f0f0; 
-                font-weight: bold; 
-                text-align: center; 
-                /* यहाँ दोनों प्रॉपर्टीज डाल दी गयी हैं */
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                border: 1px solid #000; padding: 6px; background: #f0f0f0; 
+                font-weight: bold; text-align: center; 
+                -webkit-print-color-adjust: exact; print-color-adjust: exact;
             }
             .main-table td { border-left: 1px solid #000; border-right: 1px solid #000; padding: 4px 6px; vertical-align: top; }
             .main-table tr:last-child td { border-bottom: 1px solid #000; }
             
-            /* Totals Section */
-            /* Totals Section - Table Layout (More Stable) */
-            .totals-table { 
-                width: 100%; 
-                border-collapse: collapse; 
-                border: 1px solid #000; 
-                font-size: 12px; 
-            }
-            .totals-table td { 
-                padding: 5px; 
-                border-bottom: 1px solid #000; 
-            }
-            /* आखिरी लाइन का बॉर्डर हटाने के लिए */
-            .totals-table tr:last-child td {
-                border-bottom: none;
-            }
+            /* Totals Section Table */
+            .totals-table { width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; }
+            .totals-table td { padding: 5px; border-bottom: 1px solid #000; }
+            .totals-table tr:last-child td { border-bottom: none; }
             
-            /* Columns Width Fix */
-           /* Labels को Left Align करने के लिए */
-            .label-col { 
-                width: 70%; 
-                text-align: left;    /* पहले right था, इसे left कर दिया */
-                padding-left: 10px;  /* थोड़ा गैप दिया */
-                font-weight: bold; 
-                border-right: 1px solid #000; 
-            }
-            
-            /* Values को Right Align ही रहने दें */
-            .value-col { 
-                width: 30%; 
-                text-align: right; 
-                padding-right: 10px; /* थोड़ा गैप दिया */
-                font-weight: bold; 
-            }
+            .label-col { width: 70%; text-align: left; padding-left: 10px; font-weight: bold; border-right: 1px solid #000; }
+            .value-col { width: 30%; text-align: right; padding-right: 10px; font-weight: bold; }
 
-            /* Amount in Words Box */
-            .words-box {
-                border: 1px solid #000;
-                border-top: none; /* ऊपर टेबल से जुड़ा रहेगा */
-                padding: 6px;
-                font-size: 12px;
-            }
+            .words-box { border: 1px solid #000; border-top: none; padding: 6px; font-size: 12px; }
 
-            /* Footer */
             .footer-section { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; font-size: 12px; padding-top: 20px; }
             .signature-box { text-align: center; width: 200px; }
             .signature-line { border-top: 1px solid #000; margin-top: 40px; padding-top: 5px; font-weight: bold; }
         }
 
-        /* Helper to hide rate columns in packing list */
         .hide-in-packing-list { display: table-cell; }
         body.printing-packing-list .hide-in-packing-list { display: none !important; }
     </style>
@@ -155,9 +82,12 @@
 
     <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden no-print">
         <div class="bg-pink-800 p-4 text-white flex justify-between items-center">
-            <h1 class="text-2xl font-bold"><i class="fas fa-file-invoice mr-2"></i> Export Doc Generator (Local)</h1>
-            <div>
-                <button onclick="clearData()" class="text-xs bg-red-600 px-3 py-1 rounded hover:bg-red-700">Reset Form</button>
+            <h1 class="text-2xl font-bold"><i class="fas fa-cloud mr-2"></i> Export Doc Generator (Firebase)</h1>
+            <div class="flex gap-2">
+                <button onclick="saveToFirebase()" class="text-sm bg-green-600 px-4 py-2 rounded hover:bg-green-700 font-bold border border-green-400">
+                    <i class="fas fa-save mr-1"></i> Save Data
+                </button>
+                <button onclick="clearData()" class="text-xs bg-red-600 px-3 py-1 rounded hover:bg-red-700">New / Reset</button>
             </div>
         </div>
 
@@ -176,9 +106,9 @@ IEC NO. 2089000104</textarea>
                     <h3 class="font-bold text-gray-700 mb-2 border-b pb-1">Buyer Details</h3>
                     <div class="flex gap-2 mb-2">
                         <select id="savedBuyers" onchange="loadBuyer()" class="w-full border p-1 rounded text-sm">
-                            <option value="">-- Load Saved Buyer --</option>
+                            <option value="">-- Loading Buyers... --</option>
                         </select>
-                        <button onclick="saveCurrentBuyer()" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">Save</button>
+                        <button onclick="saveCurrentBuyer()" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">Save New Buyer</button>
                     </div>
                     <textarea id="buyerDetails" rows="4" class="w-full border p-2 text-sm rounded" placeholder="Type Buyer Name & Address Here..."></textarea>
                 </div>
@@ -186,9 +116,15 @@ IEC NO. 2089000104</textarea>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-blue-50 p-4 rounded border">
                 <div>
-                    <label class="text-xs font-bold text-gray-600">Invoice No</label>
-                    <input type="text" id="invoiceNo" class="w-full border p-2 rounded">
+                    <label class="text-xs font-bold text-gray-600">Invoice No (Enter & Search)</label>
+                    <div class="flex gap-1">
+                        <input type="text" id="invoiceNo" class="w-full border p-2 rounded border-pink-500" placeholder="e.g. EXP/023/2025">
+                        <button onclick="loadInvoiceData()" class="bg-purple-600 text-white px-3 rounded hover:bg-purple-700" title="Load Saved Data">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
                 </div>
+
                 <div>
                     <label class="text-xs font-bold text-gray-600">Date</label>
                     <input type="date" id="invoiceDate" class="w-full border p-2 rounded">
@@ -233,8 +169,7 @@ IEC NO. 2089000104</textarea>
                             <th class="p-2 w-10"></th>
                         </tr>
                     </thead>
-                    <tbody id="itemsBody">
-                        </tbody>
+                    <tbody id="itemsBody"></tbody>
                 </table>
                 <div class="p-2 bg-gray-50 border-t flex justify-center">
                     <button onclick="addRow()" class="bg-pink-600 text-white px-4 py-2 rounded-full hover:bg-pink-700 shadow-md transform hover:-translate-y-0.5 transition"><i class="fas fa-plus"></i> Add Row</button>
@@ -277,7 +212,7 @@ SWIFT: UBININBBGAN</textarea>
         </div>
     </div>
 
-  <div id="print-area">
+    <div id="print-area">
         <div class="doc-container">
             <div class="header">
                 <div class="company-name">OSWAL LUMBERS PVT. LTD.</div>
@@ -324,8 +259,7 @@ SWIFT: UBININBBGAN</textarea>
                         <th class="hide-in-packing-list" style="width: 10%">Amount ($)</th>
                     </tr>
                 </thead>
-                <tbody id="printItemsBody">
-                    </tbody>
+                <tbody id="printItemsBody"></tbody>
             </table>
 
             <table class="totals-table">
@@ -333,12 +267,10 @@ SWIFT: UBININBBGAN</textarea>
                     <td class="label-col">Total Qty:</td>
                     <td class="value-col" id="printTotalQty"></td>
                 </tr>
-                
                 <tr>
                     <td class="label-col">Total Volume (M3):</td>
                     <td class="value-col" id="printTotalM3"></td>
                 </tr>
-                
                 <tr class="hide-in-packing-list">
                     <td class="label-col">Total Amount ($):</td>
                     <td class="value-col" id="printTotalAmount"></td>
@@ -371,24 +303,188 @@ SWIFT: UBININBBGAN</textarea>
         </div>
     </div>
 
-    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-    <script>
-        // --- LOGIC ---
-        
-        // 1. Initialize
-        let items = [];
-        const savedBuyersKey = 'my_buyers_list';
-        const lastInvoiceKey = 'last_invoice_data';
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCVzrCoIAXTQZiNIR1d2wdPL1kvs1WmdCY",
+            authDomain: "export-data-d099e.firebaseapp.com",
+            projectId: "export-data-d099e",
+            storageBucket: "export-data-d099e.firebasestorage.app",
+            messagingSenderId: "436774671877",
+            appId: "1:436774671877:web:855cf7a4d401f361606e6c"
+        };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            loadBuyersDropdown();
-            loadLastData();
-            if(items.length === 0) addRow();
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- GLOBAL FUNCTIONS (Attached to window) ---
+
+        // 1. Initialize Page
+        window.addEventListener('DOMContentLoaded', () => {
+            window.loadBuyersDropdown(); // Fetch from Firebase
+            if(document.getElementById('itemsBody').children.length === 0) window.addRow();
         });
 
-        // 2. Row Management
-        function addRow(data = {}) {
+        // 2. Load Buyers from Firebase
+        window.loadBuyersDropdown = async function() {
+            const sel = document.getElementById('savedBuyers');
+            sel.innerHTML = '<option value="">-- Loading... --</option>';
+            
+            try {
+                const querySnapshot = await getDocs(collection(db, "buyers"));
+                sel.innerHTML = '<option value="">-- Load Saved Buyer --</option>';
+                querySnapshot.forEach((doc) => {
+                    const b = doc.data();
+                    const opt = document.createElement('option');
+                    opt.value = b.details;
+                    opt.textContent = b.name;
+                    sel.appendChild(opt);
+                });
+            } catch (e) {
+                console.error("Error loading buyers: ", e);
+                sel.innerHTML = '<option value="">Error Loading Buyers</option>';
+            }
+        };
+
+        // 3. Save New Buyer to Firebase
+        window.saveCurrentBuyer = async function() {
+            const details = document.getElementById('buyerDetails').value;
+            if(!details) return alert("Enter buyer details first");
+            
+            const lines = details.split('\n');
+            const name = lines[0];
+
+            try {
+                await addDoc(collection(db, "buyers"), {
+                    name: name,
+                    details: details
+                });
+                alert("Buyer Saved to Cloud!");
+                window.loadBuyersDropdown();
+            } catch (e) {
+                console.error("Error adding buyer: ", e);
+                alert("Error saving buyer.");
+            }
+        };
+
+        // 4. Fill Buyer Details
+        window.loadBuyer = function() {
+            const val = document.getElementById('savedBuyers').value;
+            if(val) document.getElementById('buyerDetails').value = val;
+        };
+
+        // 5. Save Invoice Data to Firebase
+        window.saveToFirebase = async function() {
+            const invNo = document.getElementById('invoiceNo').value;
+            if(!invNo) return alert("Please Enter Invoice Number to Save!");
+
+            // Gather Data
+            const items = [];
+            document.querySelectorAll('#itemsBody tr').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                items.push({
+                    desc: inputs[1].value,
+                    comment: inputs[2].value,
+                    hsn: inputs[3].value,
+                    qty: inputs[4].value,
+                    m3: inputs[5].value,
+                    rate: inputs[6].value,
+                    amount: inputs[7].value
+                });
+            });
+
+            const invoiceData = {
+                seller: document.getElementById('sellerDetails').value,
+                buyer: document.getElementById('buyerDetails').value,
+                invoiceNo: invNo,
+                date: document.getElementById('invoiceDate').value,
+                portLoading: document.getElementById('portLoading').value,
+                portDischarge: document.getElementById('portDischarge').value,
+                terms: document.getElementById('terms').value,
+                origin: document.getElementById('origin').value,
+                containerNo: document.getElementById('containerNo').value,
+                containerSize: document.getElementById('containerSize').value,
+                grossWeight: document.getElementById('grossWeight').value,
+                netWeight: document.getElementById('netWeight').value,
+                bankDetails: document.getElementById('bankDetails').value,
+                items: items,
+                timestamp: new Date()
+            };
+
+            try {
+                // Using Invoice Number as Document ID
+                // Sanitizing Invoice Number (replacing / with -)
+                const docId = invNo.replace(/\//g, '-');
+                await setDoc(doc(db, "invoices", docId), invoiceData);
+                alert("Invoice Saved Successfully to Database!");
+            } catch (e) {
+                console.error("Error saving invoice: ", e);
+                alert("Error saving invoice: " + e.message);
+            }
+        };
+// --- NEW FUNCTION: LOAD INVOICE DATA ---
+        window.loadInvoiceData = async function() {
+            const invNo = document.getElementById('invoiceNo').value;
+            if(!invNo) return alert("Please Enter Invoice Number to Search!");
+
+            // 1. ID Generate करें (जैसे save करते वक्त किया था, / को - में बदलें)
+            const docId = invNo.replace(/\//g, '-');
+            const docRef = doc(db, "invoices", docId);
+
+            try {
+                // 2. Firebase से डेटा मंगवाएं
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    // 3. फॉर्म भरना शुरू करें
+                    if(confirm(`Data found for ${invNo}. Load it? This will replace current fields.`)) {
+                        
+                        document.getElementById('sellerDetails').value = data.seller || '';
+                        document.getElementById('buyerDetails').value = data.buyer || '';
+                        document.getElementById('invoiceDate').value = data.date || '';
+                        document.getElementById('portLoading').value = data.portLoading || '';
+                        document.getElementById('portDischarge').value = data.portDischarge || '';
+                        document.getElementById('terms').value = data.terms || '';
+                        document.getElementById('origin').value = data.origin || '';
+                        document.getElementById('containerNo').value = data.containerNo || '';
+                        document.getElementById('containerSize').value = data.containerSize || '';
+                        document.getElementById('grossWeight').value = data.grossWeight || '';
+                        document.getElementById('netWeight').value = data.netWeight || '';
+                        document.getElementById('bankDetails').value = data.bankDetails || '';
+
+                        // 4. आइटम्स टेबल को खाली करें और दोबारा भरें
+                        document.getElementById('itemsBody').innerHTML = '';
+                        
+                        if (data.items && data.items.length > 0) {
+                            data.items.forEach(item => {
+                                // existing addRow function को कॉल करें
+                                window.addRow(item);
+                            });
+                        } else {
+                            // अगर कोई आइटम नहीं था तो एक खाली रो जोड़ दें
+                            window.addRow();
+                        }
+                        
+                        // Totals अपडेट करें
+                        window.calcTotals();
+                        alert("Data Loaded Successfully!");
+                    }
+                } else {
+                    alert("No saved invoice found with this number!");
+                }
+            } catch (error) {
+                console.error("Error loading document:", error);
+                alert("Error loading data: " + error.message);
+            }
+        };
+        // 6. Row & Calculation Logic (Standard JS)
+        window.addRow = function(data = {}) {
             const tbody = document.getElementById('itemsBody');
             const rowIdx = tbody.children.length;
             const tr = document.createElement('tr');
@@ -407,29 +503,28 @@ SWIFT: UBININBBGAN</textarea>
                 <td class="p-2 text-center"><button onclick="removeRow(this)" class="text-red-500 hover:text-red-700 font-bold">&times;</button></td>
             `;
             tbody.appendChild(tr);
-            calcTotals();
-        }
+            window.calcTotals();
+        };
 
-        function removeRow(btn) {
+        window.removeRow = function(btn) {
             btn.closest('tr').remove();
-            // Re-index rows
             const rows = document.getElementById('itemsBody').querySelectorAll('tr');
             rows.forEach((row, index) => {
                 row.querySelector('td input').value = index + 1;
             });
-            calcTotals();
-        }
+            window.calcTotals();
+        };
 
-        function calcRow(input) {
+        window.calcRow = function(input) {
             const row = input.closest('tr');
             const m3 = parseFloat(row.querySelector('.m3').value) || 0;
             const rate = parseFloat(row.querySelector('.rate').value) || 0;
             const amt = m3 * rate;
             row.querySelector('.amt').value = amt.toFixed(2);
-            calcTotals();
-        }
+            window.calcTotals();
+        };
 
-        function calcTotals() {
+        window.calcTotals = function() {
             let tQty = 0, tM3 = 0, tAmt = 0;
             document.querySelectorAll('#itemsBody tr').forEach(row => {
                 tQty += parseFloat(row.querySelector('.qty').value) || 0;
@@ -440,31 +535,37 @@ SWIFT: UBININBBGAN</textarea>
             document.getElementById('dispTotalQty').textContent = tQty;
             document.getElementById('dispTotalM3').textContent = tM3.toFixed(3);
             document.getElementById('dispTotalAmount').textContent = '$' + tAmt.toFixed(2);
-            
-            saveToLocal(); // Auto save on change
-        }
+        };
 
-        // 3. Print Logic (The Magic)
-        function printDoc(type) {
-            // Save data first
-            saveToLocal();
+        window.clearData = function() {
+            if(confirm("Start New Invoice? This will clear current fields.")) {
+                document.querySelectorAll('input').forEach(i => {
+                    if(i.id !== 'portLoading' && i.id !== 'origin' && i.id !== 'containerSize') i.value = '';
+                });
+                document.getElementById('itemsBody').innerHTML = '';
+                window.addRow();
+            }
+        };
 
-            // Set Title
+        // 7. Print Logic
+        window.printDoc = function(type) {
+            // Save before printing
+            window.saveToFirebase();
+
             const title = type === 'invoice' ? 'INVOICE' : 'PACKING LIST';
             document.getElementById('printTitle').innerText = title;
 
-            // Toggle CSS class for hiding columns
             if (type === 'packing') {
                 document.body.classList.add('printing-packing-list');
             } else {
                 document.body.classList.remove('printing-packing-list');
             }
 
-            // Fill Data Mapping
+            // Fill Data
             document.getElementById('printSeller').innerText = document.getElementById('sellerDetails').value;
             document.getElementById('printBuyer').innerText = document.getElementById('buyerDetails').value;
             document.getElementById('printInvNo').innerText = document.getElementById('invoiceNo').value;
-            document.getElementById('printDate').innerText = document.getElementById('invoiceDate').value; // You might want to format this date
+            document.getElementById('printDate').innerText = document.getElementById('invoiceDate').value;
             document.getElementById('printTerms').innerText = document.getElementById('terms').value;
             document.getElementById('printOrigin').innerText = document.getElementById('origin').value;
             document.getElementById('printLoad').innerText = document.getElementById('portLoading').value;
@@ -480,15 +581,15 @@ SWIFT: UBININBBGAN</textarea>
             document.getElementById('printTotalM3').innerText = document.getElementById('dispTotalM3').textContent + " CBM";
             const totalAmtRaw = document.getElementById('dispTotalAmount').textContent.replace('$','');
             document.getElementById('printTotalAmount').innerText = '$' + totalAmtRaw;
-            document.getElementById('printAmountWords').innerText = amountToWords(parseFloat(totalAmtRaw)) + " ONLY.";
+            document.getElementById('printAmountWords').innerText = window.amountToWords(parseFloat(totalAmtRaw)) + " ONLY.";
 
             // Fill Table
             const printBody = document.getElementById('printItemsBody');
             printBody.innerHTML = '';
             document.querySelectorAll('#itemsBody tr').forEach((row, i) => {
                 const inputs = row.querySelectorAll('input');
-                const desc = inputs[1].value; // Main Desc
-                const cmt = inputs[2].value; // Comment
+                const desc = inputs[1].value; 
+                const cmt = inputs[2].value; 
                 const fullDesc = cmt ? `<strong>${desc}</strong><br><span style="font-size:10px;">${cmt}</span>` : `<strong>${desc}</strong>`;
                 
                 const tr = document.createElement('tr');
@@ -504,88 +605,11 @@ SWIFT: UBININBBGAN</textarea>
                 printBody.appendChild(tr);
             });
 
-            // Trigger Print
             window.print();
-        }
+        };
 
-        // 4. Local Storage Helpers (Saving Data)
-        function saveToLocal() {
-            const data = {
-                seller: document.getElementById('sellerDetails').value,
-                buyer: document.getElementById('buyerDetails').value,
-                invNo: document.getElementById('invoiceNo').value,
-                date: document.getElementById('invoiceDate').value,
-                terms: document.getElementById('terms').value,
-                discharge: document.getElementById('portDischarge').value,
-                container: document.getElementById('containerNo').value,
-                items: [] // Gets reconstructed on load
-            };
-            // Items are harder to sync perfectly without complexity, 
-            // but we save main fields so refreshing doesn't lose address info.
-            localStorage.setItem(lastInvoiceKey, JSON.stringify(data));
-        }
-
-        function loadLastData() {
-            const raw = localStorage.getItem(lastInvoiceKey);
-            if(raw) {
-                const data = JSON.parse(raw);
-                document.getElementById('sellerDetails').value = data.seller || '';
-                document.getElementById('buyerDetails').value = data.buyer || '';
-                document.getElementById('invoiceNo').value = data.invNo || '';
-                document.getElementById('invoiceDate').value = data.date || '';
-                document.getElementById('terms').value = data.terms || '';
-                document.getElementById('portDischarge').value = data.discharge || '';
-                document.getElementById('containerNo').value = data.container || '';
-            }
-        }
-
-        function saveCurrentBuyer() {
-            const details = document.getElementById('buyerDetails').value;
-            if(!details) return alert("Enter buyer details first");
-            
-            // Extract first line as name
-            const lines = details.split('\n');
-            const name = lines[0];
-
-            let buyers = JSON.parse(localStorage.getItem(savedBuyersKey) || "[]");
-            // Check dupes
-            const idx = buyers.findIndex(b => b.name === name);
-            if(idx >= 0) buyers[idx].details = details;
-            else buyers.push({name, details});
-
-            localStorage.setItem(savedBuyersKey, JSON.stringify(buyers));
-            loadBuyersDropdown();
-            alert("Buyer Saved Locally!");
-        }
-
-        function loadBuyersDropdown() {
-            const sel = document.getElementById('savedBuyers');
-            sel.innerHTML = '<option value="">-- Load Saved Buyer --</option>';
-            const buyers = JSON.parse(localStorage.getItem(savedBuyersKey) || "[]");
-            buyers.forEach(b => {
-                const opt = document.createElement('option');
-                opt.value = b.details;
-                opt.textContent = b.name;
-                sel.appendChild(opt);
-            });
-        }
-
-        function loadBuyer() {
-            const val = document.getElementById('savedBuyers').value;
-            if(val) document.getElementById('buyerDetails').value = val;
-        }
-
-        function clearData() {
-            if(confirm("Clear all fields?")) {
-                document.querySelectorAll('input').forEach(i => i.value = '');
-                document.getElementById('itemsBody').innerHTML = '';
-                addRow();
-                localStorage.removeItem(lastInvoiceKey);
-            }
-        }
-
-        // 5. Utilities
-        function amountToWords(amount) {
+        // 8. Amount to Words
+        window.amountToWords = function(amount) {
             const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
             const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
             const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -614,7 +638,8 @@ SWIFT: UBININBBGAN</textarea>
                 words += ' and Cents ' + convertHundreds(parseInt(cents, 10));
             }
             return words.trim();
-        }
+        };
+
     </script>
 </body>
 </html>
