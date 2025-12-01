@@ -565,7 +565,14 @@ SWIFT: UBININBBGAN</textarea>
             document.getElementById('printSeller').innerText = document.getElementById('sellerDetails').value;
             document.getElementById('printBuyer').innerText = document.getElementById('buyerDetails').value;
             document.getElementById('printInvNo').innerText = document.getElementById('invoiceNo').value;
-            document.getElementById('printDate').innerText = document.getElementById('invoiceDate').value;
+            // Date Formatting Logic (YYYY-MM-DD to DD-MM-YYYY)
+            const rawDate = document.getElementById('invoiceDate').value;
+            if (rawDate) {
+                const [year, month, day] = rawDate.split('-'); // तारीख को तोड़ें
+                document.getElementById('printDate').innerText = `${day}-${month}-${year}`; // उल्टा करके जोड़ें
+            } else {
+                document.getElementById('printDate').innerText = '';
+            }
             document.getElementById('printTerms').innerText = document.getElementById('terms').value;
             document.getElementById('printOrigin').innerText = document.getElementById('origin').value;
             document.getElementById('printLoad').innerText = document.getElementById('portLoading').value;
