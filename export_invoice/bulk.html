@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Invoice & Packing List Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+ <style>
+        /* --- Screen UI Styles --- */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f3f4f6; 
+        }
+        
+        /* @apply हटाकर नार्मल CSS लिखी गयी है */
+        .input-field { 
+            display: block;
+            width: 100%;
+            margin-top: 0.25rem;
+            border-radius: 0.375rem;
+            border: 1px solid #d1d5db; /* gray-300 */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            padding: 0.5rem;
+            font-size: 0.875rem; /* text-sm */
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #6366f1; /* indigo-500 */
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5);
+        }
+        
+        /* --- PRINT STYLES (The Beautiful Part) --- */
+        @media print {
+            @page { size: A4; margin: 10mm; }
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { 
+                position: absolute; left: 0; top: 0; width: 100%; 
+                font-family: 'Times New Roman', Times, serif; color: #000;
+            }
+            .no-print { display: none !important; }
+            
+            /* Professional Borders & Layout */
+            .doc-container { 
+                border: 2px solid #000; 
+                padding: 10px; 
+                height: 98vh; 
+                position: relative; 
+                display: flex; 
+                flex-direction: column; 
+            }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
+            .company-name { font-size: 32px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+            .company-details { font-size: 11px; margin-bottom: 2px; }
+            
+            .doc-title { 
+                background: #e5e7eb; 
+                border: 1px solid #000; 
+                font-weight: bold; 
+                text-align: center; 
+                padding: 5px; 
+                font-size: 18px; 
+                margin: 10px 0; 
+                letter-spacing: 2px;
+                /* यहाँ दोनों प्रॉपर्टीज डाल दी गयी हैं */
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            }
+
+            /* Grid for Addresses */
+            .address-grid { display: flex; border: 1px solid #000; margin-bottom: 15px; }
+            .address-box { flex: 1; padding: 8px; font-size: 12px; line-height: 1.4; }
+            .address-box:first-child { border-right: 1px solid #000; }
+            .box-label { font-weight: bold; text-decoration: underline; margin-bottom: 4px; display: block; }
+
+            /* Info Grid (Invoice No, Dates, etc) */
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid #000; margin-bottom: 15px; font-size: 12px; }
+            .info-item { padding: 5px 8px; border-bottom: 1px solid #000; border-right: 1px solid #000; display: flex; justify-content: space-between; }
+            .info-item:nth-child(even) { border-right: none; }
+            .info-item:last-child, .info-item:nth-last-child(2) { border-bottom: none; }
+            .info-label { font-weight: bold; }
+
+            /* Table Styles */
+            .main-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px; flex-grow: 1; }
+            .main-table th { 
+                border: 1px solid #000; 
+                padding: 6px; 
+                background: #f0f0f0; 
+                font-weight: bold; 
+                text-align: center; 
+                /* यहाँ दोनों प्रॉपर्टीज डाल दी गयी हैं */
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .main-table td { border-left: 1px solid #000; border-right: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+            .main-table tr:last-child td { border-bottom: 1px solid #000; }
+            
+            /* Totals Section */
+            /* Totals Section - Table Layout (More Stable) */
+            .totals-table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                border: 1px solid #000; 
+                font-size: 12px; 
+            }
+            .totals-table td { 
+                padding: 5px; 
+                border-bottom: 1px solid #000; 
+            }
+            /* आखिरी लाइन का बॉर्डर हटाने के लिए */
+            .totals-table tr:last-child td {
+                border-bottom: none;
+            }
+            
+            /* Columns Width Fix */
+           /* Labels को Left Align करने के लिए */
+            .label-col { 
+                width: 70%; 
+                text-align: left;    /* पहले right था, इसे left कर दिया */
+                padding-left: 10px;  /* थोड़ा गैप दिया */
+                font-weight: bold; 
+                border-right: 1px solid #000; 
+            }
+            
+            /* Values को Right Align ही रहने दें */
+            .value-col { 
+                width: 30%; 
+                text-align: right; 
+                padding-right: 10px; /* थोड़ा गैप दिया */
+                font-weight: bold; 
+            }
+
+            /* Amount in Words Box */
+            .words-box {
+                border: 1px solid #000;
+                border-top: none; /* ऊपर टेबल से जुड़ा रहेगा */
+                padding: 6px;
+                font-size: 12px;
+            }
+
+            /* Footer */
+            .footer-section { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; font-size: 12px; padding-top: 20px; }
+            .signature-box { text-align: center; width: 200px; }
+            .signature-line { border-top: 1px solid #000; margin-top: 40px; padding-top: 5px; font-weight: bold; }
+        }
+
+        /* Helper to hide rate columns in packing list */
+        .hide-in-packing-list { display: table-cell; }
+        body.printing-packing-list .hide-in-packing-list { display: none !important; }
+    </style>
+</head>
+<body class="p-6">
+
+    <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden no-print">
+        <div class="bg-pink-800 p-4 text-white flex justify-between items-center">
+            <h1 class="text-2xl font-bold"><i class="fas fa-file-invoice mr-2"></i> Export Doc Generator (Local)</h1>
+            <div>
+                <button onclick="clearData()" class="text-xs bg-red-600 px-3 py-1 rounded hover:bg-red-700">Reset Form</button>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-50 p-4 rounded border">
+                    <h3 class="font-bold text-gray-700 mb-2 border-b pb-1">Seller Details</h3>
+                    <textarea id="sellerDetails" rows="4" class="w-full border p-2 text-sm rounded">OSWAL LUMBERS PVT LTD
+SURVEY NO. 262, 263, 261/2, 261/3
+P.O. BOX 181, NATIONAL HIGHWAY 8A
+GANDHIDHAM - 370 201 - KUTCH - GUJARAT - INDIA
+EMAIL: INFO@OSWALLUMBERS.COM
+IEC NO. 2089000104</textarea>
+                </div>
+                <div class="bg-gray-50 p-4 rounded border relative">
+                    <h3 class="font-bold text-gray-700 mb-2 border-b pb-1">Buyer Details</h3>
+                    <div class="flex gap-2 mb-2">
+                        <select id="savedBuyers" onchange="loadBuyer()" class="w-full border p-1 rounded text-sm">
+                            <option value="">-- Load Saved Buyer --</option>
+                        </select>
+                        <button onclick="saveCurrentBuyer()" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">Save</button>
+                    </div>
+                    <textarea id="buyerDetails" rows="4" class="w-full border p-2 text-sm rounded" placeholder="Type Buyer Name & Address Here..."></textarea>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-blue-50 p-4 rounded border">
+                <div>
+                    <label class="text-xs font-bold text-gray-600">Invoice No</label>
+                    <input type="text" id="invoiceNo" class="w-full border p-2 rounded">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-600">Date</label>
+                    <input type="date" id="invoiceDate" class="w-full border p-2 rounded">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-600">Port of Loading</label>
+                    <input type="text" id="portLoading" value="MUNDRA, INDIA" class="w-full border p-2 rounded">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-600">Port of Discharge</label>
+                    <input type="text" id="portDischarge" class="w-full border p-2 rounded">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-600">Terms</label>
+                    <input type="text" id="terms" class="w-full border p-2 rounded">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-600">Country of Origin</label>
+                    <input type="text" id="origin" value="INDIA" class="w-full border p-2 rounded">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-600">Container No</label>
+                    <input type="text" id="containerNo" class="w-full border p-2 rounded">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-600">Container Size</label>
+                    <input type="text" id="containerSize" value="1 X 40' CONTAINER" class="w-full border p-2 rounded">
+                </div>
+            </div>
+
+            <div class="border rounded-lg overflow-hidden">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-100 text-gray-700 uppercase font-bold">
+                        <tr>
+                            <th class="p-2 w-10">#</th>
+                            <th class="p-2">Description / Comments</th>
+                            <th class="p-2 w-24">HSN</th>
+                            <th class="p-2 w-20">Qty</th>
+                            <th class="p-2 w-20">M3</th>
+                            <th class="p-2 w-24">Rate ($)</th>
+                            <th class="p-2 w-24">Amount ($)</th>
+                            <th class="p-2 w-10"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsBody">
+                        </tbody>
+                </table>
+                <div class="p-2 bg-gray-50 border-t flex justify-center">
+                    <button onclick="addRow()" class="bg-pink-600 text-white px-4 py-2 rounded-full hover:bg-pink-700 shadow-md transform hover:-translate-y-0.5 transition"><i class="fas fa-plus"></i> Add Row</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                     <div>
+                        <label class="text-xs font-bold text-gray-600">Weight Details</label>
+                        <div class="grid grid-cols-2 gap-2">
+                             <input type="text" id="grossWeight" placeholder="Gross Weight (KGS)" class="border p-2 rounded">
+                             <input type="text" id="netWeight" placeholder="Net Weight (KGS)" class="border p-2 rounded">
+                        </div>
+                     </div>
+                     <div>
+                        <label class="text-xs font-bold text-gray-600">Bank Details</label>
+                        <textarea id="bankDetails" rows="4" class="w-full border p-2 text-sm rounded">BANK: UNION BANK OF INDIA
+BRANCH: GANDHIDHAM
+A/C NO: 560101000092024
+SWIFT: UBININBBGAN</textarea>
+                    </div>
+                </div>
+                <div class="bg-yellow-50 p-4 rounded border">
+                    <h4 class="font-bold text-lg mb-4 text-center">Totals</h4>
+                    <div class="flex justify-between py-1 border-b"><span>Total Qty:</span> <span id="dispTotalQty" class="font-bold">0</span></div>
+                    <div class="flex justify-between py-1 border-b"><span>Total M3:</span> <span id="dispTotalM3" class="font-bold">0.000</span></div>
+                    <div class="flex justify-between py-2 text-xl text-pink-700"><span>Total Amount:</span> <span id="dispTotalAmount" class="font-bold">$0.00</span></div>
+                </div>
+            </div>
+
+            <div class="flex gap-4 justify-end pt-4 border-t">
+                <button onclick="printDoc('invoice')" class="bg-blue-800 text-white font-bold py-3 px-6 rounded shadow hover:bg-blue-900 flex items-center gap-2">
+                    <i class="fas fa-print"></i> Print Invoice
+                </button>
+                <button onclick="printDoc('packing')" class="bg-yellow-600 text-white font-bold py-3 px-6 rounded shadow hover:bg-yellow-700 flex items-center gap-2">
+                    <i class="fas fa-box"></i> Print Packing List
+                </button>
+            </div>
+        </div>
+    </div>
+
+  <div id="print-area">
+        <div class="doc-container">
+            <div class="header">
+                <div class="company-name">OSWAL LUMBERS PVT. LTD.</div>
+                <div class="company-details">SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA</div>
+                <div class="company-details">E-MAIL: info@oswallumbers.com | Ph: +91 9978555000</div>
+            </div>
+
+            <div class="doc-title" id="printTitle">INVOICE</div>
+
+            <div class="address-grid">
+                <div class="address-box">
+                    <span class="box-label">SELLER / SHIPPER:</span>
+                    <div id="printSeller" style="white-space: pre-wrap;"></div>
+                </div>
+                <div class="address-box">
+                    <span class="box-label">BUYER / CONSIGNEE:</span>
+                    <div id="printBuyer" style="white-space: pre-wrap;"></div>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">Invoice No:</span> <span id="printInvNo"></span></div>
+                <div class="info-item"><span class="info-label">Date:</span> <span id="printDate"></span></div>
+                
+                <div class="info-item"><span class="info-label">Terms:</span> <span id="printTerms"></span></div>
+                <div class="info-item"><span class="info-label">Origin:</span> <span id="printOrigin"></span></div>
+
+                <div class="info-item"><span class="info-label">Loading Port:</span> <span id="printLoad"></span></div>
+                <div class="info-item"><span class="info-label">Discharge Port:</span> <span id="printDischarge"></span></div>
+
+                <div class="info-item"><span class="info-label">Container:</span> <span id="printContainer"></span></div>
+                <div class="info-item"><span class="info-label">Size:</span> <span id="printSize"></span></div>
+            </div>
+
+            <table class="main-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%">S.No</th>
+                        <th style="width: 45%; text-align: left;">Description of Goods</th>
+                        <th style="width: 10%">HSN</th>
+                        <th style="width: 10%">Qty (PCS)</th>
+                        <th style="width: 10%">Vol (M3)</th>
+                        <th class="hide-in-packing-list" style="width: 10%">Rate ($)</th>
+                        <th class="hide-in-packing-list" style="width: 10%">Amount ($)</th>
+                    </tr>
+                </thead>
+                <tbody id="printItemsBody">
+                    </tbody>
+            </table>
+
+            <table class="totals-table">
+                <tr>
+                    <td class="label-col">Total Qty:</td>
+                    <td class="value-col" id="printTotalQty"></td>
+                </tr>
+                
+                <tr>
+                    <td class="label-col">Total Volume (M3):</td>
+                    <td class="value-col" id="printTotalM3"></td>
+                </tr>
+                
+                <tr class="hide-in-packing-list">
+                    <td class="label-col">Total Amount ($):</td>
+                    <td class="value-col" id="printTotalAmount"></td>
+                </tr>
+            </table>
+
+            <div class="words-box hide-in-packing-list">
+                <strong>Amount in Words: </strong> 
+                <span id="printAmountWords" class="uppercase"></span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; border: 1px solid #000; padding: 5px; font-size: 12px; margin-bottom: 5px;">
+                <div style="width: 48%;">
+                    <strong>Gross Weight:</strong> <span id="printGross"></span><br>
+                    <strong>Net Weight:</strong> <span id="printNet"></span><br>
+                    <div class="mt-2 hide-in-packing-list">
+                        <strong>Bank Details:</strong><br>
+                        <span id="printBank" style="white-space: pre-wrap;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-section">
+                <div></div> 
+                <div class="signature-box">
+                    <div>For, OSWAL LUMBERS PVT. LTD.</div>
+                    <div class="signature-line">AUTHORISED SIGNATORY</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <script>
+        // --- LOGIC ---
+        
+        // 1. Initialize
+        let items = [];
+        const savedBuyersKey = 'my_buyers_list';
+        const lastInvoiceKey = 'last_invoice_data';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBuyersDropdown();
+            loadLastData();
+            if(items.length === 0) addRow();
+        });
+
+        // 2. Row Management
+        function addRow(data = {}) {
+            const tbody = document.getElementById('itemsBody');
+            const rowIdx = tbody.children.length;
+            const tr = document.createElement('tr');
+            tr.className = "border-b hover:bg-gray-50";
+            tr.innerHTML = `
+                <td class="p-2"><input type="text" value="${rowIdx + 1}" class="w-full text-center bg-gray-100 p-1" readonly></td>
+                <td class="p-2">
+                    <input type="text" class="w-full border p-1 rounded mb-1" placeholder="Item Name" value="${data.desc || ''}" oninput="calcRow(this)">
+                    <input type="text" class="w-full border p-1 rounded text-xs text-gray-500" placeholder="Comment/Size" value="${data.comment || ''}">
+                </td>
+                <td class="p-2"><input type="text" class="w-full border p-1 rounded text-center" value="${data.hsn || '44071100'}"></td>
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded text-center qty" value="${data.qty || ''}" oninput="calcRow(this)"></td>
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded text-center m3" step="0.001" value="${data.m3 || ''}" oninput="calcRow(this)"></td>
+                <td class="p-2"><input type="number" class="w-full border p-1 rounded text-center rate" step="0.01" value="${data.rate || ''}" oninput="calcRow(this)"></td>
+                <td class="p-2"><input type="text" class="w-full bg-gray-100 p-1 rounded text-right font-bold amt" readonly value="${data.amount || '0.00'}"></td>
+                <td class="p-2 text-center"><button onclick="removeRow(this)" class="text-red-500 hover:text-red-700 font-bold">&times;</button></td>
+            `;
+            tbody.appendChild(tr);
+            calcTotals();
+        }
+
+        function removeRow(btn) {
+            btn.closest('tr').remove();
+            // Re-index rows
+            const rows = document.getElementById('itemsBody').querySelectorAll('tr');
+            rows.forEach((row, index) => {
+                row.querySelector('td input').value = index + 1;
+            });
+            calcTotals();
+        }
+
+        function calcRow(input) {
+            const row = input.closest('tr');
+            const m3 = parseFloat(row.querySelector('.m3').value) || 0;
+            const rate = parseFloat(row.querySelector('.rate').value) || 0;
+            const amt = m3 * rate;
+            row.querySelector('.amt').value = amt.toFixed(2);
+            calcTotals();
+        }
+
+        function calcTotals() {
+            let tQty = 0, tM3 = 0, tAmt = 0;
+            document.querySelectorAll('#itemsBody tr').forEach(row => {
+                tQty += parseFloat(row.querySelector('.qty').value) || 0;
+                tM3 += parseFloat(row.querySelector('.m3').value) || 0;
+                tAmt += parseFloat(row.querySelector('.amt').value) || 0;
+            });
+
+            document.getElementById('dispTotalQty').textContent = tQty;
+            document.getElementById('dispTotalM3').textContent = tM3.toFixed(3);
+            document.getElementById('dispTotalAmount').textContent = '$' + tAmt.toFixed(2);
+            
+            saveToLocal(); // Auto save on change
+        }
+
+        // 3. Print Logic (The Magic)
+        function printDoc(type) {
+            // Save data first
+            saveToLocal();
+
+            // Set Title
+            const title = type === 'invoice' ? 'INVOICE' : 'PACKING LIST';
+            document.getElementById('printTitle').innerText = title;
+
+            // Toggle CSS class for hiding columns
+            if (type === 'packing') {
+                document.body.classList.add('printing-packing-list');
+            } else {
+                document.body.classList.remove('printing-packing-list');
+            }
+
+            // Fill Data Mapping
+            document.getElementById('printSeller').innerText = document.getElementById('sellerDetails').value;
+            document.getElementById('printBuyer').innerText = document.getElementById('buyerDetails').value;
+            document.getElementById('printInvNo').innerText = document.getElementById('invoiceNo').value;
+            document.getElementById('printDate').innerText = document.getElementById('invoiceDate').value; // You might want to format this date
+            document.getElementById('printTerms').innerText = document.getElementById('terms').value;
+            document.getElementById('printOrigin').innerText = document.getElementById('origin').value;
+            document.getElementById('printLoad').innerText = document.getElementById('portLoading').value;
+            document.getElementById('printDischarge').innerText = document.getElementById('portDischarge').value;
+            document.getElementById('printContainer').innerText = document.getElementById('containerNo').value;
+            document.getElementById('printSize').innerText = document.getElementById('containerSize').value;
+            document.getElementById('printGross').innerText = document.getElementById('grossWeight').value;
+            document.getElementById('printNet').innerText = document.getElementById('netWeight').value;
+            document.getElementById('printBank').innerText = document.getElementById('bankDetails').value;
+
+            // Totals
+            document.getElementById('printTotalQty').innerText = document.getElementById('dispTotalQty').textContent + " PCS";
+            document.getElementById('printTotalM3').innerText = document.getElementById('dispTotalM3').textContent + " CBM";
+            const totalAmtRaw = document.getElementById('dispTotalAmount').textContent.replace('$','');
+            document.getElementById('printTotalAmount').innerText = '$' + totalAmtRaw;
+            document.getElementById('printAmountWords').innerText = amountToWords(parseFloat(totalAmtRaw)) + " ONLY.";
+
+            // Fill Table
+            const printBody = document.getElementById('printItemsBody');
+            printBody.innerHTML = '';
+            document.querySelectorAll('#itemsBody tr').forEach((row, i) => {
+                const inputs = row.querySelectorAll('input');
+                const desc = inputs[1].value; // Main Desc
+                const cmt = inputs[2].value; // Comment
+                const fullDesc = cmt ? `<strong>${desc}</strong><br><span style="font-size:10px;">${cmt}</span>` : `<strong>${desc}</strong>`;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center;">${i+1}</td>
+                    <td>${fullDesc}</td>
+                    <td style="text-align:center;">${inputs[3].value}</td>
+                    <td style="text-align:center;">${inputs[4].value}</td>
+                    <td style="text-align:right;">${inputs[5].value}</td>
+                    <td class="hide-in-packing-list" style="text-align:right;">${inputs[6].value}</td>
+                    <td class="hide-in-packing-list" style="text-align:right;">${inputs[7].value}</td>
+                `;
+                printBody.appendChild(tr);
+            });
+
+            // Trigger Print
+            window.print();
+        }
+
+        // 4. Local Storage Helpers (Saving Data)
+        function saveToLocal() {
+            const data = {
+                seller: document.getElementById('sellerDetails').value,
+                buyer: document.getElementById('buyerDetails').value,
+                invNo: document.getElementById('invoiceNo').value,
+                date: document.getElementById('invoiceDate').value,
+                terms: document.getElementById('terms').value,
+                discharge: document.getElementById('portDischarge').value,
+                container: document.getElementById('containerNo').value,
+                items: [] // Gets reconstructed on load
+            };
+            // Items are harder to sync perfectly without complexity, 
+            // but we save main fields so refreshing doesn't lose address info.
+            localStorage.setItem(lastInvoiceKey, JSON.stringify(data));
+        }
+
+        function loadLastData() {
+            const raw = localStorage.getItem(lastInvoiceKey);
+            if(raw) {
+                const data = JSON.parse(raw);
+                document.getElementById('sellerDetails').value = data.seller || '';
+                document.getElementById('buyerDetails').value = data.buyer || '';
+                document.getElementById('invoiceNo').value = data.invNo || '';
+                document.getElementById('invoiceDate').value = data.date || '';
+                document.getElementById('terms').value = data.terms || '';
+                document.getElementById('portDischarge').value = data.discharge || '';
+                document.getElementById('containerNo').value = data.container || '';
+            }
+        }
+
+        function saveCurrentBuyer() {
+            const details = document.getElementById('buyerDetails').value;
+            if(!details) return alert("Enter buyer details first");
+            
+            // Extract first line as name
+            const lines = details.split('\n');
+            const name = lines[0];
+
+            let buyers = JSON.parse(localStorage.getItem(savedBuyersKey) || "[]");
+            // Check dupes
+            const idx = buyers.findIndex(b => b.name === name);
+            if(idx >= 0) buyers[idx].details = details;
+            else buyers.push({name, details});
+
+            localStorage.setItem(savedBuyersKey, JSON.stringify(buyers));
+            loadBuyersDropdown();
+            alert("Buyer Saved Locally!");
+        }
+
+        function loadBuyersDropdown() {
+            const sel = document.getElementById('savedBuyers');
+            sel.innerHTML = '<option value="">-- Load Saved Buyer --</option>';
+            const buyers = JSON.parse(localStorage.getItem(savedBuyersKey) || "[]");
+            buyers.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.details;
+                opt.textContent = b.name;
+                sel.appendChild(opt);
+            });
+        }
+
+        function loadBuyer() {
+            const val = document.getElementById('savedBuyers').value;
+            if(val) document.getElementById('buyerDetails').value = val;
+        }
+
+        function clearData() {
+            if(confirm("Clear all fields?")) {
+                document.querySelectorAll('input').forEach(i => i.value = '');
+                document.getElementById('itemsBody').innerHTML = '';
+                addRow();
+                localStorage.removeItem(lastInvoiceKey);
+            }
+        }
+
+        // 5. Utilities
+        function amountToWords(amount) {
+            const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+            const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+            const convertHundreds = (n) => {
+                let str = '';
+                if (n > 99) { str += ones[Math.floor(n / 100)] + ' Hundred '; n %= 100; }
+                if (n > 19) { str += tens[Math.floor(n / 10)] + ' '; n %= 10; }
+                if (n > 9) { str += teens[n - 10] + ' '; return str; }
+                if (n > 0) { str += ones[n] + ' '; }
+                return str;
+            };
+
+            const [dollars, cents] = amount.toFixed(2).split('.');
+            let words = 'US Dollars ';
+            const num = parseInt(dollars, 10);
+            
+            if (num === 0) words += 'Zero';
+            else {
+                if (num >= 1000) { words += convertHundreds(Math.floor(num / 1000)) + ' Thousand '; }
+                const rem = num % 1000;
+                if (rem > 0) words += convertHundreds(rem);
+            }
+
+            if (parseInt(cents, 10) > 0) {
+                words += ' and Cents ' + convertHundreds(parseInt(cents, 10));
+            }
+            return words.trim();
+        }
+    </script>
+</body>
+</html>
