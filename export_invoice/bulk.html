@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Export Invoice Generator (Firebase Connected)</title>
+    <title>Bulk Invoice Generator </title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -82,7 +82,7 @@
 
     <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden no-print">
         <div class="bg-pink-800 p-4 text-white flex justify-between items-center">
-            <h1 class="text-2xl font-bold"><i class="fas fa-cloud mr-2"></i> Export Doc Generator (Firebase)</h1>
+            <h1 class="text-2xl font-bold"><i class="fas fa-cloud mr-2"></i>Bluck Export Doc Generator </h1>
             <div class="flex gap-2">
                 <button onclick="saveToFirebase()" class="text-sm bg-green-600 px-4 py-2 rounded hover:bg-green-700 font-bold border border-green-400">
                     <i class="fas fa-save mr-1"></i> Save Data
@@ -548,6 +548,7 @@ SWIFT: UBININBBGAN</textarea>
         };
 
         // 7. Print Logic
+   // 7. UPDATED Print Logic (Auto-Merge Same Items)
         window.printDoc = function(type) {
             // Save before printing
             window.saveToFirebase();
@@ -561,18 +562,20 @@ SWIFT: UBININBBGAN</textarea>
                 document.body.classList.remove('printing-packing-list');
             }
 
-            // Fill Data
+            // Fill Header Data
             document.getElementById('printSeller').innerText = document.getElementById('sellerDetails').value;
             document.getElementById('printBuyer').innerText = document.getElementById('buyerDetails').value;
             document.getElementById('printInvNo').innerText = document.getElementById('invoiceNo').value;
-            // Date Formatting Logic (YYYY-MM-DD to DD-MM-YYYY)
+            
+            // Date Formatting
             const rawDate = document.getElementById('invoiceDate').value;
             if (rawDate) {
-                const [year, month, day] = rawDate.split('-'); // तारीख को तोड़ें
-                document.getElementById('printDate').innerText = `${day}-${month}-${year}`; // उल्टा करके जोड़ें
+                const [year, month, day] = rawDate.split('-');
+                document.getElementById('printDate').innerText = `${day}-${month}-${year}`;
             } else {
                 document.getElementById('printDate').innerText = '';
             }
+
             document.getElementById('printTerms').innerText = document.getElementById('terms').value;
             document.getElementById('printOrigin').innerText = document.getElementById('origin').value;
             document.getElementById('printLoad').innerText = document.getElementById('portLoading').value;
@@ -590,26 +593,69 @@ SWIFT: UBININBBGAN</textarea>
             document.getElementById('printTotalAmount').innerText = '$' + totalAmtRaw;
             document.getElementById('printAmountWords').innerText = window.amountToWords(parseFloat(totalAmtRaw)) + " ONLY.";
 
-            // Fill Table
+            // --- MAGIC TABLE FILLING (MERGE LOGIC) ---
             const printBody = document.getElementById('printItemsBody');
             printBody.innerHTML = '';
-            document.querySelectorAll('#itemsBody tr').forEach((row, i) => {
-                const inputs = row.querySelectorAll('input');
-                const desc = inputs[1].value; 
-                const cmt = inputs[2].value; 
-                const fullDesc = cmt ? `<strong>${desc}</strong><br><span style="font-size:10px;">${cmt}</span>` : `<strong>${desc}</strong>`;
+            
+            const rows = document.querySelectorAll('#itemsBody tr');
+            let previousItemName = "";
+            let serialCounter = 0;
+
+            rows.forEach((row, i) => {
+                const inputs = row.querySelectorAll('input, textarea');
                 
+                const currentItemName = inputs[1].value.trim(); // Main Item Name
+                const cmt = inputs[2].value; // Size/Comment
+                const qty = inputs[4].value;
+                const m3 = inputs[5].value;
+                const rate = inputs[6].value;
+                const amount = inputs[7].value;
+
+                // Check if this row belongs to the previous item
+                const isSameItem = (i > 0 && currentItemName === previousItemName && currentItemName !== "");
+
+                let displaySerial = "";
+                let displayDesc = "";
+                let rowStyle = "";
+
+                if (isSameItem) {
+                    // SAME ITEM: Hide Serial, Hide Name, Remove Top Border
+                    displaySerial = "";
+                    // सिर्फ साइज दिखाओ (नया नाम नहीं)
+                    displayDesc = `<span style="font-size:10px;">${cmt.replace(/\n/g, "<br>")}</span>`;
+                    // ऊपर की लाइन हटा दो ताकि यह पिछले आइटम का हिस्सा लगे
+                    rowStyle = "border-top: none transparent;"; 
+                } else {
+                    // NEW ITEM: Show Serial, Show Full Name
+                    serialCounter++;
+                    displaySerial = serialCounter;
+                    
+                    const namePart = `<strong>${currentItemName}</strong>`;
+                    const cmtPart = cmt ? `<br><span style="font-size:10px;">${cmt.replace(/\n/g, "<br>")}</span>` : "";
+                    displayDesc = namePart + cmtPart;
+                    
+                    // नार्मल बॉर्डर
+                    rowStyle = "border-top: 1px solid #000;";
+                }
+
+                // Create Print Row
                 const tr = document.createElement('tr');
+                // स्टाइल अप्लाई करें
+                tr.style.cssText = rowStyle;
+                
                 tr.innerHTML = `
-                    <td style="text-align:center;">${i+1}</td>
-                    <td>${fullDesc}</td>
-                    <td style="text-align:center;">${inputs[3].value}</td>
-                    <td style="text-align:center;">${inputs[4].value}</td>
-                    <td style="text-align:right;">${inputs[5].value}</td>
-                    <td class="hide-in-packing-list" style="text-align:right;">${inputs[6].value}</td>
-                    <td class="hide-in-packing-list" style="text-align:right;">${inputs[7].value}</td>
+                    <td style="text-align:center; ${rowStyle}">${displaySerial}</td>
+                    <td style="${rowStyle}">${displayDesc}</td>
+                    <td style="text-align:center; ${rowStyle}">${inputs[3].value}</td>
+                    <td style="text-align:center; ${rowStyle}">${qty}</td>
+                    <td style="text-align:right; ${rowStyle}">${parseFloat(m3).toFixed(3)}</td>
+                    <td class="hide-in-packing-list" style="text-align:right; ${rowStyle}">${rate}</td>
+                    <td class="hide-in-packing-list" style="text-align:right; ${rowStyle}">${amount}</td>
                 `;
                 printBody.appendChild(tr);
+
+                // Update tracker
+                previousItemName = currentItemName;
             });
 
             window.print();
