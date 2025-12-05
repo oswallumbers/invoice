@@ -52,6 +52,8 @@
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
     <style>
         html, body {
 		
@@ -267,6 +269,9 @@
                                 <div><label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone *</label><input type="tel" id="phone" name="phone" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"></div>
                             </div>
                             <div class="mb-4"><label for="message" class="block text-sm font-medium text-gray-700 mb-1">Message</label><textarea id="message" name="message" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary" placeholder="Any specific requirements..."></textarea></div>
+							<div class="g-recaptcha mb-4"
+     data-sitekey="6LcQJSIsAAAAANkO4mnKIwYkyLEeXGnEvqJ-sIA8"></div>
+							 <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
                             <button type="submit" class="w-full bg-primary text-white font-medium px-6 py-3 rounded-md shadow-md hover:bg-opacity-90 transition-all text-lg">Request Price</button>
                             <p id="form-success" class="text-green-600 mt-4 hidden">Thank you! Your quote request has been sent.</p>
                         </form>
@@ -592,6 +597,7 @@ productTypeSelect.addEventListener('change', function() {
     </script>
 </body>
 </html>
+
 
 
 
