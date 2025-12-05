@@ -27,7 +27,7 @@
     <!-- //========= STYLES & SCRIPTS (Copied from index.html) =========// -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-   <script type="application/ld+json">
+ <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -66,6 +66,21 @@
           "shippingDestination": {
             "@type": "DefinedRegion",
             "addressCountry": "IN"
+          },
+          "deliveryTime": {
+            "@type": "ShippingDeliveryTime",
+            "handlingTime": {
+              "@type": "QuantitativeValue",
+              "minValue": 0,
+              "maxValue": 1,
+              "unitCode": "DAY"
+            },
+            "transitTime": {
+              "@type": "QuantitativeValue",
+              "minValue": 1,
+              "maxValue": 5,
+              "unitCode": "DAY"
+            }
           }
         },
         "hasMerchantReturnPolicy": {
