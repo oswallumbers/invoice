@@ -27,7 +27,7 @@
     <!-- //========= STYLES & SCRIPTS (Copied from index.html) =========// -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script type="application/ld+json">
+   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -35,7 +35,7 @@
       "image": "https://placehold.co/600x400/CD853F/FFFFFF?text=Face+Veneer",
       "description": "Premium decorative face veneers in natural wood and recon species for an aesthetic finish on plywood, MDF, and furniture.",
       "brand": {
-        "@type": "Organization",
+        "@type": "Brand",
         "name": "Oswal Lumbers Pvt. Ltd."
       },
       "supplier": {
@@ -44,12 +44,46 @@
         "url": "https://www.oswallumbers.in/",
         "logo": "https://i.ibb.co/VWCxPSqc/OLPLLOGO.jpg"
       },
-		"offers": {
-    "@type": "Offer",
-    "availability": "https://schema.org/InStock"
- 	 }
+      "offers": {
+        "@type": "Offer",
+        "url": "https://www.oswallumbers.in/face-veneer.html",
+        "priceCurrency": "INR",
+        "price": "100",
+        "priceValidUntil": "2026-12-31",
+        "itemCondition": "https://schema.org/NewCondition",
+        "availability": "https://schema.org/InStock",
+        "seller": {
+            "@type": "Organization",
+            "name": "Oswal Lumbers Pvt. Ltd."
+        },
+        "shippingDetails": {
+          "@type": "OfferShippingDetails",
+          "shippingRate": {
+            "@type": "MonetaryAmount",
+            "value": "0",
+            "currency": "INR"
+          },
+          "shippingDestination": {
+            "@type": "DefinedRegion",
+            "addressCountry": "IN"
+          }
+        },
+        "hasMerchantReturnPolicy": {
+          "@type": "MerchantReturnPolicy",
+          "applicableCountry": "IN",
+          "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+          "merchantReturnDays": "7",
+          "returnMethod": "https://schema.org/ReturnByMail",
+          "returnFees": "https://schema.org/FreeReturn"
+        }
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "5",
+        "reviewCount": "1"
+      }
     }
-    </script>
+</script>
     <script>
         tailwind.config = {
             theme: {
