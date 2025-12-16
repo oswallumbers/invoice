@@ -295,11 +295,11 @@ document.addEventListener('DOMContentLoaded', function () {
         let y = margin;
 
         // --- Header Section ---
-        doc.setFontSize(22); // Slightly smaller to prevent huge header
+        doc.setFontSize(27); // Slightly smaller to prevent huge header
         doc.setFont(font, 'bold');
         doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
         y += 7;
-        doc.setFontSize(10);
+        doc.setFontSize(12);
         doc.setFont(font, 'normal');
         doc.text('SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA', pageWidth / 2, y, { align: 'center' });
         y += 5;
@@ -498,5 +498,6 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
