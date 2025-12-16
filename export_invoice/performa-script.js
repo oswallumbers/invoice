@@ -285,48 +285,58 @@ document.addEventListener('DOMContentLoaded', function () {
         generatePDF();
     });
     
-    function generatePDF() {
+   function generatePDF() {
         const doc = new jsPDF();
         const data = getFormData();
         const font = 'Helvetica';
         doc.setFont(font, 'normal');
         const margin = 13;
         const pageWidth = doc.internal.pageSize.width;
-        const pageHeight = doc.internal.pageSize.height;
         let y = margin;
 
-        doc.setFontSize(30);
+        // --- Header Section ---
+        doc.setFontSize(22); // Slightly smaller to prevent huge header
         doc.setFont(font, 'bold');
         doc.text('OSWAL LUMBERS PVT. LTD.', pageWidth / 2, y, { align: 'center' });
-        y += 6;
-        doc.setFontSize(11);
+        y += 7;
+        doc.setFontSize(10);
         doc.setFont(font, 'normal');
         doc.text('SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA', pageWidth / 2, y, { align: 'center' });
-        y += 4;
+        y += 5;
         doc.text('E-MAIL: info@oswallumbers.com', pageWidth / 2, y, { align: 'center' });
 
-        y += 8;
-        const piDate = new Date(data.performaInvoiceDate).toLocaleDateString('en-GB');
+        y += 10;
+        const piDate = new Date(data.performaInvoiceDate).toLocaleDateString('en-GB'); // DD/MM/YYYY
         doc.setFont(font, 'bold');
         doc.text(`Sales Contract No: ${data.performaInvoiceNo}`, margin, y);
         doc.setFont(font, 'normal');
         doc.text(`Date: ${piDate}`, margin, y + 5);
         y += 15;
 
+        // --- Buyer Section ---
         doc.setFont(font, 'bold');
         doc.text('Buyer:', margin, y);
         y += 5;
         doc.setFont(font, 'normal');
+        
+        // Combine Name and Address
         const fullBuyerText = data.buyerName + '\n' + data.buyerDetails;
+        // FIX: Ensure address wraps properly and pushes 'y' down safely
         const buyerTextDims = doc.getTextDimensions(fullBuyerText, { maxWidth: 100 });
         doc.text(fullBuyerText, margin, y, { maxWidth: 100 });
-        y += buyerTextDims.h + 5;
+        
+        // FIX: Add extra buffer (+8) to prevent overlap with "Dear Sir"
+        y += buyerTextDims.h + 8; 
         
         doc.text('Dear Sir,', margin, y);
-        y += 4;
+        y += 5;
         doc.text(`We are pleased to confirm having sold to you ${data.mainItemDesc}`, margin, y, { maxWidth: pageWidth - (margin * 2) });
-        y += 8;
         
+        // Calculate dynamic height for main description too in case it's long
+        const descDims = doc.getTextDimensions(`We are pleased to confirm having sold to you ${data.mainItemDesc}`, { maxWidth: pageWidth - (margin * 2) });
+        y += descDims.h + 5; 
+        
+        // --- Table Section ---
         const head = [['NO.', 'HSN', 'DIMENSION', 'QUANTITY ABOUT M3', 'CNF PRICE US$/M3', 'AMOUNT US$']];
         let body;
         const totalM3 = data.items.reduce((sum, item) => sum + (parseFloat(item.m3) || 0), 0);
@@ -365,24 +375,49 @@ document.addEventListener('DOMContentLoaded', function () {
 
         doc.autoTable({
             head: head, body: body, foot: foot, startY: y, theme: 'grid',
-            headStyles: { fontStyle: 'bold', halign: 'center' },
-            footStyles: { fontStyle: 'bold' },
-            styles: { fontSize: 9 },
+            headStyles: { 
+                fontStyle: 'bold', 
+                halign: 'center',
+                fillColor: [240, 240, 240], // Light gray header
+                textColor: [0, 0, 0],
+                lineWidth: 0.1
+            },
+            footStyles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0] },
+            // FIX: Added 'halign: center' and 'valign: middle' for all body cells
+            bodyStyles: { 
+                fontSize: 9, 
+                halign: 'center', 
+                valign: 'middle',
+                textColor: [0, 0, 0] 
+            },
+            styles: { 
+                lineColor: [0, 0, 0], 
+                lineWidth: 0.1 
+            },
         });
-        y = doc.autoTable.previous.finalY + 5;
+        
+        // FIX: Ensure y updates from the end of table
+        y = doc.autoTable.previous.finalY + 8;
 
+        // --- Terms Section ---
         const addTerm = (label, value) => {
             if (value) {
+                // Check for page break if needed (simple check)
+                if (y > 270) { doc.addPage(); y = margin; }
+                
                 doc.setFont(font, 'bold');
-                doc.text(label, margin, y, { maxWidth: 40 });
+                doc.text(label, margin, y, { maxWidth: 45 });
                 doc.setFont(font, 'normal');
-                const textHeight = doc.getTextDimensions(value, { maxWidth: pageWidth - margin * 2 - 45 }).h;
+                
+                // Calculate height of the value text
+                const textDims = doc.getTextDimensions(value, { maxWidth: pageWidth - margin * 2 - 45 });
                 doc.text(value, margin + 45, y, { maxWidth: pageWidth - margin * 2 - 45 });
-                y += textHeight + 3;
+                
+                // Increase y by the text height + padding
+                y += textDims.h + 3;
             }
         };
 
-        // CHANGE: The order of printing is confirmed here.
         addTerm('Port of Loading:', 'MUNDRA PORT, INDIA');
         addTerm('Port of Discharge:', data.portOfDischarge);
         addTerm('Terms of Shipment:', data.shipmentDetails);
@@ -391,62 +426,56 @@ document.addEventListener('DOMContentLoaded', function () {
         addTerm('Partial Shipment:', data.partialShipment);
         addTerm('Documents:', 'Invoice, Packing List, BL & COO(CEPA)');
         
-        // --- Code Start ---
-// --- Code Start ---
-
-        // 1. Bank Details (गैप और कम किया ताकि जगह बचे)
-        y += 2; 
+        // --- Bank Details ---
+        if (y > 250) { doc.addPage(); y = margin; } // Check space before bank details
+        
+        y += 4; 
         doc.setFont(font, 'bold');
         doc.text('Our Bank details:', margin, y);
-        y += 4;
+        y += 5;
         doc.setFont(font, 'normal');
         
         const bankDetailsText = data.bankDetails;
-        // लाइन हाइट फैक्टर थोड़ा कम किया (1.15)
         const bankDetailsDims = doc.getTextDimensions(bankDetailsText, { lineHeightFactor: 1.15, maxWidth: pageWidth - margin * 2 });
         doc.text(bankDetailsText, margin + 5, y, { lineHeightFactor: 1.15, maxWidth: pageWidth - margin * 2 });
-        y += bankDetailsDims.h;
+        
+        // FIX: Add buffer to prevent overlap with Note box
+        y += bankDetailsDims.h + 8;
 
-      // --- Calculation Note Updated Code ---
-if (data.calculationNote) {
-    const noteText = data.calculationNote;
-    // Max allowed width (margin के अंदर–अंदर)
-const maxBoxWidth = pageWidth - margin * 2 - 6;
+        // --- Calculation Note ---
+        if (data.calculationNote) {
+            const noteText = data.calculationNote;
+            const maxBoxWidth = pageWidth - margin * 2 - 6;
+            const textDims = doc.getTextDimensions(noteText, { maxWidth: maxBoxWidth });
+            
+            // Check for page break if note is large
+            if (y + textDims.h + 20 > 280) { doc.addPage(); y = margin; }
 
-// पहले text की actual width निकालो
-const textDims = doc.getTextDimensions(noteText, { maxWidth: maxBoxWidth });
+            const paddingX = 3;
+            const paddingY = 3;
+            const boxWidth = maxBoxWidth + paddingX * 2; // Fixed width style
+            const boxHeight = textDims.h + paddingY * 2;
 
-// अब box को text के बराबर रखो (+padding)
-const paddingX = 3;
-const paddingY = 3;
+            doc.setDrawColor(0);
+            doc.rect(margin, y, boxWidth, boxHeight);
+            doc.text(noteText, margin + paddingX, y + paddingY + 3, { maxWidth: maxBoxWidth });
 
-const boxWidth  = Math.min(textDims.w + paddingX * 2, maxBoxWidth + paddingX * 2);
-const boxHeight = textDims.h + paddingY * 2;
+            // FIX: Update y properly after box
+            y += boxHeight + 10;
+        } else {
+             y += 5;
+        }
 
-const startX = margin;
-const startY = y;
+        // --- Signatures ---
+        // Ensure we don't print signatures at the very bottom edge
+        if (y > 250) { doc.addPage(); y = margin + 20; }
 
-// text को box के अंदर थोड़ा अंदर से लिखें
-doc.text(
-  noteText,
-  startX + paddingX,
-  startY + paddingY + 2,           // +2 ताकि ऊपर से touch न करे
-  { maxWidth: boxWidth - paddingX * 2 }
-);
+        doc.text('Best Regards,', margin, y);
+        
+        // FIX: INCREASE GAP for Director/Buyer sign (Previously 14, now 35)
+        y += 35; 
 
-// अब border draw करो
-doc.rect(startX, startY, boxWidth, boxHeight);
-
-// बॉक्स के बाद का y
-y = startY + boxHeight + 4;
-
-}
-
-// --- Best Regards + Signature (more spacing) ---
-doc.text('Best Regards,', margin, y + 6);
-y += 14;
-
-const signatureY = y;
+        const signatureY = y;
 
         // Director Name & Line
         const companyLineX1 = margin;
@@ -456,32 +485,18 @@ const signatureY = y;
         
         doc.setFont(font, 'bold');
         doc.setFontSize(9);
-        doc.text('DEEPAK PAREKH', margin, signatureY + 4);
-        doc.text('DIRECTOR', margin, signatureY + 8);
+        doc.text('DEEPAK PAREKH', margin, signatureY + 5);
+        doc.text('DIRECTOR', margin, signatureY + 10);
         
         // Buyer Name & Line
         const lineX1 = pageWidth - margin - 70;
         const lineX2 = pageWidth - margin;      
         doc.setDrawColor(0);
         doc.line(lineX1, signatureY, lineX2, signatureY); 
-        doc.setFont(font, 'bold');
-        doc.setFontSize(9);
-        doc.text('BUYER', (lineX1 + lineX2) / 2, signatureY + 4, { align: 'center' });
+        doc.text('BUYER', (lineX1 + lineX2) / 2, signatureY + 5, { align: 'center' });
 
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
-
-
-
-
-
-
-
-
-
-
-
-
 
 
