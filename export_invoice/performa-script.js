@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function () {
    function generatePDF() {
         const doc = new jsPDF();
         const data = getFormData();
-        const font = 'Helvetica';
+        const font = 'times';
         doc.setFont(font, 'normal');
         const margin = 13;
         const pageWidth = doc.internal.pageSize.width;
@@ -498,6 +498,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
