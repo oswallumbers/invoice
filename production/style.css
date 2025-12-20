@@ -1,0 +1,156 @@
+/* --- MODERN GRADIENT THEME & BASE STYLES --- */
+:root {
+    --primary-gradient: linear-gradient(45deg, #4e54c8, #8f94fb);
+    --secondary-color: #f8f9fa;
+    --shadow-color: rgba(0, 0, 0, 0.15);
+    --text-color: #333;
+    --light-text-color: #fff;
+    --border-color: #dee2e6;
+}
+
+body {
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #eef2f7;
+    color: var(--text-color);
+    /* Add padding to the bottom to prevent footer from overlapping last item */
+    padding-bottom: 90px;
+}
+
+/* --- SLIDER STYLES --- */
+.slider-viewport {
+    width: 100%;
+    overflow: hidden;
+    margin: 1.5rem 0;
+}
+
+.slider-container {
+    display: flex;
+    transition: transform 0.3s ease-in-out;
+}
+
+.log-card {
+    flex: 0 0 100%;
+    width: 100%;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px var(--shadow-color);
+    padding: 1.5rem;
+    box-sizing: border-box;
+}
+
+.log-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.log-card-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #4e54c8;
+}
+
+.log-card .form-label {
+    font-weight: 500;
+    color: #555;
+}
+
+.log-card .form-control {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: #f7f7f9;
+}
+.log-card .form-control:focus {
+    background-color: white;
+    border-color: #8f94fb;
+    box-shadow: 0 0 0 3px rgba(143, 148, 251, 0.25);
+}
+
+.cft-display {
+    background: var(--primary-gradient);
+    color: var(--light-text-color);
+    text-align: center;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+.cft-display small {
+    display: block;
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+/* --- NAVIGATION STYLES --- */
+.slider-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1rem;
+}
+
+.nav-arrow {
+    background: var(--primary-gradient);
+    color: var(--light-text-color);
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 1.5rem;
+    box-shadow: 0 4px 15px var(--shadow-color);
+    transition: transform 0.2s;
+}
+.nav-arrow:hover {
+    transform: scale(1.1);
+}
+.nav-arrow:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+#slide-counter {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+/* --- TOTALS & FOOTER --- */
+#totals-section {
+    border-radius: 15px !important;
+    background-color: white !important;
+    box-shadow: 0 8px 25px var(--shadow-color);
+}
+
+.fixed-footer {
+    position: fixed; /* Keep the footer fixed at the bottom */
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: white;
+    /* REDUCED PADDING for minimum margin */
+    padding: 1.5rem 1rem;
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -4px 15px var(--shadow-color);
+    z-index: 1000;
+    text-align:center;
+}
+.dhartee{
+    text-align:center;
+    width:100%;
+    margin:0 0 0 0;
+    
+    
+}
+
+.btn-primary-gradient {
+    background: var(--primary-gradient);
+    border: none;
+    color: var(--light-text-color);
+    font-weight: 600;
+}
+.btn-primary-gradient:hover {
+    color: var(--light-text-color);
+    box-shadow: 0 4px 15px rgba(78, 84, 200, 0.4);
+}
