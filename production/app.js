@@ -66,6 +66,14 @@ async function initializeEntryPage() {
     }
     
     populatePartyNames(); 
+    const partyInput = document.getElementById('partyName');
+    const dateInput = document.getElementById('entryDate');
+    
+    if(partyInput) partyInput.addEventListener('focus', hideKeypad);
+    if(dateInput) dateInput.addEventListener('focus', hideKeypad);
+    
+    // Hide it initially
+    hideKeypad();
     
     // Auto-open print if requested
     if (urlParams.get('action') === 'print' && recordId) {
@@ -196,7 +204,7 @@ function removeLogRow(index) {
 }
 
 // --- ACTIVE FIELD & KEYPAD LOGIC ---
-
+// Replace your existing setActiveField function
 function setActiveField(id) {
     // 1. Remove active class from old field
     if (activeFieldId) {
@@ -210,7 +218,10 @@ function setActiveField(id) {
     if (newEl) {
         newEl.classList.add('active-field');
         
-        // Ensure we slide to the correct card if user tapped a field manually
+        // NEW: Ensure Keypad is visible
+        showKeypad(); 
+        
+        // Ensure we slide to the correct card
         const parts = id.split('-'); 
         const slideIndex = parseInt(parts[1]);
         if (slideIndex !== currentIndex) showSlide(slideIndex);
@@ -334,7 +345,31 @@ function manualPrevLog() {
         setActiveField(`fullLength-${currentIndex - 1}`);
     }
 }
+// --- KEYPAD VISIBILITY LOGIC ---
+function showKeypad() {
+    const keypad = document.querySelector('.virtual-keypad-container');
+    if(keypad) {
+        keypad.classList.remove('keypad-hidden');
+        // Add padding to body so content isn't covered
+        document.body.style.paddingBottom = '260px'; 
+    }
+}
 
+function hideKeypad() {
+    const keypad = document.querySelector('.virtual-keypad-container');
+    if(keypad) {
+        keypad.classList.add('keypad-hidden');
+        // Reduce padding when keypad is gone
+        document.body.style.paddingBottom = '80px'; 
+        
+        // Also remove "active" blue border from log inputs
+        if(activeFieldId) {
+             const el = document.getElementById(activeFieldId);
+             if(el) el.classList.remove('active-field');
+             activeFieldId = null;
+        }
+    }
+}
 // --- SAVING & EXPORTING ---
 
 async function saveRecord() {
@@ -494,3 +529,4 @@ function exportRecordToExcel() {
     XLSX.utils.book_append_sheet(wb, ws, "Record Details");
     XLSX.writeFile(wb, `${partyName}_${date}.xlsx`);
 }
+
