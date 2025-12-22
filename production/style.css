@@ -103,6 +103,7 @@ body {
 }
 
 /* --- VIRTUAL KEYPAD CONTAINER --- */
+/* Find .virtual-keypad-container and REPLACE it with this: */
 .virtual-keypad-container {
     position: fixed;
     bottom: 0;
@@ -117,6 +118,15 @@ body {
     height: var(--keypad-height);
     display: flex;
     flex-direction: column;
+    
+    /* NEW: Animation to slide up/down */
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transform: translateY(0); /* Visible by default */
+}
+
+/* NEW: Class to hide the keypad */
+.virtual-keypad-container.keypad-hidden {
+    transform: translateY(110%); /* Slide down off-screen */
 }
 
 /* Totals Strip (Top of Keypad) */
@@ -172,3 +182,4 @@ body {
 
 /* --- UTILS --- */
 .d-none { display: none !important; }
+
