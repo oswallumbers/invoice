@@ -5,113 +5,138 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Data Entry</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
-<body>
-    <div class="container my-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h1 id="page-title" class="h4 m-0">New Record</h1>
-            <a href="#" onclick="logoutUser()" class="btn btn-sm btn-outline-secondary">Logout</a>
-        </div>
-        
-        <form id="entry-form" onsubmit="event.preventDefault(); saveRecord();">
-            <div class="row g-2">
-                <div class="col-12">
-                    <label for="partyName" class="form-label text-muted small">Supplier Name</label>
-                    <input type="text" class="form-control form-control-lg" id="partyName" list="party-names-list" placeholder="Enter Supplier" required>
-                    <datalist id="party-names-list"></datalist>
-                </div>
-                <div class="col-6">
-                    <label for="entryDate" class="form-label text-muted small">Date</label>
-                    <input type="date" class="form-control" id="entryDate" required>
-                </div>
-                <div class="col-6">
-                    <label for="recordNumber" class="form-label text-muted small">Record No.</label>
-                    <input type="text" class="form-control bg-light" id="recordNumber" readonly disabled>
-                </div>
-                <input type="hidden" id="vehicleNumber" value=""> 
+<body class="app-body">
+    
+    <nav class="navbar navbar-dark bg-primary fixed-top shadow-sm">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-link text-white p-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sideMenu">
+                    <i class="bi bi-list fs-1"></i>
+                </button>
+                <span class="navbar-brand mb-0 h1" id="page-title">New Record</span>
             </div>
-        </form>
-        
-        <div class="slider-nav mt-4 d-flex align-items-center justify-content-between">
-            <button type="button" id="prev-btn" class="nav-arrow" disabled>&lt;</button>
-            <span id="slide-counter" class="fw-bold">Log 0 of 0</span>
-            <button type="button" id="next-btn" class="nav-arrow">&gt;</button>
+            <button type="button" class="btn text-white" onclick="saveRecord()">
+                <i class="bi bi-check-lg fs-2"></i>
+            </button>
         </div>
+    </nav>
 
-        <div class="slider-viewport">
-            <div id="slider-container" class="slider-container"></div>
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="sideMenu">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title">Menu</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
         </div>
-
-        <div class="text-center mb-5">
-            <button type="button" class="btn btn-secondary w-100 py-2" onclick="addLogRow()">+ Add Another Log</button>
+        <div class="offcanvas-body p-0">
+            <div class="list-group list-group-flush">
+                <a href="index.html" class="list-group-item list-group-item-action">
+                    <i class="bi bi-arrow-left me-2"></i> Back to List
+                </a>
+                <a href="#" onclick="printList()" class="list-group-item list-group-item-action">
+                    <i class="bi bi-printer me-2"></i> Print PDF
+                </a>
+                <a href="#" onclick="exportRecordToExcel()" class="list-group-item list-group-item-action">
+                    <i class="bi bi-file-earmark-spreadsheet me-2"></i> Export Excel
+                </a>
+                 <button type="button" id="delete-btn" class="list-group-item list-group-item-action text-danger d-none">
+                    <i class="bi bi-trash me-2"></i> Delete Record
+                </button>
+                <a href="#" onclick="logoutUser()" class="list-group-item list-group-item-action text-secondary">
+                    <i class="bi bi-box-arrow-right me-2"></i> Logout
+                </a>
+            </div>
         </div>
-
-        <div id="totals-section" class="row text-center bg-light p-3 rounded mx-0 mb-5 border">
-            <div class="col-4 px-1">
-                <h6 class="text-muted small mb-1">Total PCS</h6>
-                <p id="total-pcs" class="fs-5 fw-bold text-dark m-0">0</p>
-            </div>
-            <div class="col-4 px-1 border-start border-end">
-                <h6 class="text-muted small mb-1">Total CFT</h6>
-                <p id="total-cft" class="fs-5 fw-bold text-primary m-0">0.00</p>
-            </div>
-            <div class="col-4 px-1">
-                <h6 class="text-muted small mb-1">Total CBM</h6>
-                <p id="total-cbm" class="fs-5 fw-bold text-dark m-0">0.00</p>
-            </div>
+        <div class="p-3 text-center text-muted small bg-light">
+            Software By <a href="https://www.dhartee.in">DharTee</a>
         </div>
     </div>
-    
-    <div class="fixed-footer">
-        <div class="container">
-            <div class="row g-2">
-                <div class="col-3">
-                    <a href="index.html" class="btn btn-outline-secondary w-100">Back</a>
-                </div>
-                <div class="col-3">
-                    <div class="dropup w-100">
-                        <button class="btn btn-info w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            Print
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="printList()">Print PDF</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="exportRecordToExcel()">Export Excel</a></li>
-                        </ul>
+
+    <div class="main-content-wrapper">
+        <form id="entry-form">
+            <div class="card shadow-sm mb-3 border-0 rounded-4">
+                <div class="card-body p-3 bg-white">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <div class="form-floating">
+                                <input type="text" class="form-control fw-bold fs-6" style="height: 3.5rem;" id="partyName" list="party-names-list" placeholder="Supplier" required>
+                                <label>Supplier Name</label>
+                            </div>
+                            <datalist id="party-names-list"></datalist>
+                        </div>
+                        <div class="col-7">
+                            <div class="form-floating">
+                                <input type="date" class="form-control fs-6" style="height: 3.5rem;" id="entryDate" required>
+                                <label>Date</label>
+                            </div>
+                        </div>
+                        <div class="col-5">
+                            <div class="form-floating">
+                                <input type="text" class="form-control text-center bg-light fs-6" style="height: 3.5rem;" id="recordNumber" placeholder="#" readonly disabled>
+                                <label>Rec No.</label>
+                            </div>
+                        </div>
+                        <input type="hidden" id="vehicleNumber" value=""> 
                     </div>
                 </div>
-                <div class="col-6">
-                    <button type="button" class="btn btn-success btn-primary-gradient w-100" onclick="saveRecord()">Save List</button>
-                </div>
-                <div class="col-12 mt-2">
-                     <button type="button" id="delete-btn" class="btn btn-danger btn-sm w-100 d-none">Delete Record</button>
-                </div>
             </div>
+        </form>
+
+        <div class="slider-wrapper">
+            <div id="slider-container" class="slider-container">
+                </div>
         </div>
+    </div>
+
+    <div class="virtual-keypad-container">
+        <div class="keypad-totals">
+            <div>PCS: <strong id="total-pcs">0</strong></div>
+            <div>CFT: <strong id="total-cft" class="text-primary">0.00</strong></div>
+            <div>CBM: <strong id="total-cbm">0.00</strong></div>
+        </div>
+
+        <div class="keypad-grid">
+            <button class="key-btn" onclick="kp('1')">1</button>
+            <button class="key-btn" onclick="kp('2')">2</button>
+            <button class="key-btn" onclick="kp('3')">3</button>
+            <button class="key-btn key-nav" onclick="manualPrevLog()"><i class="bi bi-chevron-left"></i></button>
+
+            <button class="key-btn" onclick="kp('4')">4</button>
+            <button class="key-btn" onclick="kp('5')">5</button>
+            <button class="key-btn" onclick="kp('6')">6</button>
+            <button class="key-btn key-nav" onclick="manualNextLog()"><i class="bi bi-chevron-right"></i></button>
+
+            <button class="key-btn" onclick="kp('7')">7</button>
+            <button class="key-btn" onclick="kp('8')">8</button>
+            <button class="key-btn" onclick="kp('9')">9</button>
+            <button class="key-btn key-next" onclick="kpNext()">NEXT</button>
+
+            <button class="key-btn" onclick="kp('.')">.</button>
+            <button class="key-btn" onclick="kp('0')">0</button>
+            <button class="key-btn key-backspace" onclick="kpBack()"><i class="bi bi-backspace"></i></button>
+            </div>
     </div>
 
     <div class="modal fade" id="successModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Success</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">Data Saved Successfully!</div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
-                </div>
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content text-center p-3">
+                <div class="mb-2 text-success"><i class="bi bi-check-circle-fill fs-1"></i></div>
+                <h5 class="mb-0">Saved!</h5>
             </div>
         </div>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
     <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js"></script>
+    
     <script src="config.js"></script>
     <script src="app.js"></script>
     <script> initializeEntryPage(); </script>
