@@ -13,10 +13,11 @@ function initializeMainPage() {
 }
 
 async function fetchAndDisplayRecords() {
-    const tableBody = document.getElementById('records-table-body');
+    const listContainer = document.getElementById('records-list-container');
     const noRecordsMsg = document.getElementById('no-records-msg');
     
-    tableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border spinner-border-sm"></div></td></tr>';
+    // Show spinner handled in HTML initial state, but helpful to be explicit
+    // listContainer.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
     
     try {
         const snapshot = await recordsCollection.orderBy('recordNumber', 'desc').get();
@@ -25,15 +26,15 @@ async function fetchAndDisplayRecords() {
         populatePartyFilter(); 
 
         if (allRecords.length === 0) {
-            noRecordsMsg.style.display = 'block';
-            tableBody.innerHTML = '';
+            noRecordsMsg.classList.remove('d-none');
+            listContainer.innerHTML = '';
         } else {
-            noRecordsMsg.style.display = 'none';
+            noRecordsMsg.classList.add('d-none');
             renderRecords(allRecords);
         }
     } catch (error) {
         console.error(error);
-        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading data.</td></tr>';
+        listContainer.innerHTML = '<div class="text-center text-danger mt-4">Error loading data.</div>';
     }
 }
 
@@ -51,27 +52,52 @@ function populatePartyFilter() {
     });
 }
 
+// UPDATED: Renders Cards instead of Table Rows
 function renderRecords(recordsToDisplay) {
-    const tableBody = document.getElementById('records-table-body');
+    const listContainer = document.getElementById('records-list-container');
+    
     if (recordsToDisplay.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No matching records found.</td></tr>';
+        listContainer.innerHTML = '';
+        document.getElementById('no-records-msg').classList.remove('d-none');
         return;
     }
+    document.getElementById('no-records-msg').classList.add('d-none');
     
-    tableBody.innerHTML = recordsToDisplay.map(record => {
+    listContainer.innerHTML = recordsToDisplay.map(record => {
         const totals = record.totals || {};
+        // Get first letter of supplier for the icon
+        const initial = record.partyName ? record.partyName.charAt(0).toUpperCase() : '?';
+        
         return `
-            <tr>
-                <td><strong>${record.recordNumber || ''}</strong></td>
-                <td>${record.partyName || '-'}</td>
-                <td>${record.date}</td>
-                <td>${totals.pcs || 0}</td>
-                <td>${totals.cft || '0.00'}</td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-outline-primary" onclick="editRecord('${record.id}')">Open</button>
-                </td>
-            </tr>`;
+            <div class="record-card" onclick="editRecord('${record.id}')">
+                <div class="record-icon">
+                    ${initial}
+                </div>
+                <div class="record-info">
+                    <div class="record-title">${record.partyName || 'Unknown'}</div>
+                    <div class="record-meta">
+                        <span class="badge bg-light text-dark border">#${record.recordNumber}</span>
+                        <span class="ms-1 text-muted"><i class="bi bi-calendar3"></i> ${formatDate(record.date)}</span>
+                    </div>
+                </div>
+                <div class="record-stat">
+                    <div class="stat-value">${totals.cft || '0.00'}</div>
+                    <div class="stat-label">CFT</div>
+                </div>
+                <div class="ms-2 text-muted opacity-50">
+                    <i class="bi bi-chevron-right"></i>
+                </div>
+            </div>`;
     }).join('');
+}
+
+// Helper for nicer dates
+function formatDate(dateString) {
+    if(!dateString) return '-';
+    // Returns DD/MM format for brevity on mobile
+    const d = new Date(dateString);
+    if(isNaN(d.getTime())) return dateString;
+    return `${d.getDate()}/${d.getMonth()+1}`;
 }
 
 function filterAndRender() {
@@ -100,7 +126,7 @@ function exportMainListToExcel() {
     const partyValue = document.getElementById('partyFilter').value;
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     
-    // Re-apply filter to ensure we export what we see
+    // Re-apply filter
     let recordsToExport = allRecords;
     if (partyValue) recordsToExport = recordsToExport.filter(r => r.partyName === partyValue);
     if (searchTerm) {
