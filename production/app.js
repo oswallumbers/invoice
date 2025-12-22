@@ -50,8 +50,22 @@ function logoutUser() { auth.signOut(); }
 async function initializeEntryPage() {
     const urlParams = new URLSearchParams(window.location.search);
     const recordId = urlParams.get('id');
+    
+    // --- FIX: Declare inputs once here ---
     const dateInput = document.getElementById('entryDate');
-    if(dateInput) dateInput.valueAsDate = new Date();
+    const partyInput = document.getElementById('partyName');
+
+    // Set Default Date
+    if(dateInput) {
+        dateInput.valueAsDate = new Date();
+        // Add listener to hide keypad when Date is focused
+        dateInput.addEventListener('focus', hideKeypad);
+    }
+    
+    // Add listener to hide keypad when Party Name is focused
+    if(partyInput) {
+        partyInput.addEventListener('focus', hideKeypad);
+    }
 
     if (recordId) {
         await loadRecordForEditing(recordId);
@@ -66,13 +80,8 @@ async function initializeEntryPage() {
     }
     
     populatePartyNames(); 
-    const partyInput = document.getElementById('partyName');
-    const dateInput = document.getElementById('entryDate');
     
-    if(partyInput) partyInput.addEventListener('focus', hideKeypad);
-    if(dateInput) dateInput.addEventListener('focus', hideKeypad);
-    
-    // Hide it initially
+    // Hide keypad initially
     hideKeypad();
     
     // Auto-open print if requested
@@ -162,9 +171,7 @@ function renderSlider() {
     showSlide(currentIndex);
     updateTotals();
 
-    // Auto-select logic:
-    // If we have an active field, re-highlight it (good for returning from delete)
-    // Otherwise, default to the first field of the current slide.
+    // Auto-select logic
     if(activeFieldId && document.getElementById(activeFieldId)) {
         setActiveField(activeFieldId);
     } else {
@@ -204,7 +211,7 @@ function removeLogRow(index) {
 }
 
 // --- ACTIVE FIELD & KEYPAD LOGIC ---
-// Replace your existing setActiveField function
+
 function setActiveField(id) {
     // 1. Remove active class from old field
     if (activeFieldId) {
@@ -218,7 +225,7 @@ function setActiveField(id) {
     if (newEl) {
         newEl.classList.add('active-field');
         
-        // NEW: Ensure Keypad is visible
+        // Show Keypad
         showKeypad(); 
         
         // Ensure we slide to the correct card
@@ -233,15 +240,12 @@ function kp(key) {
     const input = document.getElementById(activeFieldId);
     if (!input) return;
 
-    // Append number
     let val = input.value;
-    // Prevent multiple decimals
     if (key === '.' && val.includes('.')) return;
     
     val += key;
     input.value = val;
     
-    // Trigger calculation
     const parts = activeFieldId.split('-');
     const field = parts[0];
     const index = parseInt(parts[1]);
@@ -274,7 +278,6 @@ function kpNext() {
     } else if (field === 'invLength') {
         setActiveField(`girth-${index}`);
     } else if (field === 'girth') {
-        // Move to next slide or create new
         if (index < recordItems.length - 1) {
              showSlide(index + 1);
              setActiveField(`fullLength-${index + 1}`);
@@ -292,7 +295,7 @@ function updateItem(index, field, value) {
     // 1. Update Data
     recordItems[index][field] = value;
     
-    // 2. Auto-calculate Used Length based on List Length
+    // 2. Auto-calculate Used Length
     if (field === 'fullLength') {
         const listLen = parseFloat(value);
         if (!isNaN(listLen)) {
@@ -309,7 +312,7 @@ function updateItem(index, field, value) {
     const girth = parseFloat(item.girth) || 0;
     item.cft = (usedLength * girth * girth / 16000000) * 35.315;
 
-    // 4. Update Display on Card
+    // 4. Update Display
     const sliderContainer = document.getElementById('slider-container');
     const card = sliderContainer.children[index];
     if (card) {
@@ -345,12 +348,12 @@ function manualPrevLog() {
         setActiveField(`fullLength-${currentIndex - 1}`);
     }
 }
+
 // --- KEYPAD VISIBILITY LOGIC ---
 function showKeypad() {
     const keypad = document.querySelector('.virtual-keypad-container');
     if(keypad) {
         keypad.classList.remove('keypad-hidden');
-        // Add padding to body so content isn't covered
         document.body.style.paddingBottom = '260px'; 
     }
 }
@@ -359,10 +362,8 @@ function hideKeypad() {
     const keypad = document.querySelector('.virtual-keypad-container');
     if(keypad) {
         keypad.classList.add('keypad-hidden');
-        // Reduce padding when keypad is gone
         document.body.style.paddingBottom = '80px'; 
         
-        // Also remove "active" blue border from log inputs
         if(activeFieldId) {
              const el = document.getElementById(activeFieldId);
              if(el) el.classList.remove('active-field');
@@ -370,6 +371,7 @@ function hideKeypad() {
         }
     }
 }
+
 // --- SAVING & EXPORTING ---
 
 async function saveRecord() {
@@ -452,7 +454,6 @@ function printList() {
     if (itemsToPrint.length === 0) { return alert("Nothing to print."); }
     
     const doc = new jsPDF('portrait', 'mm', 'a4');
-    const pageHeight = doc.internal.pageSize.getHeight();
     const pageWidth = doc.internal.pageSize.getWidth();
     let startY = 32;
     
@@ -485,20 +486,15 @@ function printList() {
         
         doc.autoTable({ ...tableStyles, head: tableHead, body: leftBody, startY: startY, margin: { left: 14, right: pageWidth / 2 + 2, bottom: 10 } });
         
-        let leftFinalY = doc.autoTable.previous.finalY;
-        let rightFinalY = 0;
-        
         if (rightItems.length > 0) {
             const rightBody = rightItems.map((item, idx) => [(i * itemsPerPage) + chunkSize + idx + 1, item.fullLength, item.invLength, item.girth, item.cft.toFixed(2)]);
             const rightSubtotal = rightItems.reduce((sum, item) => sum + item.cft, 0);
             rightBody.push([{ content: 'Total', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } }, { content: rightSubtotal.toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } }]);
             
             doc.autoTable({ ...tableStyles, head: tableHead, body: rightBody, startY: startY, margin: { left: pageWidth / 2 + 2, bottom: 10 } });
-            rightFinalY = doc.autoTable.previous.finalY;
         }
     }
     
-    // Footer Totals
     const totalPcs = document.getElementById('total-pcs').innerText;
     const totalCft = document.getElementById('total-cft').innerText;
     const totalCbm = document.getElementById('total-cbm').innerText;
@@ -529,4 +525,3 @@ function exportRecordToExcel() {
     XLSX.utils.book_append_sheet(wb, ws, "Record Details");
     XLSX.writeFile(wb, `${partyName}_${date}.xlsx`);
 }
-
