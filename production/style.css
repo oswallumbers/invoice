@@ -31,79 +31,104 @@ body {
 .navbar-brand { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.5px; }
 
 /* --- LAYOUT --- */
-.main-content-wrapper { padding: 10px 15px; overflow-x: hidden; }
+.main-content-wrapper { 
+    padding: 10px 15px; 
+    overflow-y: auto; 
+    padding-bottom: 20px; /* कीपैड के लिए जगह */
+}
+
 .slider-wrapper { width: 100%; overflow: hidden; margin-top: 0.5rem; }
 .slider-container { display: flex; transition: transform 0.2s ease-out; }
 .log-card { flex: 0 0 100%; width: 100%; padding: 0 4px; box-sizing: border-box; }
 
 /* --- ENTRY BOX (BORDER BOX STYLE) --- */
+/* --- style.css --- */
+
 .entry-box-card {
     background: white;
     border-radius: 16px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    padding: 1rem; /* पैडिंग कम की (पहले 1.5rem थी) */
     position: relative;
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.02);
 }
 
-/* New Border Box Input Style */
+/* 2. Input Fields Compact Size */
 .entry-box-card .form-floating > .form-control {
-    font-size: 1.6rem; 
-    font-weight: 700;
-    color: var(--primary-color);
-    background: #fff;
-    height: calc(3.5rem + 2px);
-    
-    /* THE BORDER BOX LOOK */
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    box-shadow: none !important;
+    font-size: 1.6rem; /* फॉन्ट थोड़ा छोटा किया (Fit होने के लिए) */
+    font-weight: 800;
+    color: #333;
+    background: #f8f9fa;
+    height: 3.5rem; /* हाइट कम की (ताकि स्क्रीन पर फिट हो) */
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding-top: 1.625rem; /* टेक्स्ट एलाइनमेंट */
+    padding-bottom: 0.625rem;
 }
 
-/* Active State (Blue Border) */
-.entry-box-card .form-floating > .form-control.active-field {
-    border-color: var(--primary-color);
-    background-color: #f8f9ff;
-    box-shadow: 0 0 0 4px rgba(78, 84, 200, 0.1) !important;
-}
-
+/* 3. Labels Adjusted */
 .entry-box-card .form-floating > label {
-    padding-left: 10px;
-    opacity: 0.6;
-    font-size: 0.9rem;
-    z-index: 5;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #888;
+    padding-top: 0.5rem;
+    padding-left: 0.8rem;
 }
 
-/* Delete Button */
+/* ACTIVE FIELD - Highlight logic */
+.entry-box-card .form-floating > .form-control.active-field {
+    background-color: #fff; /* White background */
+    border-color: #4e54c8; /* Blue Border */
+    color: #4e54c8; /* Blue Text */
+    box-shadow: 0 0 0 5px rgba(78, 84, 200, 0.15) !important; /* Glow effect */
+    transform: scale(1.02); /* Slight zoom effect */
+}
+
+/* Log Number Badge above the card */
+.log-badge {
+    background: #eef2ff;
+    color: #4e54c8;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    display: inline-block;
+    margin-bottom: 15px;
+}
+
 .card-delete-btn {
-    position: absolute;
-    top: 12px;
-    right: 15px;
-    background: #fff0f0;
+    position: static; /* अब यह Absolute नहीं है */
+    background: #fff;
+    border: 1px solid #ffe5e5;
     color: #dc3545;
-    border: none;
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    font-size: 1.1rem;
+    width: 32px; /* छोटा किया */
+    height: 32px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1rem;
+}
+.card-delete-btn:active {
+    background: #dc3545;
+    color: white;
 }
 
-/* CFT Result */
 .cft-result-box {
-    margin-top: 1.2rem;
-    background: #eef2ff;
-    border-radius: 12px;
-    padding: 10px;
-    text-align: center;
-    color: var(--primary-color);
-    border: 1px dashed rgba(78, 84, 200, 0.3);
+    margin-top: 0.5rem; /* गैप कम किया */
+    padding: 5px; /* पैडिंग कम की */
+    background: linear-gradient(135deg, #4e54c8, #8f94fb);
+    border-radius: 10px;
+    color: white;
 }
+.cft-value-display { 
+    font-size: 1.8rem; /* रिजल्ट फॉन्ट साइज एडजस्ट किया */
+    line-height: 1.2;
+}
+.cft-result-box .small { opacity: 0.8; color: white; }
+.cft-value-display { font-size: 2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
 /* --- VIRTUAL KEYPAD CONTAINER --- */
-/* Find .virtual-keypad-container and REPLACE it with this: */
 .virtual-keypad-container {
     position: fixed;
     bottom: 0;
@@ -118,15 +143,6 @@ body {
     height: var(--keypad-height);
     display: flex;
     flex-direction: column;
-    
-    /* NEW: Animation to slide up/down */
-    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-    transform: translateY(0); /* Visible by default */
-}
-
-/* NEW: Class to hide the keypad */
-.virtual-keypad-container.keypad-hidden {
-    transform: translateY(110%); /* Slide down off-screen */
 }
 
 /* Totals Strip (Top of Keypad) */
@@ -182,7 +198,6 @@ body {
 
 /* --- UTILS --- */
 .d-none { display: none !important; }
-
 /* --- INDEX PAGE / LIST VIEW STYLES --- */
 
 /* Search Container at top */
