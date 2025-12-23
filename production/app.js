@@ -50,22 +50,8 @@ function logoutUser() { auth.signOut(); }
 async function initializeEntryPage() {
     const urlParams = new URLSearchParams(window.location.search);
     const recordId = urlParams.get('id');
-    
-    // --- FIX: Declare inputs once here ---
     const dateInput = document.getElementById('entryDate');
-    const partyInput = document.getElementById('partyName');
-
-    // Set Default Date
-    if(dateInput) {
-        dateInput.valueAsDate = new Date();
-        // Add listener to hide keypad when Date is focused
-        dateInput.addEventListener('focus', hideKeypad);
-    }
-    
-    // Add listener to hide keypad when Party Name is focused
-    if(partyInput) {
-        partyInput.addEventListener('focus', hideKeypad);
-    }
+    if(dateInput) dateInput.valueAsDate = new Date();
 
     if (recordId) {
         await loadRecordForEditing(recordId);
@@ -74,15 +60,14 @@ async function initializeEntryPage() {
         const lastRecordNumber = snapshot.empty ? 0 : snapshot.docs[0].data().recordNumber;
         const recNumInput = document.getElementById('recordNumber');
         if(recNumInput) recNumInput.value = lastRecordNumber + 1;
-        
+        const noteInput = document.getElementById('entryNote');
+        if(noteInput) noteInput.value = '';
+
         recordItems = [{ fullLength: '', invLength: '', girth: '', cft: 0 }];
         renderSlider();
     }
     
     populatePartyNames(); 
-    
-    // Hide keypad initially
-    hideKeypad();
     
     // Auto-open print if requested
     if (urlParams.get('action') === 'print' && recordId) {
@@ -102,6 +87,7 @@ async function loadRecordForEditing(recordId) {
     document.getElementById('partyName').value = record.partyName || ''; 
     document.getElementById('entryDate').value = record.date;
     document.getElementById('recordNumber').value = record.recordNumber;
+    document.getElementById('entryNote').value = record.note || '';
     
     const deleteBtn = document.getElementById('delete-btn');
     if(deleteBtn) {
@@ -121,57 +107,64 @@ function renderSlider() {
 
     sliderContainer.innerHTML = recordItems.map((item, index) => {
         const cftValue = (item.cft || 0).toFixed(2);
-        return `
-            <div class="log-card">
-                <div class="entry-box-card">
-                    <button type="button" class="card-delete-btn" onclick="removeLogRow(${index})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                    
-                    <h5 class="text-muted mb-3 small fw-bold text-uppercase">Log Entry #${index + 1}</h5>
+     // --- app.js (Inside renderSlider function) ---
 
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <div class="form-floating">
-                                <input type="text" id="fullLength-${index}" 
-                                    class="form-control" placeholder="0" readonly
-                                    value="${item.fullLength || ''}" 
-                                    onclick="setActiveField('fullLength-${index}')">
-                                <label>List Len</label>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="form-floating">
-                                <input type="text" id="invLength-${index}" 
-                                    class="form-control" placeholder="0" readonly
-                                    value="${item.invLength || ''}" 
-                                    onclick="setActiveField('invLength-${index}')">
-                                <label>Used Len</label>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="form-floating">
-                                <input type="text" id="girth-${index}" 
-                                    class="form-control" placeholder="0" readonly
-                                    value="${item.girth || ''}" 
-                                    onclick="setActiveField('girth-${index}')">
-                                <label>Girth</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="cft-result-box">
-                        <div class="small text-uppercase fw-bold opacity-75">Volume (CFT)</div>
-                        <div class="fs-1 fw-bold cft-value-display">${cftValue}</div>
+return `
+    <div class="log-card">
+        <div class="entry-box-card">
+            
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="log-badge m-0">Log #${index + 1}</span>
+                
+                <button type="button" class="card-delete-btn" onclick="removeLogRow(${index})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+            
+            <div class="row g-2">
+                <div class="col-6">
+                    <div class="form-floating">
+                        <input type="text" id="fullLength-${index}" 
+                            class="form-control" placeholder="0" readonly
+                            value="${item.fullLength || ''}" 
+                            onclick="setActiveField('fullLength-${index}')">
+                        <label>List Len</label>
                     </div>
                 </div>
-            </div>`;
+                <div class="col-6">
+                    <div class="form-floating">
+                        <input type="text" id="invLength-${index}" 
+                            class="form-control" placeholder="0" readonly
+                            value="${item.invLength || ''}" 
+                            onclick="setActiveField('invLength-${index}')">
+                        <label>Used Len</label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="form-floating">
+                        <input type="text" id="girth-${index}" 
+                            class="form-control" placeholder="0" readonly
+                            value="${item.girth || ''}" 
+                            onclick="setActiveField('girth-${index}')">
+                        <label>Girth</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cft-result-box">
+                <div class="small text-uppercase fw-bold" style="font-size: 0.7rem;">Volume (CFT)</div>
+                <div class="fw-bold cft-value-display">${cftValue}</div>
+            </div>
+        </div>
+    </div>`;
     }).join('');
     
     showSlide(currentIndex);
     updateTotals();
 
-    // Auto-select logic
+    // Auto-select logic:
+    // If we have an active field, re-highlight it (good for returning from delete)
+    // Otherwise, default to the first field of the current slide.
     if(activeFieldId && document.getElementById(activeFieldId)) {
         setActiveField(activeFieldId);
     } else {
@@ -225,10 +218,7 @@ function setActiveField(id) {
     if (newEl) {
         newEl.classList.add('active-field');
         
-        // Show Keypad
-        showKeypad(); 
-        
-        // Ensure we slide to the correct card
+        // Ensure we slide to the correct card if user tapped a field manually
         const parts = id.split('-'); 
         const slideIndex = parseInt(parts[1]);
         if (slideIndex !== currentIndex) showSlide(slideIndex);
@@ -240,12 +230,15 @@ function kp(key) {
     const input = document.getElementById(activeFieldId);
     if (!input) return;
 
+    // Append number
     let val = input.value;
+    // Prevent multiple decimals
     if (key === '.' && val.includes('.')) return;
     
     val += key;
     input.value = val;
     
+    // Trigger calculation
     const parts = activeFieldId.split('-');
     const field = parts[0];
     const index = parseInt(parts[1]);
@@ -278,6 +271,7 @@ function kpNext() {
     } else if (field === 'invLength') {
         setActiveField(`girth-${index}`);
     } else if (field === 'girth') {
+        // Move to next slide or create new
         if (index < recordItems.length - 1) {
              showSlide(index + 1);
              setActiveField(`fullLength-${index + 1}`);
@@ -295,7 +289,7 @@ function updateItem(index, field, value) {
     // 1. Update Data
     recordItems[index][field] = value;
     
-    // 2. Auto-calculate Used Length
+    // 2. Auto-calculate Used Length based on List Length
     if (field === 'fullLength') {
         const listLen = parseFloat(value);
         if (!isNaN(listLen)) {
@@ -312,7 +306,7 @@ function updateItem(index, field, value) {
     const girth = parseFloat(item.girth) || 0;
     item.cft = (usedLength * girth * girth / 16000000) * 35.315;
 
-    // 4. Update Display
+    // 4. Update Display on Card
     const sliderContainer = document.getElementById('slider-container');
     const card = sliderContainer.children[index];
     if (card) {
@@ -333,51 +327,42 @@ function updateTotals() {
     document.getElementById('total-cbm').innerText = totalCbm.toFixed(2);
 }
 
+// --- app.js ---
+
 function manualNextLog() {
+    // Check if we are not at the last slide
     if (currentIndex < recordItems.length - 1) {
-        showSlide(currentIndex + 1);
-        setActiveField(`fullLength-${currentIndex + 1}`);
+        // Calculate the target index first
+        const targetIndex = currentIndex + 1;
+        
+        // Show the slide
+        showSlide(targetIndex);
+        
+        // Set focus to the first field of that NEW slide
+        // Note: We use targetIndex, do NOT add +1 again here
+        setActiveField(`fullLength-${targetIndex}`);
     } else {
+        // If at the end, create a new row
         addLogRow();
     }
 }
 
 function manualPrevLog() {
     if (currentIndex > 0) {
-        showSlide(currentIndex - 1);
-        setActiveField(`fullLength-${currentIndex - 1}`);
+        const targetIndex = currentIndex - 1;
+        showSlide(targetIndex);
+        setActiveField(`fullLength-${targetIndex}`);
     }
 }
-
-// --- KEYPAD VISIBILITY LOGIC ---
-function showKeypad() {
-    const keypad = document.querySelector('.virtual-keypad-container');
-    if(keypad) {
-        keypad.classList.remove('keypad-hidden');
-        document.body.style.paddingBottom = '260px'; 
-    }
-}
-
-function hideKeypad() {
-    const keypad = document.querySelector('.virtual-keypad-container');
-    if(keypad) {
-        keypad.classList.add('keypad-hidden');
-        document.body.style.paddingBottom = '80px'; 
-        
-        if(activeFieldId) {
-             const el = document.getElementById(activeFieldId);
-             if(el) el.classList.remove('active-field');
-             activeFieldId = null;
-        }
-    }
-}
-
 // --- SAVING & EXPORTING ---
 
 async function saveRecord() {
     const partyName = document.getElementById('partyName').value.trim();
     const entryDate = document.getElementById('entryDate').value;
     const recordNumber = document.getElementById('recordNumber').value;
+    
+    // 1. Get Note Value (NEW)
+    const entryNote = document.getElementById('entryNote').value; 
     
     if (!partyName || !entryDate) { return alert('Please fill in Supplier Name and Date.'); }
 
@@ -387,7 +372,8 @@ async function saveRecord() {
     const recordData = { 
         recordNumber: parseInt(recordNumber), 
         partyName, 
-        date: entryDate, 
+        date: entryDate,
+        note: entryNote, // 2. Add Note to Data (NEW)
         items: validItems, 
         totals: { 
             pcs: document.getElementById('total-pcs').innerText, 
@@ -395,6 +381,8 @@ async function saveRecord() {
             cbm: document.getElementById('total-cbm').innerText 
         } 
     };
+    
+    // ... बाकी कोड पहले जैसा ही रहेगा ...
     
     const urlParams = new URLSearchParams(window.location.search);
     let recordId = urlParams.get('id');
@@ -454,6 +442,7 @@ function printList() {
     if (itemsToPrint.length === 0) { return alert("Nothing to print."); }
     
     const doc = new jsPDF('portrait', 'mm', 'a4');
+    const pageHeight = doc.internal.pageSize.getHeight();
     const pageWidth = doc.internal.pageSize.getWidth();
     let startY = 32;
     
@@ -486,15 +475,20 @@ function printList() {
         
         doc.autoTable({ ...tableStyles, head: tableHead, body: leftBody, startY: startY, margin: { left: 14, right: pageWidth / 2 + 2, bottom: 10 } });
         
+        let leftFinalY = doc.autoTable.previous.finalY;
+        let rightFinalY = 0;
+        
         if (rightItems.length > 0) {
             const rightBody = rightItems.map((item, idx) => [(i * itemsPerPage) + chunkSize + idx + 1, item.fullLength, item.invLength, item.girth, item.cft.toFixed(2)]);
             const rightSubtotal = rightItems.reduce((sum, item) => sum + item.cft, 0);
             rightBody.push([{ content: 'Total', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } }, { content: rightSubtotal.toFixed(2), styles: { halign: 'right', fontStyle: 'bold' } }]);
             
             doc.autoTable({ ...tableStyles, head: tableHead, body: rightBody, startY: startY, margin: { left: pageWidth / 2 + 2, bottom: 10 } });
+            rightFinalY = doc.autoTable.previous.finalY;
         }
     }
     
+    // Footer Totals
     const totalPcs = document.getElementById('total-pcs').innerText;
     const totalCft = document.getElementById('total-cft').innerText;
     const totalCbm = document.getElementById('total-cbm').innerText;
