@@ -6,5 +6,11 @@ User-agent: *
 Allow: /
 Disallow: /export_invoice/
 Disallow: /local_purchase/
+Disallow: /banking/
+Disallow: /local_purchase/
+Disallow: /production/
+Disallow: /sales/
+Disallow: /round-logs-loading/
+Disallow: /import/
 # Provide the location of the sitemap file to help search engines index the site better.
 Sitemap: https://www.oswallumbers.in/sitemap.xml
