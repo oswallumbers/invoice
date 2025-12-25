@@ -113,10 +113,71 @@
             font-family: 'Arial', sans-serif !important;
             letter-spacing: 0.5px;
         }
+        /*----------------------------------------------------*/
+        .mobile-restriction {
+        display: none;
+    }
+
+    /* 2. सिर्फ मोबाइल स्क्रीन के लिए नियम (768px से कम चौड़ाई) */
+    @media only screen and (max-width: 768px) {
+        
+        /* पूरी वेबसाइट के बाकी कंटेंट को छुपा दें */
+        body > *:not(.mobile-restriction) {
+            display: none !important;
+        }
+
+        /* बॉडी का बैकग्राउंड सादा कर दें */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            height: 100vh;
+            overflow: hidden; /* स्क्रॉलिंग बंद करें */
+        }
+
+        /* मैसेज वाले बॉक्स को स्क्रीन पर दिखाएं */
+        .mobile-restriction {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh; /* पूरी स्क्रीन घेर ले */
+            width: 100%;
+            text-align: center;
+            background: #ffffff;
+            z-index: 99999;
+        }
+
+        /* मैसेज की स्टाइलिंग (सजावट) */
+        .message-box {
+            border: 1px solid #ddd;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .message-box h1 {
+            color: #d9534f; /* लाल रंग */
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .message-box p {
+            color: #333;
+            font-size: 16px;
+        }
+    }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
-
+<div class="mobile-restriction">
+    <div class="message-box">
+        <h1>⚠️ Access Restricted</h1>
+        <p>This website is optimized for Desktop only.</p>
+        <p>Please open this link on a PC or Laptop to proceed.</p>
+    </div>
+</div>
     <div id="login-section" class="flex items-center justify-center h-screen bg-gradient-to-br from-blue-600 to-indigo-900">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-96 text-center">
              <button onclick="window.location.href='https://oswallumbers.in/portal.html'" class="text-gray-600 hover:text-blue-600 font-medium"><i class="fa-solid fa-house"></i> Go to Portal</button>
