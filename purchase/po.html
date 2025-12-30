@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PO Generator - Oswal Lumbers</title>
+    <style>
+        :root {
+            --primary-color: #d35400; /* Oswal Orange */
+            --secondary-color: #2c3e50; /* Dark Blue */
+            --bg-color: #f0f2f5;
+            --input-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden; /* Prevent body scroll, handle inside panels */
+            display: flex;
+        }
+
+        /* ========================
+           LEFT PANEL: INPUTS
+           ======================== */
+        .input-panel {
+            width: 35%;
+            background: var(--secondary-color);
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .input-panel h2 { margin-top: 0; color: #ecf0f1; border-bottom: 1px solid #4a6278; padding-bottom: 10px; }
+        .input-group { margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; }
+        .input-group label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: bold; color: #bdc3c7; }
+        .input-group input, .input-group textarea {
+            width: 95%; padding: 8px; border: none; border-radius: 3px; font-family: inherit;
+        }
+        
+        /* Items Input Area */
+        .item-row-input {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            position: relative;
+        }
+        .remove-btn {
+            position: absolute; top: 5px; right: 5px;
+            background: #e74c3c; color: white; border: none; cursor: pointer; padding: 2px 8px; font-size: 12px; border-radius: 3px;
+        }
+        .add-btn {
+            width: 100%; padding: 10px; background: #27ae60; color: white; border: none; cursor: pointer; font-weight: bold; margin-bottom: 20px;
+        }
+        .add-btn:hover { background: #2ecc71; }
+
+        .print-btn-float {
+            position: fixed; bottom: 20px; left: 20px; width: 30%;
+            padding: 15px; background: var(--primary-color); color: white;
+            border: none; font-size: 18px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        /* ========================
+           RIGHT PANEL: PREVIEW
+           ======================== */
+        .preview-panel {
+            width: 65%;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* The Paper Document */
+        #invoice-paper {
+            background: white;
+            width: 210mm; /* A4 width */
+            min-height: 297mm; /* A4 height */
+            padding: 40px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            position: relative;
+            box-sizing: border-box; 
+        }
+
+        /* ========================
+           INVOICE CSS (From previous Step)
+           ======================== */
+        /* Header */
+        header { display: flex; justify-content: space-between; border-bottom: 3px solid var(--primary-color); padding-bottom: 20px; margin-bottom: 30px; }
+        .company-branding h1 { color: var(--primary-color); margin: 0; font-size: 24px; text-transform: uppercase; }
+        .company-branding p { margin: 5px 0 0; font-size: 12px; color: #555; line-height: 1.4; }
+        .document-title h2 { margin: 0; font-size: 32px; color: var(--secondary-color); text-transform: uppercase; text-align: right; }
+        
+        .po-meta-table { float: right; margin-top: 10px; font-size: 13px; }
+        .po-meta-table td { padding: 2px 10px; text-align: right; }
+
+        /* Address Box */
+        .address-section { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 30px; }
+        .box { flex: 1; border: 1px solid #eee; padding: 15px; border-radius: 4px; }
+        .box h3 { background: var(--secondary-color); color: #fff; padding: 5px 10px; margin: -15px -15px 15px -15px; font-size: 13px; text-transform: uppercase; }
+        .box-content { font-size: 13px; line-height: 1.5; }
+
+        /* Machine Info */
+        .machine-info { background: #fff8e1; border: 1px solid #ffe0b2; color: #d35400; padding: 8px; margin-bottom: 20px; font-size: 12px; text-align: center; font-weight: bold; }
+
+        /* Table */
+        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+        .items-table th { background: var(--secondary-color); color: white; text-align: left; padding: 8px; text-transform: uppercase; }
+        .items-table td { padding: 8px; border-bottom: 1px solid #eee; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        /* Totals */
+        .totals-section { display: flex; justify-content: flex-end; }
+        .totals-table { width: 40%; border-collapse: collapse; font-size: 13px; }
+        .totals-table td { padding: 6px; border-bottom: 1px solid #eee; }
+        .grand-total { font-weight: bold; font-size: 15px; background: #f4f4f4; border-top: 2px solid var(--secondary-color); }
+
+        /* Footer */
+        .footer { margin-top: 40px; padding-top: 10px; border-top: 2px solid var(--primary-color); display: flex; justify-content: space-between; align-items: flex-end; }
+        .terms { width: 65%; font-size: 10px; color: #666; }
+        .signature { width: 30%; text-align: center; font-size: 12px; }
+        .signature-line { border-bottom: 1px solid #333; margin-bottom: 5px; height: 40px; }
+
+        /* ========================
+           PRINT MEDIA QUERY
+           ======================== */
+        @media print {
+            body { display: block; height: auto; background: white; }
+            .input-panel { display: none; } /* Hide Inputs */
+            .preview-panel { width: 100%; padding: 0; display: block; } /* Full Width */
+            #invoice-paper { box-shadow: none; margin: 0; width: 100%; min-height: auto; }
+            .print-btn-float { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="input-panel">
+        <h2>PO Data Entry</h2>
+        
+        <div class="input-group">
+            <label>PO Number</label>
+            <input type="text" id="in-po-no" value="OLPL/PO/25-26/12-1" oninput="updatePreview()">
+        </div>
+        <div class="input-group">
+            <label>Date</label>
+            <input type="date" id="in-date" oninput="updatePreview()">
+        </div>
+        <div class="input-group">
+            <label>Ref Quote No</label>
+            <input type="text" id="in-ref" value="Q-15132-SS-00" oninput="updatePreview()">
+        </div>
+
+        <hr style="border-color: #4a6278;">
+
+        <div class="input-group">
+            <label>Vendor Name</label>
+            <input type="text" id="in-vendor-name" value="ElectroMech Lift Trucks Pvt. Ltd." oninput="updatePreview()">
+        </div>
+        <div class="input-group">
+            <label>Vendor Address</label>
+            <textarea id="in-vendor-addr" rows="3" oninput="updatePreview()">Gat No. 316, At Post: Kasar Amboli, Tal. Mulshi, Dist. Pune 412 115</textarea>
+        </div>
+        <div class="input-group">
+            <label>Attn Name</label>
+            <input type="text" id="in-vendor-attn" value="Sushil Shinde" oninput="updatePreview()">
+        </div>
+
+        <hr style="border-color: #4a6278;">
+        
+        <h3>Line Items</h3>
+        <div id="items-container">
+            </div>
+        <button class="add-btn" onclick="addNewItem()">+ Add Item</button>
+
+        <button class="print-btn-float" onclick="window.print()">PRINT / PDF</button>
+    </div>
+
+    <div class="preview-panel">
+        <div id="invoice-paper">
+            <header>
+                <div class="company-branding">
+                    <h1>Oswal Lumbers Pvt. Ltd.</h1>
+                    <p>
+                        Survey No 262 N H 8/A, Mithirohar<br>
+                        Gandhidham - 370201, Gujarat - India<br>
+                        Email: info@oswallumbers.com
+                    </p>
+                </div>
+                <div class="document-title">
+                    <h2>Purchase Order</h2>
+                    <table class="po-meta-table">
+                        <tr><td><strong>PO Date:</strong></td><td id="out-date"></td></tr>
+                        <tr><td><strong>PO No:</strong></td><td id="out-po-no"></td></tr>
+                        <tr><td><strong>Ref Quote:</strong></td><td id="out-ref"></td></tr>
+                    </table>
+                </div>
+            </header>
+
+            <section class="address-section">
+                <div class="box">
+                    <h3>Vendor (To)</h3>
+                    <div class="box-content">
+                        <strong id="out-vendor-name"></strong><br>
+                        <span id="out-vendor-addr"></span><br>
+                        <strong>Attn:</strong> <span id="out-vendor-attn"></span>
+                    </div>
+                </div>
+
+                <div class="box">
+                    <h3>Ship To (Delivery At)</h3>
+                    <div class="box-content">
+                        <strong>Oswal Lumbers Pvt. Ltd.</strong><br>
+                        Survey No 262 N H 8/A<br>
+                        Mithirohar, Gandhidham - 370201<br>
+                        Gujarat<br>
+                        <strong>Contact:</strong> Mr. Om Prakash
+                    </div>
+                </div>
+            </section>
+
+            <div class="machine-info">
+                SPARES FOR: Yale GDP30UX | Serial: A7S1A03036W | Engine: Yanmar 4TNE98
+            </div>
+
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width: 30px;">Sr.</th>
+                        <th>Part No</th>
+                        <th>Description</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-center">UOM</th>
+                        <th class="text-right">Rate</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="out-items-body">
+                    </tbody>
+            </table>
+
+            <div class="totals-section">
+                <table class="totals-table">
+                    <tr>
+                        <td>Sub Total</td>
+                        <td class="text-right" id="out-subtotal">0.00</td>
+                    </tr>
+                    <tr>
+                        <td>Add: IGST (18%)</td>
+                        <td class="text-right" id="out-tax">0.00</td>
+                    </tr>
+                    <tr class="grand-total">
+                        <td>Grand Total</td>
+                        <td class="text-right" id="out-grand">0.00</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="footer">
+                <div class="terms">
+                    <strong>Terms & Conditions:</strong>
+                    <ul>
+                        <li>Payment: 100% Advance Payment as per quotation.</li>
+                        <li>Delivery Schedule: Within 6-8 weeks from PO date.</li>
+                        <li>Transport: To be arranged by Buyer (Ex-Works Pimpri).</li>
+                    </ul>
+                </div>
+                <div class="signature">
+                    <div class="signature-line"></div>
+                    <strong>Authorized Signatory</strong><br>
+                    <small>Oswal Lumbers Pvt. Ltd.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set default date to today
+        document.getElementById('in-date').valueAsDate = new Date();
+
+        // Initial Data Structure
+        let items = [
+            { part: "582101509", desc: "BRACKET ENGINE", qty: 2, uom: "Nos", rate: 7575 },
+            { part: "582100701", desc: "RUBBER DAMPER", qty: 4, uom: "Nos", rate: 4394 },
+            { part: "582106510", desc: "WASHER", qty: 2, uom: "Nos", rate: 743 },
+            { part: "582117936", desc: "CAPSCREW-M12", qty: 2, uom: "Nos", rate: 245 }
+        ];
+
+        // 1. Initialize Inputs
+        const itemsContainer = document.getElementById('items-container');
+
+        function renderInputFields() {
+            itemsContainer.innerHTML = '';
+            items.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'item-row-input';
+                div.innerHTML = `
+                    <button class="remove-btn" onclick="removeItem(${index})">X</button>
+                    <div style="display:flex; gap:5px; margin-bottom:5px;">
+                        <input type="text" placeholder="Part No" value="${item.part}" oninput="updateItem(${index}, 'part', this.value)" style="flex:1">
+                        <input type="text" placeholder="UOM" value="${item.uom}" oninput="updateItem(${index}, 'uom', this.value)" style="width:40px">
+                    </div>
+                    <input type="text" placeholder="Description" value="${item.desc}" oninput="updateItem(${index}, 'desc', this.value)" style="width:95%; margin-bottom:5px;">
+                    <div style="display:flex; gap:5px;">
+                        <input type="number" placeholder="Qty" value="${item.qty}" oninput="updateItem(${index}, 'qty', this.value)" style="flex:1">
+                        <input type="number" placeholder="Rate" value="${item.rate}" oninput="updateItem(${index}, 'rate', this.value)" style="flex:1">
+                    </div>
+                `;
+                itemsContainer.appendChild(div);
+            });
+        }
+
+        // 2. Logic to Update Data
+        function updateItem(index, field, value) {
+            items[index][field] = value;
+            updatePreview();
+        }
+
+        function addNewItem() {
+            items.push({ part: "", desc: "", qty: 1, uom: "Nos", rate: 0 });
+            renderInputFields();
+            updatePreview();
+        }
+
+        function removeItem(index) {
+            items.splice(index, 1);
+            renderInputFields();
+            updatePreview();
+        }
+
+        // 3. Logic to Update Preview
+        function updatePreview() {
+            // Header Info
+            document.getElementById('out-po-no').innerText = document.getElementById('in-po-no').value;
+            
+            // Format Date
+            const d = new Date(document.getElementById('in-date').value);
+            const dateStr = !isNaN(d) ? d.toLocaleDateString('en-GB') : '';
+            document.getElementById('out-date').innerText = dateStr;
+            
+            document.getElementById('out-ref').innerText = document.getElementById('in-ref').value;
+
+            // Vendor Info
+            document.getElementById('out-vendor-name').innerText = document.getElementById('in-vendor-name').value;
+            document.getElementById('out-vendor-addr').innerText = document.getElementById('in-vendor-addr').value;
+            document.getElementById('out-vendor-attn').innerText = document.getElementById('in-vendor-attn').value;
+
+            // Items Table
+            const tbody = document.getElementById('out-items-body');
+            tbody.innerHTML = '';
+            
+            let subtotal = 0;
+
+            items.forEach((item, i) => {
+                const qty = parseFloat(item.qty) || 0;
+                const rate = parseFloat(item.rate) || 0;
+                const total = qty * rate;
+                subtotal += total;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-center">${i + 1}</td>
+                    <td>${item.part}</td>
+                    <td>${item.desc}</td>
+                    <td class="text-center">${qty}</td>
+                    <td class="text-center">${item.uom}</td>
+                    <td class="text-right">${rate.toFixed(2)}</td>
+                    <td class="text-right">${total.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Totals
+            const tax = subtotal * 0.18;
+            const grand = subtotal + tax;
+
+            document.getElementById('out-subtotal').innerText = formatMoney(subtotal);
+            document.getElementById('out-tax').innerText = formatMoney(tax);
+            document.getElementById('out-grand').innerText = formatMoney(grand);
+        }
+
+        function formatMoney(amount) {
+            return amount.toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
+        }
+
+        // Initialize App
+        renderInputFields();
+        updatePreview();
+    </script>
+</body>
+</html>
