@@ -440,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.text(bankDetailsText, margin + 5, y, { lineHeightFactor: 1.15, maxWidth: pageWidth - margin * 2 });
         
         // FIX: Add buffer to prevent overlap with Note box
-        y += bankDetailsDims.h + 8;
+        y += bankDetailsDims.h + 5;
 
         // --- Calculation Note ---
         if (data.calculationNote) {
@@ -468,12 +468,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // --- Signatures ---
         // Ensure we don't print signatures at the very bottom edge
-        if (y > 250) { doc.addPage(); y = margin + 20; }
+        if (y > 275) { doc.addPage(); y = margin + 20; }
 
         doc.text('Best Regards,', margin, y);
         
         // FIX: INCREASE GAP for Director/Buyer sign (Previously 14, now 35)
-        y += 35; 
+        y += 25; 
 
         const signatureY = y;
 
@@ -498,6 +498,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
