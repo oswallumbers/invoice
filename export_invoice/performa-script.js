@@ -406,6 +406,7 @@ document.addEventListener('DOMContentLoaded', function () {
         y = tableEndY + 12;
        
         // FIX: Ensure y updates from the end of table
+       doc.setFontSize(11);
         y = doc.autoTable.previous.finalY + 8;
 
         // --- Terms Section ---
@@ -507,6 +508,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
