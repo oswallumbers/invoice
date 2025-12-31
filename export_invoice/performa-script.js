@@ -400,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // 2. Add the text just below the table on the right side
         doc.setFont(font, 'bold');
         doc.setFontSize(9); // Size match kar lijiye jarurat anusaar
-        doc.text("QUANTITY +- 10% ALLOWED", pageWidth - margin, tableEndY + 5, { align: 'right' });
+        doc.text("QUANTITY +/- 10% ALLOWED", pageWidth - margin, tableEndY + 5, { align: 'right' });
 
         // 3. Update 'y' so the next section starts after this text
         y = tableEndY + 12;
@@ -508,6 +508,7 @@ document.addEventListener('DOMContentLoaded', function () {
         doc.save(`Performa-Invoice-${data.performaInvoiceNo.replace(/\//g, '-')}.pdf`);
     }
 });
+
 
 
 
