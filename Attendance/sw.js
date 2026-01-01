@@ -1,13 +1,14 @@
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open('oswal-store').then((cache) => cache.addAll([
-      '/index.html',
+      './',                // Current Folder
+      './index.html',      // Main File
+      './manifest.json'    // Manifest File
     ])),
   );
 });
 
 self.addEventListener('fetch', (e) => {
-  console.log(e.request.url);
   e.respondWith(
     caches.match(e.request).then((response) => response || fetch(e.request)),
   );
