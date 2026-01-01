@@ -104,7 +104,7 @@
         import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- PWA SERVICE WORKER REGISTRATION ---
-       if ('serviceWorker' in navigator) {
+           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js') // यहाँ ./sw.js लिखें
             .then(reg => console.log('Service Worker Registered', reg))
             .catch(err => console.log('SW Failed', err));
@@ -229,19 +229,28 @@
             loadLogs();
         }
 
-        // --- 3. GEOLOCATION ---
+        // --- 3. GEOLOCATION (UPDATED FOR SPEED) ---
         function startLocation() {
             if (!navigator.geolocation) return;
+
+            // Options: High Accuracy koshish karo, par Cache bhi use karo (Fast Speed ke liye)
+            const options = {
+                enableHighAccuracy: true,
+                maximumAge: 60000, // 1 minute purani location bhi chalegi (Instant Load)
+                timeout: 15000     // 15 sec se jyada wait mat karo
+            };
+
             navigator.geolocation.watchPosition(pos => {
                 userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                 
-                // Testing Logs (Remove later)
+                // Testing Logs
                 console.log("Lat:", userLocation.lat, "Lng:", userLocation.lng);
 
                 const dist = getDist(userLocation.lat, userLocation.lng, OFFICE_LAT, OFFICE_LNG);
                 const statusEl = document.getElementById('location-status');
                 const iconEl = document.getElementById('loc-icon');
 
+                // UI Update logic
                 if (dist <= ALLOWED_RADIUS) {
                     isLocationValid = true;
                     statusEl.innerText = "Verified: Inside Office";
@@ -255,7 +264,10 @@
                     iconEl.innerHTML = '<i class="fas fa-times text-red-600"></i>';
                     iconEl.className = "w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-3";
                 }
-            }, err => console.error(err), { enableHighAccuracy: true });
+            }, (err) => {
+                console.error(err);
+                document.getElementById('location-status').innerText = "GPS Error: " + err.message;
+            }, options); // <--- Yahan options pass kiye hain
         }
 
         // --- 4. BIOMETRIC (WEBAUTHN) ---
