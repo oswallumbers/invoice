@@ -12,7 +12,6 @@
         .active-nav { background-color: #1e293b; border-left: 4px solid #3b82f6; }
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        /* Modal Backdrop */
         .modal-bg { background-color: rgba(0,0,0,0.5); }
     </style>
 </head>
@@ -25,9 +24,11 @@
                 <h1 class="text-3xl font-bold text-slate-800">HR Portal</h1>
                 <p class="text-slate-500 font-semibold">Oswal Lumbers Pvt Ltd</p>
             </div>
-            <input type="email" id="admin-email-input" placeholder="Admin Email" class="w-full p-4 mb-4 border rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 transition">
-            <input type="password" id="admin-password-input" placeholder="Password" class="w-full p-4 mb-6 border rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 transition">
-            <button onclick="adminLogin()" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold text-lg hover:bg-slate-900 transition shadow-lg transform active:scale-95">Secure Login</button>
+            <form onsubmit="event.preventDefault(); adminLogin();">
+                <input type="email" id="admin-email-input" placeholder="Admin Email" class="w-full p-4 mb-4 border rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 transition" autocomplete="email">
+                <input type="password" id="admin-password-input" placeholder="Password" class="w-full p-4 mb-6 border rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 transition" autocomplete="current-password">
+                <button type="submit" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold text-lg hover:bg-slate-900 transition shadow-lg transform active:scale-95">Secure Login</button>
+            </form>
         </div>
     </div>
 
@@ -197,7 +198,7 @@
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, query, where, getDocs, orderBy, Timestamp, doc, updateDoc, deleteField, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-         const firebaseConfig = {
+          const firebaseConfig = {
             apiKey: "AIzaSyB-R05CTNKajcFMpbkutCesDCGLOZknehA",
             authDomain: "attendance-97b55.firebaseapp.com",
             projectId: "attendance-97b55",
@@ -222,6 +223,13 @@
                 if(user.email !== ADMIN_EMAIL) { alert("Access Denied!"); signOut(auth); return; }
                 document.getElementById('admin-login-screen').classList.add('hidden');
                 document.getElementById('admin-dashboard').classList.remove('hidden');
+                
+                // Initialize Date Input Safely
+                const dateInput = document.getElementById('filter-date');
+                if (!dateInput.value) {
+                    dateInput.valueAsDate = new Date();
+                }
+                
                 loadAttendance();
             } else {
                 document.getElementById('admin-login-screen').classList.remove('hidden');
@@ -240,7 +248,7 @@
         window.openModal = () => document.getElementById('add-staff-modal').classList.remove('hidden');
         window.closeModal = () => document.getElementById('add-staff-modal').classList.add('hidden');
 
-        // --- REGISTER STAFF LOGIC (SECONDARY APP TRICK) ---
+        // --- REGISTER STAFF ---
         window.registerNewStaff = async () => {
             const name = document.getElementById('reg-name').value;
             const email = document.getElementById('reg-email').value;
@@ -253,16 +261,13 @@
             const oldText = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
 
-            // TRICK: Create a secondary app instance to create user WITHOUT logging out admin
             const secondaryApp = initializeApp(firebaseConfig, "Secondary");
             const secondaryAuth = getAuth(secondaryApp);
 
             try {
-                // 1. Create User in Auth
                 const userCred = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
                 const newUser = userCred.user;
 
-                // 2. Save Details to Firestore (using Main DB connection)
                 await setDoc(doc(db, "users", newUser.uid), {
                     email: email,
                     name: name,
@@ -271,31 +276,27 @@
                     role: "staff"
                 });
 
-                // 3. Cleanup
                 await deleteApp(secondaryApp);
 
                 alert("Staff Registered Successfully!");
                 closeModal();
                 
-                // Clear inputs
                 document.getElementById('reg-name').value = '';
                 document.getElementById('reg-email').value = '';
                 document.getElementById('reg-pass').value = '';
                 document.getElementById('reg-salary').value = '';
 
-                // Refresh List
                 loadStaff();
 
             } catch (error) {
                 console.error(error);
                 alert("Error: " + error.message);
-                // Ensure secondary app is deleted even on error
                 if(secondaryApp) deleteApp(secondaryApp); 
             }
             btn.innerHTML = oldText;
         };
 
-        // --- TABS & FUNCTIONS (Existing Logic) ---
+        // --- TABS & FUNCTIONS ---
         window.switchTab = (tab) => {
             ['dashboard', 'staff', 'payroll'].forEach(t => {
                 document.getElementById('section-'+t).classList.add('hidden');
@@ -313,10 +314,23 @@
         }
 
         window.loadAttendance = async () => {
+            // FIX: Validate Date Input Before Using
+            const dateEl = document.getElementById('filter-date');
+            if (!dateEl.value) {
+                dateEl.valueAsDate = new Date(); // Fallback to today
+            }
+            
+            // Check if date is valid
+            const selectedDate = new Date(dateEl.value);
+            if (isNaN(selectedDate.getTime())) {
+                console.error("Invalid Date Detected");
+                return; // Stop execution if date is still invalid
+            }
+
             if(Object.keys(userCache).length === 0) await fetchUserCache();
             const tableBody = document.getElementById('attendance-table');
             tableBody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">Loading...</td></tr>';
-            const selectedDate = new Date(document.getElementById('filter-date').value);
+            
             const start = new Date(selectedDate.setHours(0,0,0,0));
             const end = new Date(selectedDate.setHours(23,59,59,999));
 
@@ -350,7 +364,7 @@
                             typeHtml = "On Time Check-In";
                         }
                     }
-                    const locHtml = d.location ? `<a href="http://googleusercontent.com/maps.google.com/6{d.location.lat},${d.location.lng}" target="_blank" class="text-blue-500 hover:text-blue-700"><i class="fas fa-map-marker-alt"></i> View</a>` : '-';
+                    const locHtml = d.location ? `<a href="http://googleusercontent.com/maps.google.com/7{d.location.lat},${d.location.lng}" target="_blank" class="text-blue-500 hover:text-blue-700"><i class="fas fa-map-marker-alt"></i> View</a>` : '-';
                     const locText = d.location ? `${d.location.lat}, ${d.location.lng}` : 'N/A';
 
                     tableBody.innerHTML += `
