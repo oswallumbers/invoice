@@ -16,18 +16,25 @@
         body { font-family: 'Segoe UI', sans-serif; background-color: #f8fafc; }
         .fingerprint-anim { animation: pulse 2s infinite; }
         @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+        /* Toast Notification */
+        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 100; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px; }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+        /* Modal Background */
+        .modal-bg { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
     </style>
 </head>
 <body class="h-screen flex flex-col select-none">
 
     <div id="login-screen" class="flex-1 flex flex-col justify-center items-center p-6 bg-white">
         <div class="w-full max-w-sm text-center">
-            <div class="mb-8 relative">
+            <div class="mb-8 relative inline-block">
                 <i class="fas fa-mobile-alt text-6xl text-blue-600"></i>
-                <i class="fas fa-lock absolute -bottom-2 -right-2 text-2xl text-orange-500 bg-white rounded-full p-1"></i>
+                <i class="fas fa-lock absolute -bottom-2 -right-2 text-2xl text-orange-500 bg-white rounded-full p-1 shadow"></i>
             </div>
             <h1 class="text-2xl font-bold mb-2">Secure Login</h1>
-            <p class="text-gray-500 mb-6 text-sm">This device will be linked to your ID.</p>
+            <p class="text-gray-500 mb-6 text-sm">Device will be locked to your ID.</p>
             
             <input type="email" id="email" placeholder="Email" class="w-full p-4 mb-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
             <input type="password" id="password" placeholder="Password" class="w-full p-4 mb-6 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -41,15 +48,15 @@
 
     <div id="loading-screen" class="hidden fixed inset-0 bg-white z-50 flex flex-col justify-center items-center">
         <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-4"></i>
-        <p class="text-gray-600 font-bold">Verifying Device ID...</p>
+        <p class="text-gray-600 font-bold">Verifying Device...</p>
     </div>
 
     <div id="dashboard-screen" class="hidden flex-1 flex flex-col relative">
-        <div class="bg-blue-600 text-white p-6 rounded-b-3xl shadow-lg z-10">
+        <div class="bg-blue-600 text-white p-6 rounded-b-3xl shadow-lg z-10 transition-colors duration-500" id="header-bg">
             <div class="flex justify-between items-start">
                 <div>
                     <h2 class="text-2xl font-bold" id="user-name">User</h2>
-                    <p class="text-blue-100 text-xs mt-1"><i class="fas fa-mobile-alt"></i> Device Linked</p>
+                    <p class="text-blue-100 text-xs mt-1" id="connection-status"><i class="fas fa-wifi"></i> Online</p>
                 </div>
                 <button onclick="logout()" class="bg-blue-700 p-2 rounded-lg text-xs"><i class="fas fa-power-off"></i></button>
             </div>
@@ -58,38 +65,56 @@
                     <i class="fas fa-satellite-dish text-gray-500 animate-pulse"></i>
                 </div>
                 <div>
-                    <p class="text-xs text-blue-200 uppercase tracking-wider">Location Status</p>
+                    <p class="text-xs text-blue-200 uppercase tracking-wider">Location</p>
                     <p class="font-bold text-sm" id="location-status">Locating...</p>
                 </div>
             </div>
         </div>
 
-        <div class="flex-1 flex flex-col justify-center items-center p-6 space-y-6">
-            <button onclick="triggerBiometric('Check-In')" id="btn-in" class="w-full max-w-xs bg-white border-2 border-green-100 p-6 rounded-2xl shadow-sm hover:shadow-md active:scale-95 transition flex items-center justify-between group">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mr-4 group-hover:bg-green-100 transition">
-                        <i class="fas fa-fingerprint text-green-600 text-xl"></i>
-                    </div>
-                    <div class="text-left">
-                        <h3 class="font-bold text-gray-800 text-lg">Check In</h3>
-                        <p class="text-xs text-gray-400">Scan Fingerprint</p>
-                    </div>
-                </div>
-                <i class="fas fa-chevron-right text-gray-300"></i>
-            </button>
+        <div class="flex-1 flex flex-col justify-center items-center p-6 space-y-4">
+            
+            <div id="sync-alert" class="hidden w-full bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4 rounded shadow-sm flex justify-between items-center">
+                <div><p class="font-bold">Offline Data Pending</p></div>
+                <i class="fas fa-sync fa-spin text-orange-500"></i>
+            </div>
 
-            <button onclick="triggerBiometric('Check-Out')" id="btn-out" class="w-full max-w-xs bg-white border-2 border-red-100 p-6 rounded-2xl shadow-sm hover:shadow-md active:scale-95 transition flex items-center justify-between group">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mr-4 group-hover:bg-red-100 transition">
-                        <i class="fas fa-fingerprint text-red-600 text-xl"></i>
+            <div id="smart-buttons-area" class="w-full flex justify-center">
+                
+                <div id="btn-loading" class="text-gray-400 font-bold animate-pulse">Checking Status...</div>
+
+                <button onclick="triggerBiometric('Check-In')" id="btn-in" class="hidden w-full max-w-xs bg-white border-2 border-green-100 p-6 rounded-2xl shadow-sm hover:shadow-md active:scale-95 transition flex items-center justify-between group">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mr-4 group-hover:bg-green-100 transition">
+                            <i class="fas fa-fingerprint text-green-600 text-xl"></i>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="font-bold text-gray-800 text-lg">Check In</h3>
+                            <p class="text-xs text-gray-400">Start Day</p>
+                        </div>
                     </div>
-                    <div class="text-left">
-                        <h3 class="font-bold text-gray-800 text-lg">Check Out</h3>
-                        <p class="text-xs text-gray-400">Scan Fingerprint</p>
+                    <i class="fas fa-chevron-right text-gray-300"></i>
+                </button>
+
+                <button onclick="triggerBiometric('Check-Out')" id="btn-out" class="hidden w-full max-w-xs bg-white border-2 border-red-100 p-6 rounded-2xl shadow-sm hover:shadow-md active:scale-95 transition flex items-center justify-between group">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mr-4 group-hover:bg-red-100 transition">
+                            <i class="fas fa-fingerprint text-red-600 text-xl"></i>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="font-bold text-gray-800 text-lg">Check Out</h3>
+                            <p class="text-xs text-gray-400">End Day</p>
+                        </div>
                     </div>
-                </div>
-                <i class="fas fa-chevron-right text-gray-300"></i>
-            </button>
+                    <i class="fas fa-chevron-right text-gray-300"></i>
+                </button>
+            </div>
+
+            <div class="mt-4">
+                <button onclick="openRequestModal()" class="text-blue-500 text-sm font-semibold hover:underline">
+                    <i class="fas fa-question-circle"></i> Forgot to Punch?
+                </button>
+            </div>
+
         </div>
 
         <div class="bg-white rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.05)] p-6 h-1/3 overflow-y-auto">
@@ -98,18 +123,38 @@
         </div>
     </div>
 
+    <div id="request-modal" class="hidden fixed inset-0 modal-bg z-50 flex justify-center items-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 transform transition-all">
+            <h3 class="text-xl font-bold text-gray-800 mb-1">Forgot Punch?</h3>
+            <p class="text-xs text-gray-500 mb-4">Send a request to Admin to fix attendance.</p>
+            
+            <div class="space-y-3">
+                <input type="date" id="req-date" class="w-full p-3 bg-gray-50 border rounded-lg text-sm">
+                <input type="time" id="req-time" class="w-full p-3 bg-gray-50 border rounded-lg text-sm">
+                <select id="req-type" class="w-full p-3 bg-gray-50 border rounded-lg text-sm">
+                    <option value="Check-In">I forgot to Check-In</option>
+                    <option value="Check-Out">I forgot to Check-Out</option>
+                </select>
+                <textarea id="req-reason" placeholder="Reason (e.g. Battery dead)" class="w-full p-3 bg-gray-50 border rounded-lg text-sm h-20"></textarea>
+            </div>
+
+            <div class="flex gap-2 mt-6">
+                <button onclick="closeRequestModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-sm">Cancel</button>
+                <button onclick="sendRequest()" id="btn-send-req" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg">Send Request</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast">Attendance Marked!</div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc, setDoc, Timestamp, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- PWA SERVICE WORKER REGISTRATION ---
-           if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js') // यहाँ ./sw.js लिखें
-            .then(reg => console.log('Service Worker Registered', reg))
-            .catch(err => console.log('SW Failed', err));
-        }
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
 
+        // --- YOUR FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyB-R05CTNKajcFMpbkutCesDCGLOZknehA",
             authDomain: "attendance-97b55.firebaseapp.com",
@@ -120,21 +165,19 @@
             measurementId: "G-3GJK5P4780"
         };
 
-
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Office Settings
         const OFFICE_LAT = 23.091557; 
         const OFFICE_LNG = 70.144753; 
-        const ALLOWED_RADIUS = 200; 
+        const ALLOWED_RADIUS = 2000; 
 
         let currentUser = null;
         let userLocation = null;
-        let isLocationValid = false;
+        let isOnline = navigator.onLine;
 
-        // --- 1. DEVICE ID LOGIC ---
+        // --- AUTH & DEVICE LOCK ---
         function getLocalDeviceId() {
             let deviceId = localStorage.getItem('oswal_device_id');
             if (!deviceId) {
@@ -144,78 +187,49 @@
             return deviceId;
         }
 
-        // --- 2. AUTH & DEVICE CHECK ---
         window.login = () => {
             const e = document.getElementById('email').value;
             const p = document.getElementById('password').value;
+            if(!e || !p) return;
             document.getElementById('login-btn').innerText = "Verifying...";
             signInWithEmailAndPassword(auth, e, p).catch(err => {
-                document.getElementById('login-msg').innerText = err.message;
+                document.getElementById('login-msg').innerText = "Invalid Credentials";
                 document.getElementById('login-btn').innerText = "Link Device & Login";
             });
         };
-
         window.logout = () => signOut(auth);
 
         onAuthStateChanged(auth, async (user) => {
-            const loginScreen = document.getElementById('login-screen');
-            const dashboard = document.getElementById('dashboard-screen');
-            const loadingScreen = document.getElementById('loading-screen');
-
             if (user) {
-                loginScreen.classList.add('hidden');
-                loadingScreen.classList.remove('hidden'); // Show loader while checking device
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('loading-screen').classList.remove('hidden');
 
-                // --- CRITICAL: DEVICE LOCK CHECK ---
-                const localDeviceId = getLocalDeviceId();
-                const userDocRef = doc(db, "users", user.uid);
-
-                try {
-                    const userSnap = await getDoc(userDocRef);
-
-                    if (!userSnap.exists()) {
-                        // CASE A: First time user ever. Lock this device to them.
-                        await setDoc(userDocRef, { 
-                            email: user.email, 
-                            registeredDevice: localDeviceId,
-                            joinedAt: Timestamp.now()
-                        }, { merge: true }); // Merge to not overwrite other info
-                        console.log("Device Registered Successfully");
-                        enterDashboard(user);
-                    } else {
-                        // CASE B: User exists. Check if device matches.
-                        const data = userSnap.data();
-                        
-                        // If no device registered yet (migration), register this one
-                        if (!data.registeredDevice) {
-                            await setDoc(userDocRef, { registeredDevice: localDeviceId }, { merge: true });
-                            enterDashboard(user);
-                        } 
-                        // If device matches
-                        else if (data.registeredDevice === localDeviceId) {
-                            enterDashboard(user);
-                        } 
-                        // CASE C: DEVICE MISMATCH (Fraud Attempt)
-                        else {
-                            alert(`SECURITY ALERT:\nThis account is locked to another device.\n\nYou cannot use this phone.`);
-                            await signOut(auth);
-                            loadingScreen.classList.add('hidden');
-                            loginScreen.classList.remove('hidden');
-                            document.getElementById('login-msg').innerText = "Account Locked to another device.";
-                            document.getElementById('login-btn').innerText = "Link Device & Login";
+                if (navigator.onLine) {
+                    const localDeviceId = getLocalDeviceId();
+                    const userDocRef = doc(db, "users", user.uid);
+                    try {
+                        const userSnap = await getDoc(userDocRef);
+                        if (!userSnap.exists()) {
+                             await setDoc(userDocRef, { email: user.email, registeredDevice: localDeviceId, joinedAt: Timestamp.now() }, { merge: true });
+                             enterDashboard(user);
+                        } else {
+                            const data = userSnap.data();
+                            if (!data.registeredDevice || data.registeredDevice === localDeviceId) {
+                                if(!data.registeredDevice) await setDoc(userDocRef, { registeredDevice: localDeviceId }, { merge: true });
+                                enterDashboard(user);
+                            } else {
+                                alert(`LOCKED: This ID is registered to another device.`);
+                                await signOut(auth);
+                                location.reload();
+                            }
                         }
-                    }
-                } catch (error) {
-                    console.error("Device Check Error:", error);
-                    alert("System Error. Try again.");
-                    signOut(auth);
-                }
-
+                    } catch (e) { enterDashboard(user); }
+                } else { enterDashboard(user); }
             } else {
                 currentUser = null;
-                loadingScreen.classList.add('hidden');
-                dashboard.classList.add('hidden');
-                loginScreen.classList.remove('hidden');
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('dashboard-screen').classList.add('hidden');
+                document.getElementById('login-screen').classList.remove('hidden');
                 document.getElementById('login-btn').innerText = "Link Device & Login";
             }
         });
@@ -227,134 +241,229 @@
             document.getElementById('user-name').innerText = user.email.split('@')[0];
             startLocation();
             loadLogs();
+            checkOfflineQueue();
+            updateUIBasedOnLastPunch(); // SMART BUTTON CHECK
         }
 
-        // --- 3. GEOLOCATION (UPDATED FOR SPEED) ---
+        // --- SMART BUTTON LOGIC ---
+        async function updateUIBasedOnLastPunch() {
+            if (!isOnline) {
+                // Offline fallback: Show Check-In by default or check localstorage
+                document.getElementById('btn-loading').classList.add('hidden');
+                document.getElementById('btn-in').classList.remove('hidden'); 
+                return; 
+            }
+
+            const today = new Date(); today.setHours(0,0,0,0);
+            
+            // Get the very last punch of today
+            const q = query(
+                collection(db, "attendance"),
+                where("userId", "==", currentUser.uid),
+                where("timestamp", ">=", Timestamp.fromDate(today)),
+                orderBy("timestamp", "desc"),
+                limit(1)
+            );
+
+            try {
+                const snapshot = await getDocs(q);
+                document.getElementById('btn-loading').classList.add('hidden');
+                
+                if (snapshot.empty) {
+                    // No punch today -> Show Check IN
+                    document.getElementById('btn-in').classList.remove('hidden');
+                    document.getElementById('btn-out').classList.add('hidden');
+                } else {
+                    const lastData = snapshot.docs[0].data();
+                    if (lastData.type === 'Check-In') {
+                        // Last was Check-In -> Show Check OUT
+                        document.getElementById('btn-in').classList.add('hidden');
+                        document.getElementById('btn-out').classList.remove('hidden');
+                    } else {
+                        // Last was Check-Out -> Show Check IN (for next shift or error fix)
+                        document.getElementById('btn-in').classList.remove('hidden');
+                        document.getElementById('btn-out').classList.add('hidden');
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching status", e);
+                document.getElementById('btn-loading').innerText = "Error loading status";
+            }
+        }
+
+        // --- FORGOT PUNCH REQUEST LOGIC ---
+        window.openRequestModal = () => {
+            document.getElementById('request-modal').classList.remove('hidden');
+            document.getElementById('req-date').valueAsDate = new Date();
+        };
+        window.closeRequestModal = () => document.getElementById('request-modal').classList.add('hidden');
+
+        window.sendRequest = async () => {
+            const date = document.getElementById('req-date').value;
+            const time = document.getElementById('req-time').value;
+            const type = document.getElementById('req-type').value;
+            const reason = document.getElementById('req-reason').value;
+            
+            if(!date || !time || !reason) { alert("Please fill all details"); return; }
+
+            const btn = document.getElementById('btn-send-req');
+            btn.innerText = "Sending...";
+
+            try {
+                await addDoc(collection(db, "requests"), {
+                    userId: currentUser.uid,
+                    userName: currentUser.email,
+                    date: date,
+                    time: time,
+                    type: type,
+                    reason: reason,
+                    status: 'Pending',
+                    timestamp: Timestamp.now()
+                });
+                showToast("Request Sent Successfully!");
+                closeRequestModal();
+                document.getElementById('req-reason').value = "";
+            } catch(e) {
+                alert("Error sending request: " + e.message);
+            }
+            btn.innerText = "Send Request";
+        };
+
+
+        // --- EXISTING LOGIC (GPS, Bio, Offline) ---
+        window.addEventListener('online', () => { isOnline = true; syncOfflineData(); updateUIBasedOnLastPunch(); });
+        window.addEventListener('offline', () => { isOnline = false; });
+
         function startLocation() {
             if (!navigator.geolocation) return;
-
-            // Options: High Accuracy koshish karo, par Cache bhi use karo (Fast Speed ke liye)
-            const options = {
-                enableHighAccuracy: true,
-                maximumAge: 60000, // 1 minute purani location bhi chalegi (Instant Load)
-                timeout: 15000     // 15 sec se jyada wait mat karo
-            };
-
+            const options = { enableHighAccuracy: true, maximumAge: 60000, timeout: 15000 };
             navigator.geolocation.watchPosition(pos => {
                 userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                
-                // Testing Logs
-                console.log("Lat:", userLocation.lat, "Lng:", userLocation.lng);
-
                 const dist = getDist(userLocation.lat, userLocation.lng, OFFICE_LAT, OFFICE_LNG);
                 const statusEl = document.getElementById('location-status');
                 const iconEl = document.getElementById('loc-icon');
 
-                // UI Update logic
                 if (dist <= ALLOWED_RADIUS) {
-                    isLocationValid = true;
                     statusEl.innerText = "Verified: Inside Office";
                     statusEl.className = "font-bold text-sm text-green-300";
                     iconEl.innerHTML = '<i class="fas fa-check text-green-600"></i>';
-                    iconEl.className = "w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3";
                 } else {
-                    isLocationValid = false;
-                    statusEl.innerText = `Outside Office (${Math.round(dist)}m)`;
+                    statusEl.innerText = `Outside (${Math.round(dist)}m)`;
                     statusEl.className = "font-bold text-sm text-red-300";
                     iconEl.innerHTML = '<i class="fas fa-times text-red-600"></i>';
-                    iconEl.className = "w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-3";
                 }
-            }, (err) => {
-                console.error(err);
-                document.getElementById('location-status').innerText = "GPS Error: " + err.message;
-            }, options); // <--- Yahan options pass kiye hain
+            }, err => console.error(err), options);
         }
 
-        // --- 4. BIOMETRIC (WEBAUTHN) ---
         window.triggerBiometric = async (type) => {
             if (!currentUser) return;
-            if (!userLocation) { alert("Waiting for location..."); return; }
-            // if (!isLocationValid) { alert("You are not at the office location."); return; } // Uncomment for strict mode
+            if (!userLocation && isOnline) { alert("Waiting for location..."); return; }
 
             try {
-                // Dummy WebAuthn for Fingerprint Prompt
-                const publicKey = {
-                    challenge: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
-                    rp: { name: "Oswal Attendance" },
-                    user: {
-                        id: Uint8Array.from(currentUser.uid, c => c.charCodeAt(0)),
-                        name: currentUser.email,
-                        displayName: currentUser.email
-                    },
-                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-                    timeout: 60000
-                };
-                
-                await navigator.credentials.create({ publicKey });
+                if (window.PublicKeyCredential) {
+                    const publicKey = {
+                        challenge: new Uint8Array([1,2,3,4]),
+                        rp: { name: "Oswal" },
+                        user: { id: new Uint8Array(16), name: currentUser.email, displayName: currentUser.email },
+                        pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                        timeout: 60000
+                    };
+                    await navigator.credentials.create({ publicKey });
+                }
                 await saveAttendance(type);
-
-            } catch (err) {
-                console.error(err);
-                alert("Biometric verification failed or canceled.");
-            }
+            } catch (err) { alert("Biometric Cancelled"); }
         };
 
         async function saveAttendance(type) {
-            try {
-                await addDoc(collection(db, "attendance"), {
-                    userId: currentUser.uid,
-                    userName: currentUser.email,
-                    type: type,
-                    timestamp: Timestamp.now(),
-                    location: userLocation,
-                    method: "Biometric + Device Lock",
-                    device: navigator.userAgent
-                });
-                alert(type + " Marked Successfully!");
-                loadLogs();
-            } catch (e) {
-                alert("Error saving data: " + e.message);
-            }
+            const record = {
+                userId: currentUser.uid,
+                userName: currentUser.email,
+                type: type,
+                timestamp: Timestamp.now(),
+                location: userLocation || {lat: 0, lng: 0},
+                device: navigator.userAgent,
+                status: isOnline ? 'Verified' : 'Offline-Sync-Pending'
+            };
+
+            if (isOnline) {
+                try {
+                    await addDoc(collection(db, "attendance"), record);
+                    showToast("Attendance Marked ✅");
+                    loadLogs();
+                    updateUIBasedOnLastPunch(); // Update buttons immediately
+                } catch (e) { saveOffline(record); }
+            } else { saveOffline(record); }
         }
 
-        // --- UTILS ---
+        function saveOffline(record) {
+            record.timestamp = { seconds: record.timestamp.seconds, nanoseconds: record.timestamp.nanoseconds };
+            let offlineData = JSON.parse(localStorage.getItem('oswal_offline_punches') || "[]");
+            offlineData.push(record);
+            localStorage.setItem('oswal_offline_punches', JSON.stringify(offlineData));
+            showToast("Saved Offline ⚠️");
+            checkOfflineQueue();
+        }
+
+        async function syncOfflineData() {
+            let offlineData = JSON.parse(localStorage.getItem('oswal_offline_punches') || "[]");
+            if (offlineData.length === 0) return;
+            document.getElementById('sync-alert').classList.remove('hidden');
+            const newQueue = [];
+            for (let rec of offlineData) {
+                try {
+                    rec.timestamp = new Timestamp(rec.timestamp.seconds, rec.timestamp.nanoseconds);
+                    rec.status = "Synced-From-Offline";
+                    await addDoc(collection(db, "attendance"), rec);
+                } catch (e) { newQueue.push(rec); }
+            }
+            localStorage.setItem('oswal_offline_punches', JSON.stringify(newQueue));
+            if (newQueue.length === 0) { showToast("Synced Successfully!"); loadLogs(); checkOfflineQueue(); updateUIBasedOnLastPunch(); }
+        }
+
+        function checkOfflineQueue() {
+            let offlineData = JSON.parse(localStorage.getItem('oswal_offline_punches') || "[]");
+            if(offlineData.length > 0) document.getElementById('sync-alert').classList.remove('hidden');
+            else document.getElementById('sync-alert').classList.add('hidden');
+        }
+
         function getDist(lat1, lon1, lat2, lon2) {
             const R = 6371e3; 
-            const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
-            const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
-            const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const a = 0.5 - Math.cos((lat2-lat1)*Math.PI/180)/2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) * (1-Math.cos((lon2-lon1)*Math.PI/180))/2;
+            return R * 2 * Math.asin(Math.sqrt(a));
+        }
+
+        function showToast(msg) {
+            const x = document.getElementById("toast");
+            x.innerText = msg;
+            x.className = "show";
+            setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
         }
 
         async function loadLogs() {
+            if (!isOnline) return;
             const list = document.getElementById('activity-log');
             list.innerHTML = '';
             const today = new Date(); today.setHours(0,0,0,0);
-            
-            const q = query(collection(db, "attendance"), where("userId", "==", currentUser.uid), where("timestamp", ">=", Timestamp.fromDate(today)));
-            const snaps = await getDocs(q);
-            
-            if(snaps.empty) list.innerHTML = '<p class="text-gray-400 text-center text-sm">No punch-ins today.</p>';
-
-            snaps.forEach(doc => {
-                const d = doc.data();
-                const time = d.timestamp.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                const isCheckIn = d.type === 'Check-In';
-                list.innerHTML += `
-                    <li class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="w-10 h-10 rounded-full ${isCheckIn?'bg-green-100':'bg-red-100'} flex items-center justify-center mr-3">
-                                <i class="fas ${isCheckIn?'fa-arrow-right':'fa-arrow-left'} ${isCheckIn?'text-green-600':'text-red-600'}"></i>
+            const q = query(collection(db, "attendance"), where("userId", "==", currentUser.uid), where("timestamp", ">=", Timestamp.fromDate(today)), orderBy("timestamp", "desc"));
+            try {
+                const snaps = await getDocs(q);
+                if(snaps.empty) list.innerHTML = '<p class="text-gray-400 text-center text-sm">No records today.</p>';
+                snaps.forEach(doc => {
+                    const d = doc.data();
+                    const time = d.timestamp.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                    const isCheckIn = d.type === 'Check-In';
+                    list.innerHTML += `
+                        <li class="flex items-center justify-between border-b border-gray-100 pb-2">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 rounded-full ${isCheckIn?'bg-green-100':'bg-red-100'} flex items-center justify-center mr-3">
+                                    <i class="fas ${isCheckIn?'fa-arrow-right':'fa-arrow-left'} ${isCheckIn?'text-green-600':'text-red-600'}"></i>
+                                </div>
+                                <div><p class="font-bold text-gray-800">${d.type}</p><p class="text-xs text-gray-500">${d.status || 'Verified'}</p></div>
                             </div>
-                            <div>
-                                <p class="font-bold text-gray-800">${d.type}</p>
-                                <p class="text-xs text-gray-500">Verified</p>
-                            </div>
-                        </div>
-                        <span class="font-bold text-gray-600">${time}</span>
-                    </li>`;
-            });
+                            <span class="font-bold text-gray-600">${time}</span>
+                        </li>`;
+                });
+            } catch(e) { console.log(e); }
         }
     </script>
 </body>
