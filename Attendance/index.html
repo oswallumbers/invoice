@@ -14,18 +14,31 @@
     
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f8fafc; }
-        .fingerprint-anim { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
-        /* Toast Notification */
-        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 100; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px; }
-        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+        
         /* Modal Background */
         .modal-bg { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
+
+        /* Full Screen Success Animation */
+        #success-flash {
+            transition: opacity 0.3s ease-in-out;
+        }
+        .scale-up { animation: scaleUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes scaleUp {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col select-none">
+<video id="hidden-video" autoplay playsinline class="hidden w-1 h-1 absolute top-0 left-0"></video>
+<canvas id="hidden-canvas" class="hidden"></canvas>
+    <div id="success-flash" class="hidden fixed inset-0 z-[100] bg-green-500 flex flex-col justify-center items-center text-white">
+        <div class="bg-white rounded-full p-8 mb-4 shadow-2xl scale-up">
+            <i class="fas fa-check text-8xl text-green-500"></i>
+        </div>
+        <h2 class="text-3xl font-bold tracking-wide animate-pulse">SUCCESS!</h2>
+        <p class="text-green-100 mt-2 text-lg">Attendance Marked</p>
+    </div>
 
     <div id="login-screen" class="flex-1 flex flex-col justify-center items-center p-6 bg-white">
         <div class="w-full max-w-sm text-center">
@@ -145,8 +158,6 @@
         </div>
     </div>
 
-    <div id="toast">Attendance Marked!</div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -234,6 +245,38 @@
             }
         });
 
+        // --- NEW: SELFIE CAPTURE FUNCTION (Storage ki jarurat nahi) ---
+async function captureSelfie() {
+    const video = document.getElementById('hidden-video');
+    const canvas = document.getElementById('hidden-canvas');
+    
+    try {
+        // Front Camera Chalu Karein
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        video.srcObject = stream;
+        
+        // Video load hone ka wait karein
+        await new Promise(resolve => video.onloadedmetadata = resolve);
+        
+        // Canvas par draw karein (Size 300x300 rakha hai taki data kam bane)
+        const ctx = canvas.getContext('2d');
+        canvas.width = 300;
+        canvas.height = 300;
+        ctx.drawImage(video, 0, 0, 300, 300);
+        
+        // Image ko Text (Base64) me badalein (Quality 50%)
+        const base64Image = canvas.toDataURL('image/jpeg', 0.5);
+        
+        // Camera band karein
+        stream.getTracks().forEach(track => track.stop());
+        
+        return base64Image;
+    } catch (e) {
+        console.error("Camera Error:", e);
+        return "No Photo (Camera Error)"; // Agar camera fail ho to ye save hoga
+    }
+}
+
         function enterDashboard(user) {
             currentUser = user;
             document.getElementById('loading-screen').classList.add('hidden');
@@ -242,13 +285,11 @@
             startLocation();
             loadLogs();
             checkOfflineQueue();
-            updateUIBasedOnLastPunch(); // SMART BUTTON CHECK
+            updateUIBasedOnLastPunch(); 
         }
 
-        // --- SMART BUTTON LOGIC ---
         async function updateUIBasedOnLastPunch() {
             if (!isOnline) {
-                // Offline fallback: Show Check-In by default or check localstorage
                 document.getElementById('btn-loading').classList.add('hidden');
                 document.getElementById('btn-in').classList.remove('hidden'); 
                 return; 
@@ -256,7 +297,6 @@
 
             const today = new Date(); today.setHours(0,0,0,0);
             
-            // Get the very last punch of today
             const q = query(
                 collection(db, "attendance"),
                 where("userId", "==", currentUser.uid),
@@ -270,17 +310,14 @@
                 document.getElementById('btn-loading').classList.add('hidden');
                 
                 if (snapshot.empty) {
-                    // No punch today -> Show Check IN
                     document.getElementById('btn-in').classList.remove('hidden');
                     document.getElementById('btn-out').classList.add('hidden');
                 } else {
                     const lastData = snapshot.docs[0].data();
                     if (lastData.type === 'Check-In') {
-                        // Last was Check-In -> Show Check OUT
                         document.getElementById('btn-in').classList.add('hidden');
                         document.getElementById('btn-out').classList.remove('hidden');
                     } else {
-                        // Last was Check-Out -> Show Check IN (for next shift or error fix)
                         document.getElementById('btn-in').classList.remove('hidden');
                         document.getElementById('btn-out').classList.add('hidden');
                     }
@@ -291,7 +328,6 @@
             }
         }
 
-        // --- FORGOT PUNCH REQUEST LOGIC ---
         window.openRequestModal = () => {
             document.getElementById('request-modal').classList.remove('hidden');
             document.getElementById('req-date').valueAsDate = new Date();
@@ -320,7 +356,7 @@
                     status: 'Pending',
                     timestamp: Timestamp.now()
                 });
-                showToast("Request Sent Successfully!");
+                alert("Request Sent Successfully!");
                 closeRequestModal();
                 document.getElementById('req-reason').value = "";
             } catch(e) {
@@ -330,7 +366,6 @@
         };
 
 
-        // --- EXISTING LOGIC (GPS, Bio, Offline) ---
         window.addEventListener('online', () => { isOnline = true; syncOfflineData(); updateUIBasedOnLastPunch(); });
         window.addEventListener('offline', () => { isOnline = false; });
 
@@ -355,52 +390,101 @@
             }, err => console.error(err), options);
         }
 
+        // --- MODIFIED BIOMETRIC FUNCTION ---
         window.triggerBiometric = async (type) => {
-            if (!currentUser) return;
-            if (!userLocation && isOnline) { alert("Waiting for location..."); return; }
+        if (!currentUser) return;
+        if (!userLocation && isOnline) { alert("Waiting for location..."); return; }
 
-            try {
-                if (window.PublicKeyCredential) {
-                    const publicKey = {
-                        challenge: new Uint8Array([1,2,3,4]),
-                        rp: { name: "Oswal" },
-                        user: { id: new Uint8Array(16), name: currentUser.email, displayName: currentUser.email },
-                        pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                        timeout: 60000
-                    };
-                    await navigator.credentials.create({ publicKey });
-                }
-                await saveAttendance(type);
-            } catch (err) { alert("Biometric Cancelled"); }
+        // STEP 1: Pehle Selfie Le (Chupke se)
+        const selfieData = await captureSelfie();
+
+        // STEP 2: Phir Biometric/Fingerprint mange
+        try {
+            if (window.PublicKeyCredential) {
+                const publicKey = {
+                    challenge: new Uint8Array([1,2,3,4]),
+                    rp: { name: "Oswal" },
+                    user: { id: new Uint8Array(16), name: currentUser.email, displayName: currentUser.email },
+                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                    timeout: 60000,
+                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }
+                };
+                await navigator.credentials.create({ publicKey });
+            }
+            // Selfie data pass karein
+            await saveAttendance(type, selfieData);
+        } catch (err) { 
+            console.error(err);
+            // Agar biometric fail ho, to bhi agar aap chahein to attendance laga sakte hain (Optional)
+            // alert("Authentication Failed");
+        }
+    };
+    async function saveAttendance(type, selfieData) {
+        const record = {
+            userId: currentUser.uid,
+            userName: currentUser.email,
+            type: type,
+            timestamp: Timestamp.now(),
+            location: userLocation || {lat: 0, lng: 0},
+            device: navigator.userAgent,
+            photo: selfieData || "No Photo", // Yahan photo save ho rahi hai
+            status: isOnline ? 'Verified' : 'Offline-Sync-Pending'
         };
 
-        async function saveAttendance(type) {
-            const record = {
-                userId: currentUser.uid,
-                userName: currentUser.email,
-                type: type,
-                timestamp: Timestamp.now(),
-                location: userLocation || {lat: 0, lng: 0},
-                device: navigator.userAgent,
-                status: isOnline ? 'Verified' : 'Offline-Sync-Pending'
-            };
+        if (isOnline) {
+            try {
+                await addDoc(collection(db, "attendance"), record);
+                
+                // Success Animation call karein
+                if(typeof triggerSuccessAnimation === "function") {
+                    triggerSuccessAnimation(); 
+                } else {
+                    alert("Attendance Marked!"); // Fallback agar animation function nahi hai
+                }
 
-            if (isOnline) {
-                try {
-                    await addDoc(collection(db, "attendance"), record);
-                    showToast("Attendance Marked ✅");
-                    loadLogs();
-                    updateUIBasedOnLastPunch(); // Update buttons immediately
-                } catch (e) { saveOffline(record); }
-            } else { saveOffline(record); }
-        }
+                loadLogs();
+                updateUIBasedOnLastPunch(); 
+            } catch (e) { saveOffline(record); }
+        } else { saveOffline(record); }
+    }
+
+        // --- NEW FUNCTION: FULL SCREEN ANIMATION ---
+       // --- EXISTING FUNCTION KO UPDATE KAREIN ---
+            function triggerSuccessAnimation() {
+                const flash = document.getElementById('success-flash');
+                flash.classList.remove('hidden');
+
+                // --- NEW: VOICE FEEDBACK CODE ---
+                if ('speechSynthesis' in window) {
+                    // User ka naam nikalna (email se)
+                    const name = currentUser.email.split('@')[0];
+                    
+                    // Message set karna
+                    const msg = new SpeechSynthesisUtterance();
+                    msg.text = `Success! Attendance Marked. Welcome ${name}`;
+                    msg.volume = 1; // 0 to 1
+                    msg.rate = 1;   // Speed
+                    msg.pitch = 1;  // Awaz ka bhari-pan
+
+                    // Browser ko bolne ka order dena
+                    window.speechSynthesis.speak(msg);
+                }
+                // --------------------------------
+
+                // Auto hide after 2 seconds
+                setTimeout(() => {
+                    flash.classList.add('hidden');
+                }, 2000);
+            }
 
         function saveOffline(record) {
             record.timestamp = { seconds: record.timestamp.seconds, nanoseconds: record.timestamp.nanoseconds };
             let offlineData = JSON.parse(localStorage.getItem('oswal_offline_punches') || "[]");
             offlineData.push(record);
             localStorage.setItem('oswal_offline_punches', JSON.stringify(offlineData));
-            showToast("Saved Offline ⚠️");
+            
+            // Still show success animation even for offline save
+            triggerSuccessAnimation();
             checkOfflineQueue();
         }
 
@@ -417,7 +501,12 @@
                 } catch (e) { newQueue.push(rec); }
             }
             localStorage.setItem('oswal_offline_punches', JSON.stringify(newQueue));
-            if (newQueue.length === 0) { showToast("Synced Successfully!"); loadLogs(); checkOfflineQueue(); updateUIBasedOnLastPunch(); }
+            if (newQueue.length === 0) { 
+                // alert("Synced Successfully!"); 
+                loadLogs(); 
+                checkOfflineQueue(); 
+                updateUIBasedOnLastPunch(); 
+            }
         }
 
         function checkOfflineQueue() {
@@ -430,13 +519,6 @@
             const R = 6371e3; 
             const a = 0.5 - Math.cos((lat2-lat1)*Math.PI/180)/2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) * (1-Math.cos((lon2-lon1)*Math.PI/180))/2;
             return R * 2 * Math.asin(Math.sqrt(a));
-        }
-
-        function showToast(msg) {
-            const x = document.getElementById("toast");
-            x.innerText = msg;
-            x.className = "show";
-            setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
         }
 
         async function loadLogs() {
