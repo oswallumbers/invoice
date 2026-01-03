@@ -390,35 +390,46 @@ async function captureSelfie() {
             }, err => console.error(err), options);
         }
 
-        // --- MODIFIED BIOMETRIC FUNCTION ---
-        window.triggerBiometric = async (type) => {
-        if (!currentUser) return;
-        if (!userLocation && isOnline) { alert("Waiting for location..."); return; }
+       // --- UPDATED: PREVENT DOUBLE PUNCH LOGIC ---
+            window.triggerBiometric = async (type) => {
+                if (!currentUser) return;
+                if (!userLocation && isOnline) { alert("Waiting for location..."); return; }
 
-        // STEP 1: Pehle Selfie Le (Chupke se)
-        const selfieData = await captureSelfie();
+                // 1. LOCK THE BUTTONS IMMEDIATELY (Isse Double Click nahi hoga)
+                document.getElementById('btn-in').classList.add('hidden');
+                document.getElementById('btn-out').classList.add('hidden');
+                document.getElementById('btn-loading').classList.remove('hidden');
+                document.getElementById('btn-loading').innerText = "Processing... Please Wait";
 
-        // STEP 2: Phir Biometric/Fingerprint mange
-        try {
-            if (window.PublicKeyCredential) {
-                const publicKey = {
-                    challenge: new Uint8Array([1,2,3,4]),
-                    rp: { name: "Oswal" },
-                    user: { id: new Uint8Array(16), name: currentUser.email, displayName: currentUser.email },
-                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                    timeout: 60000,
-                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }
-                };
-                await navigator.credentials.create({ publicKey });
-            }
-            // Selfie data pass karein
-            await saveAttendance(type, selfieData);
-        } catch (err) { 
-            console.error(err);
-            // Agar biometric fail ho, to bhi agar aap chahein to attendance laga sakte hain (Optional)
-            // alert("Authentication Failed");
-        }
-    };
+                try {
+                    // STEP A: Selfie Le
+                    const selfieData = await captureSelfie();
+
+                    // STEP B: Fingerprint Le
+                    if (window.PublicKeyCredential) {
+                        const publicKey = {
+                            challenge: new Uint8Array([1,2,3,4]),
+                            rp: { name: "Oswal" },
+                            user: { id: new Uint8Array(16), name: currentUser.email, displayName: currentUser.email },
+                            pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                            timeout: 60000,
+                            authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }
+                        };
+                        await navigator.credentials.create({ publicKey });
+                    }
+
+                    // STEP C: Save Kare
+                    await saveAttendance(type, selfieData);
+
+                } catch (err) { 
+                    console.error(err);
+                    alert("Process Failed/Cancelled. Try Again.");
+                    
+                    // Agar fail ho jaye, to wapas sahi button dikhana padega
+                    updateUIBasedOnLastPunch(); 
+                }
+            };
+
     async function saveAttendance(type, selfieData) {
         const record = {
             userId: currentUser.uid,
