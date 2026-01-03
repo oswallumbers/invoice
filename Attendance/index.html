@@ -157,7 +157,39 @@
             </div>
         </div>
     </div>
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').then((registration) => {
+            
+            // Check for updates periodically
+            registration.onupdatefound = () => {
+                const newWorker = registration.installing;
+                newWorker.onstatechange = () => {
+                    if (newWorker.state === 'installed') {
+                        if (navigator.serviceWorker.controller) {
+                            // New update available
+                            console.log('New update available!');
+                            // Option A: Ask User
+                            if(confirm("New Update Available! Click OK to Refresh.")) {
+                                window.location.reload();
+                            }
+                            // Option B: Force Reload (Agar automatic chahiye to upar wala hatakar niche wala use kare)
+                            // window.location.reload(); 
+                        }
+                    }
+                };
+            };
+        });
 
+        // Detect controller change (Important for hard refresh)
+        let refreshing;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            window.location.reload();
+            refreshing = true;
+        });
+    }
+</script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
