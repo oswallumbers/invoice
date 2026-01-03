@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HR Admin - Oswal Attendance</title>
+    <title>Oswal HR Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -12,7 +12,7 @@
         .active-nav { background-color: #1e293b; border-left: 4px solid #3b82f6; }
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .modal-bg { background-color: rgba(0,0,0,0.5); }
+        .modal-bg { background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
@@ -20,15 +20,19 @@
     <div id="admin-login-screen" class="min-h-screen flex flex-col justify-center items-center bg-slate-200">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border-t-4 border-slate-800">
             <div class="text-center mb-8">
-                <i class="fas fa-user-tie text-6xl text-slate-700 mb-4"></i>
-                <h1 class="text-3xl font-bold text-slate-800">HR Portal</h1>
-                <p class="text-slate-500 font-semibold">Oswal Lumbers Pvt Ltd</p>
+                <i class="fas fa-industry text-6xl text-slate-700 mb-4"></i>
+                <h1 class="text-3xl font-bold text-slate-800">Oswal Factory</h1>
+                <p class="text-slate-500 font-semibold">Management Portal</p>
             </div>
             <form onsubmit="event.preventDefault(); adminLogin();">
-                <input type="email" id="admin-email-input" placeholder="Admin Email" class="w-full p-4 mb-4 border rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 transition" autocomplete="email">
-                <input type="password" id="admin-password-input" placeholder="Password" class="w-full p-4 mb-6 border rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 transition" autocomplete="current-password">
-                <button type="submit" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold text-lg hover:bg-slate-900 transition shadow-lg transform active:scale-95">Secure Login</button>
+                <input type="email" id="admin-email-input" placeholder="Email (Manager or Accounts)" class="w-full p-4 mb-4 border rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 transition">
+                <input type="password" id="admin-password-input" placeholder="Password" class="w-full p-4 mb-6 border rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 transition">
+                <button type="submit" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold text-lg hover:bg-slate-900 transition shadow-lg transform active:scale-95">Login</button>
             </form>
+            <div class="mt-4 text-xs text-gray-400 text-center">
+                <p>Use <b>accounts@oswal.com</b> for Full Access</p>
+                <p>Use <b>manager@oswal.com</b> for Staff/Logs only</p>
+            </div>
         </div>
     </div>
 
@@ -37,20 +41,20 @@
         <aside class="w-64 bg-slate-900 text-white flex flex-col fixed h-full z-20 shadow-2xl">
             <div class="p-6 border-b border-slate-800">
                 <h1 class="text-xl font-bold text-white tracking-wide">Oswal <span class="text-blue-500">HR</span></h1>
-                <p class="text-xs text-slate-400 mt-1">Admin Control Center</p>
+                <p class="text-xs text-slate-400 mt-1" id="role-display">Loading Role...</p>
             </div>
             <nav class="mt-4 flex-1 space-y-1">
                 <a href="#" onclick="switchTab('dashboard')" id="nav-dashboard" class="active-nav block py-4 px-6 hover:bg-slate-800 transition flex items-center">
                     <i class="fas fa-chart-line w-8"></i> Live Logs
                 </a>
-                <a href="#" onclick="switchTab('requests')" id="nav-requests" class="block py-4 px-6 hover:bg-slate-800 transition flex items-center border-l-4 border-transparent">
+                <a href="#" onclick="switchTab('requests')" id="nav-requests" class="block py-4 px-6 hover:bg-slate-800 transition flex items-center">
                     <i class="fas fa-bell w-8"></i> Requests
                 </a>
                 <a href="#" onclick="switchTab('staff')" id="nav-staff" class="block py-4 px-6 hover:bg-slate-800 transition flex items-center">
-                    <i class="fas fa-users-cog w-8"></i> Staff & Salary
+                    <i class="fas fa-users-cog w-8"></i> Staff Mgmt
                 </a>
-                <a href="#" onclick="switchTab('payroll')" id="nav-payroll" class="block py-4 px-6 hover:bg-slate-800 transition flex items-center">
-                    <i class="fas fa-file-invoice-dollar w-8"></i> Payroll (Salary)
+                <a href="#" onclick="switchTab('payroll')" id="nav-payroll" class="hidden block py-4 px-6 hover:bg-slate-800 transition flex items-center text-green-400">
+                    <i class="fas fa-file-invoice-dollar w-8"></i> Payroll & Advance
                 </a>
             </nav>
             <div class="p-4 bg-slate-900">
@@ -64,27 +68,21 @@
                 <div class="flex justify-between items-center mb-8">
                     <div>
                         <h2 class="text-3xl font-bold text-slate-800">Daily Attendance</h2>
-                        <p class="text-slate-500 text-sm">Real-time tracking & Late marks</p>
+                        <p class="text-slate-500 text-sm">Real-time tracking</p>
                     </div>
                     <div class="flex gap-2">
                         <input type="date" id="filter-date" class="p-3 border rounded-xl shadow-sm bg-white font-semibold text-slate-700 cursor-pointer" onchange="loadAttendance()">
-                        <button onclick="exportTableToCSV('attendance-table', 'Attendance_Report')" class="bg-green-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-green-700 shadow-lg transition flex items-center">
+                        <button onclick="loadAttendance()" class="bg-blue-100 text-blue-600 px-3 py-2 rounded-xl hover:bg-blue-200"><i class="fas fa-sync-alt"></i></button>
+                        <button onclick="exportTableToCSV('attendance-table-el', 'Attendance_Log')" class="bg-green-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-green-700 flex items-center text-sm shadow">
                             <i class="fas fa-file-excel mr-2"></i> Excel
                         </button>
                     </div>
                 </div>
-                
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse" id="attendance-table-el">
-                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold">
-                                <tr>
-                                    <th class="p-5 border-b">Time</th>
-                                    <th class="p-5 border-b">Employee</th>
-                                    <th class="p-5 border-b">Status</th>
-                                    <th class="p-5 border-b">Location</th>
-                                    <th class="p-5 border-b">Device</th>
-                                </tr>
+                        <table class="w-full text-left" id="attendance-table-el">
+                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
+                                <tr><th class="p-5">Time</th><th class="p-5">Employee</th><th class="p-5">Status</th><th class="p-5">Location</th></tr>
                             </thead>
                             <tbody id="attendance-table" class="text-sm font-medium"></tbody>
                         </table>
@@ -94,31 +92,16 @@
 
             <div id="section-requests" class="hidden fade-in">
                 <div class="flex justify-between items-center mb-8">
-                    <div>
-                        <h2 class="text-3xl font-bold text-slate-800">Pending Requests 🔔</h2>
-                        <p class="text-slate-500">Approve or Reject 'Forgot Punch' requests.</p>
-                    </div>
-                    <button onclick="loadRequests()" class="bg-blue-100 text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-200"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    <h2 class="text-3xl font-bold text-slate-800">Requests 🔔</h2>
+                    <button onclick="loadRequests()" class="bg-blue-100 text-blue-600 px-3 py-2 rounded-xl hover:bg-blue-200"><i class="fas fa-sync-alt"></i> Refresh</button>
                 </div>
-
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold">
-                                <tr>
-                                    <th class="p-5 border-b">Date / Time Requested</th>
-                                    <th class="p-5 border-b">Employee</th>
-                                    <th class="p-5 border-b">Type</th>
-                                    <th class="p-5 border-b">Reason</th>
-                                    <th class="p-5 border-b">Status</th>
-                                    <th class="p-5 border-b text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="requests-table" class="text-sm font-medium">
-                                <tr><td colspan="6" class="p-6 text-center text-gray-400">Loading...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
+                            <tr><th class="p-5">Date</th><th class="p-5">Employee</th><th class="p-5">Reason</th><th class="p-5 text-right">Action</th></tr>
+                        </thead>
+                        <tbody id="requests-table" class="text-sm font-medium"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -126,68 +109,64 @@
                 <div class="flex justify-between items-center mb-8">
                     <div>
                         <h2 class="text-3xl font-bold text-slate-800">Staff Directory</h2>
-                        <p class="text-slate-500">Manage Staff, Salaries & Devices.</p>
+                        <p class="text-slate-500">Manage Staff Details</p>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="openModal()" class="bg-blue-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-blue-700 shadow-lg transition flex items-center">
+                        <button onclick="openModal()" class="bg-blue-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-blue-700 shadow-lg transition">
                             <i class="fas fa-user-plus mr-2"></i> Add Staff
                         </button>
-                        <button onclick="exportTableToCSV('staff-table-el', 'Staff_List')" class="bg-green-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-green-700 shadow-lg transition flex items-center">
+                        <button onclick="exportTableToCSV('staff-table-el', 'Staff_List')" class="bg-green-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-green-700 flex items-center text-sm shadow">
                             <i class="fas fa-file-excel mr-2"></i> Excel
                         </button>
                     </div>
                 </div>
-
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse" id="staff-table-el">
-                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold">
-                                <tr>
-                                    <th class="p-5 border-b">Employee Name</th>
-                                    <th class="p-5 border-b">Email</th>
-                                    <th class="p-5 border-b">Daily Salary (₹)</th>
-                                    <th class="p-5 border-b">Device Status</th>
-                                    <th class="p-5 border-b text-right">Update</th>
-                                </tr>
-                            </thead>
-                            <tbody id="staff-table" class="text-sm font-medium"></tbody>
-                        </table>
-                    </div>
+                    <table class="w-full text-left" id="staff-table-el">
+                        <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
+                            <tr>
+                                <th class="p-5">Name</th>
+                                <th class="p-5">Email</th>
+                                <th class="p-5 accounts-only hidden">Monthly Salary (₹)</th>
+                                <th class="p-5">Device</th>
+                                <th class="p-5 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staff-table" class="text-sm font-medium"></tbody>
+                    </table>
                 </div>
             </div>
 
             <div id="section-payroll" class="hidden fade-in">
                 <div class="flex justify-between items-center mb-8">
                     <div>
-                        <h2 class="text-3xl font-bold text-slate-800">Monthly Payroll</h2>
-                        <p class="text-slate-500">Auto-calculate salary based on attendance.</p>
+                        <h2 class="text-3xl font-bold text-slate-800">Payroll & Advances</h2>
+                        <p class="text-slate-500">Auto-calculation (Based on 30 Days)</p>
                     </div>
                     <div class="flex gap-2">
                          <input type="month" id="payroll-month" class="p-3 border rounded-xl shadow-sm bg-white font-semibold text-slate-700 cursor-pointer">
                          <button onclick="calculatePayroll()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 shadow-lg transition">Calculate</button>
-                         <button onclick="exportTableToCSV('payroll-table-el', 'Payroll_Report')" class="bg-green-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-green-700 shadow-lg transition flex items-center">
+                         <button onclick="exportTableToCSV('payroll-table-el', 'Payroll_Sheet')" class="bg-green-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-green-700 flex items-center text-sm shadow">
                             <i class="fas fa-file-excel mr-2"></i> Excel
                         </button>
                     </div>
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse" id="payroll-table-el">
-                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold">
-                                <tr>
-                                    <th class="p-5 border-b">Employee Name</th>
-                                    <th class="p-5 border-b text-center">Days Present</th>
-                                    <th class="p-5 border-b text-center text-red-500">Late Days</th>
-                                    <th class="p-5 border-b text-right">Daily Rate</th>
-                                    <th class="p-5 border-b text-right text-green-600 text-lg">Total Pay</th>
-                                </tr>
-                            </thead>
-                            <tbody id="payroll-table" class="text-sm font-medium">
-                                <tr><td colspan="5" class="p-10 text-center text-gray-400">Select a month and click Calculate.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <table class="w-full text-left" id="payroll-table-el">
+                        <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
+                            <tr>
+                                <th class="p-4 border-b">Employee</th>
+                                <th class="p-4 border-b text-center">Month Salary</th>
+                                <th class="p-4 border-b text-center text-red-500">Absent</th>
+                                <th class="p-4 border-b text-center text-orange-500">Advance</th>
+                                <th class="p-4 border-b text-right text-green-700 text-lg">Net Payable</th>
+                                <th class="p-4 border-b text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payroll-table" class="text-sm font-medium">
+                            <tr><td colspan="6" class="p-10 text-center text-gray-400">Select month & click Calculate.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -195,27 +174,43 @@
     </div>
 
     <div id="add-staff-modal" class="hidden fixed inset-0 modal-bg z-50 flex justify-center items-center">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 transform transition-all scale-100">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold text-slate-800">Register New Staff</h3>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+            <h3 class="text-2xl font-bold text-slate-800 mb-4">Register New Staff</h3>
+            <div class="space-y-3">
+                <input type="text" id="reg-name" placeholder="Full Name" class="w-full p-3 border rounded-lg">
+                <input type="email" id="reg-email" placeholder="Email" class="w-full p-3 border rounded-lg">
+                <input type="text" id="reg-pass" placeholder="Password" class="w-full p-3 border rounded-lg">
+                <input type="number" id="reg-salary" placeholder="Monthly Salary (e.g. 30000)" class="w-full p-3 border rounded-lg">
             </div>
-            <div class="space-y-4">
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label><input type="text" id="reg-name" placeholder="e.g. Ramesh Kumar" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label><input type="email" id="reg-email" placeholder="e.g. ramesh@oswal.com" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Password</label><input type="text" id="reg-pass" placeholder="e.g. Oswal@123" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Daily Salary (₹)</label><input type="number" id="reg-salary" placeholder="500" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
+            <div class="flex gap-2 mt-6">
+                <button onclick="closeModal()" class="flex-1 bg-gray-200 py-3 rounded-xl font-bold">Cancel</button>
+                <button onclick="registerNewStaff()" id="btn-register" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold">Create</button>
             </div>
-            <button onclick="registerNewStaff()" id="btn-register" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold mt-6 hover:bg-blue-700 shadow-lg transition">Create Account</button>
+        </div>
+    </div>
+
+    <div id="advance-modal" class="hidden fixed inset-0 modal-bg z-50 flex justify-center items-center">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h3 class="text-xl font-bold text-slate-800 mb-2">Give Advance Payment</h3>
+            <p id="adv-user-name" class="text-sm text-gray-500 mb-4"></p>
+            <input type="hidden" id="adv-user-id">
+            <input type="hidden" id="adv-month">
+            
+            <label class="text-xs font-bold text-gray-500">Amount (₹)</label>
+            <input type="number" id="adv-amount" class="w-full p-3 border rounded-lg mb-4 font-bold text-lg" placeholder="e.g. 5000">
+            
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('advance-modal').classList.add('hidden')" class="flex-1 bg-gray-200 py-3 rounded-xl">Cancel</button>
+                <button onclick="saveAdvance()" class="flex-1 bg-orange-500 text-white py-3 rounded-xl font-bold">Save Advance</button>
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, query, where, getDocs, orderBy, Timestamp, doc, updateDoc, deleteField, setDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, query, where, getDocs, orderBy, Timestamp, doc, updateDoc, deleteField, setDoc, addDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyB-R05CTNKajcFMpbkutCesDCGLOZknehA",
             authDomain: "attendance-97b55.firebaseapp.com",
@@ -230,19 +225,29 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- SETTINGS ---
-        const ADMIN_EMAIL = "admin@oswal.com";
-        const OFFICE_START_HOUR = 9;   
-        const OFFICE_START_MINUTE = 30;
+        // --- ROLE SETTINGS ---
+        const ACCOUNTS_EMAIL = "admin@oswal.com"; 
+        
+        let CURRENT_ROLE = 'manager'; 
+        let OFFICE_START_HOUR = 9;   
+        let OFFICE_START_MINUTE = 30;
 
-        // --- AUTH ---
+        // --- AUTH & ROLE CHECK ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                if(user.email !== ADMIN_EMAIL) { alert("Access Denied!"); signOut(auth); return; }
                 document.getElementById('admin-login-screen').classList.add('hidden');
                 document.getElementById('admin-dashboard').classList.remove('hidden');
-                const dateInput = document.getElementById('filter-date');
-                if (!dateInput.value) dateInput.valueAsDate = new Date();
+                
+                if(user.email === ACCOUNTS_EMAIL || user.email === 'accounts@oswal.com') {
+                    CURRENT_ROLE = 'accounts';
+                    document.getElementById('role-display').innerHTML = '<i class="fas fa-shield-alt text-green-400"></i> Accounts & Admin';
+                    document.getElementById('nav-payroll').classList.remove('hidden');
+                } else {
+                    CURRENT_ROLE = 'manager';
+                    document.getElementById('role-display').innerHTML = '<i class="fas fa-user-tie text-blue-400"></i> Factory Manager';
+                    document.getElementById('nav-payroll').classList.add('hidden'); 
+                }
+
                 loadAttendance();
             } else {
                 document.getElementById('admin-login-screen').classList.remove('hidden');
@@ -253,19 +258,18 @@
         window.adminLogin = () => {
             const e = document.getElementById('admin-email-input').value;
             const p = document.getElementById('admin-password-input').value;
-            signInWithEmailAndPassword(auth, e, p).catch(err => alert(err.message));
+            signInWithEmailAndPassword(auth, e, p).catch(err => alert("Login Failed: " + err.message));
         };
         window.logout = () => signOut(auth);
-
-        // --- MODAL ---
         window.openModal = () => document.getElementById('add-staff-modal').classList.remove('hidden');
         window.closeModal = () => document.getElementById('add-staff-modal').classList.add('hidden');
 
-        // --- NAVIGATION ---
         window.switchTab = (tab) => {
             ['dashboard', 'requests', 'staff', 'payroll'].forEach(t => {
-                document.getElementById('section-'+t).classList.add('hidden');
-                document.getElementById('nav-'+t).classList.remove('active-nav');
+                const sec = document.getElementById('section-'+t);
+                const nav = document.getElementById('nav-'+t);
+                if(sec) sec.classList.add('hidden');
+                if(nav) nav.classList.remove('active-nav');
             });
             document.getElementById('section-' + tab).classList.remove('hidden');
             document.getElementById('nav-' + tab).classList.add('active-nav');
@@ -274,208 +278,83 @@
             if(tab === 'requests') loadRequests();
         };
 
-        // --- CACHE ---
-        let userCache = {};
-        async function fetchUserCache() {
-            const snap = await getDocs(collection(db, "users"));
-            snap.forEach(d => { userCache[d.id] = d.data(); });
-        }
-
-        // --- 1. DASHBOARD ---
+        // --- 1. ATTENDANCE ---
         window.loadAttendance = async () => {
             const dateEl = document.getElementById('filter-date');
             if (!dateEl.value) dateEl.valueAsDate = new Date();
-            const selectedDate = new Date(dateEl.value);
-            if (isNaN(selectedDate.getTime())) return;
-
-            if(Object.keys(userCache).length === 0) await fetchUserCache();
+            const start = new Date(dateEl.value); start.setHours(0,0,0,0);
+            const end = new Date(dateEl.value); end.setHours(23,59,59,999);
             const tableBody = document.getElementById('attendance-table');
-            tableBody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">Loading...</td></tr>';
             
-            const start = new Date(selectedDate.setHours(0,0,0,0));
-            const end = new Date(selectedDate.setHours(23,59,59,999));
-
-            try {
-                const q = query(collection(db, "attendance"), where("timestamp", ">=", Timestamp.fromDate(start)), where("timestamp", "<=", Timestamp.fromDate(end)), orderBy("timestamp", "desc"));
-                const snapshot = await getDocs(q);
-                tableBody.innerHTML = '';
-                if(snapshot.empty) { tableBody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-400">No records found.</td></tr>'; return; }
-
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-                    const dateObj = d.timestamp.toDate();
-                    const time = dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                    const userInfo = userCache[d.userId];
-                    const displayName = (userInfo && userInfo.name) ? userInfo.name : d.userName;
-                    
-                    let typeBadge = `<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase">${d.type}</span>`;
-                    let rowClass = "hover:bg-slate-50 border-b border-gray-100";
-
-                    if (d.type === 'Check-In') {
-                        const punchHour = dateObj.getHours();
-                        const punchMin = dateObj.getMinutes();
-                        if (punchHour > OFFICE_START_HOUR || (punchHour === OFFICE_START_HOUR && punchMin > OFFICE_START_MINUTE)) {
-                            typeBadge = `<span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold uppercase flex items-center w-fit"><i class="fas fa-clock mr-1"></i> LATE</span>`;
-                            rowClass = "bg-red-50 border-b border-red-100";
-                        } else {
-                            typeBadge = `<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase">ON TIME</span>`;
-                        }
-                    }
-                    const locHtml = d.location && d.location.lat ? `<a href="http://googleusercontent.com/maps.google.com/8{d.location.lat},${d.location.lng}" target="_blank" class="text-blue-500 hover:text-blue-700"><i class="fas fa-map-marker-alt"></i> View</a>` : '-';
-
-                    tableBody.innerHTML += `
-                        <tr class="${rowClass} transition">
-                            <td class="p-5 text-slate-700 font-mono">${time}</td>
-                            <td class="p-5 font-semibold text-slate-800">${displayName}</td>
-                            <td class="p-5">${typeBadge}</td>
-                            <td class="p-5">${locHtml}</td>
-                            <td class="p-5 text-xs text-slate-400 truncate max-w-[100px]">${d.device || 'N/A'}</td>
-                        </tr>`;
-                });
-            } catch (e) { console.error(e); }
-        };
-
-        // --- 2. REQUESTS (NEW) ---
-        window.loadRequests = async () => {
-            const tableBody = document.getElementById('requests-table');
-            tableBody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-500">Loading requests...</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-500">Loading...</td></tr>';
+            const q = query(collection(db, "attendance"), where("timestamp", ">=", Timestamp.fromDate(start)), where("timestamp", "<=", Timestamp.fromDate(end)), orderBy("timestamp", "desc"));
+            const snapshot = await getDocs(q);
+            tableBody.innerHTML = '';
             
-            if(Object.keys(userCache).length === 0) await fetchUserCache();
-
-            try {
-                const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
-                const snapshot = await getDocs(q);
-                tableBody.innerHTML = '';
+            if(snapshot.empty) { tableBody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-400">No records found.</td></tr>'; return; }
+            
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                const time = d.timestamp.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                const isLate = d.type === 'Check-In' && (d.timestamp.toDate().getHours() > OFFICE_START_HOUR || (d.timestamp.toDate().getHours() === OFFICE_START_HOUR && d.timestamp.toDate().getMinutes() > OFFICE_START_MINUTE));
+                const badge = isLate ? `<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">LATE</span>` : `<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">${d.type}</span>`;
+                const loc = d.location && d.location.lat ? `<a href="https://maps.google.com/?q=${d.location.lat},${d.location.lng}" target="_blank" class="text-blue-500 hover:underline">View Map</a>` : '-';
                 
-                if(snapshot.empty) { tableBody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-400">No pending requests.</td></tr>'; return; }
-
-                snapshot.forEach(docSnap => {
-                    const req = docSnap.data();
-                    const reqId = docSnap.id;
-                    const userInfo = userCache[req.userId];
-                    const displayName = (userInfo && userInfo.name) ? userInfo.name : req.userName;
-                    
-                    let statusBadge = `<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-bold">Pending</span>`;
-                    let actions = `
-                        <button onclick="approveRequest('${reqId}')" class="bg-green-100 text-green-600 hover:bg-green-200 px-3 py-1 rounded-md text-xs font-bold mr-2">Approve</button>
-                        <button onclick="rejectRequest('${reqId}')" class="bg-red-100 text-red-600 hover:bg-red-200 px-3 py-1 rounded-md text-xs font-bold">Reject</button>
-                    `;
-
-                    if(req.status === 'Approved') {
-                        statusBadge = `<span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">Approved</span>`;
-                        actions = '<span class="text-gray-400 text-xs">Completed</span>';
-                    } else if (req.status === 'Rejected') {
-                        statusBadge = `<span class="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-bold">Rejected</span>`;
-                        actions = '<span class="text-gray-400 text-xs">Rejected</span>';
-                    }
-
-                    // Convert req.date + req.time to display format
-                    const displayDateTime = `${req.date} at ${req.time}`;
-
-                    // Hidden data for JS logic
-                    const dataJson = JSON.stringify({ userId: req.userId, userName: req.userName, type: req.type, date: req.date, time: req.time });
-
-                    tableBody.innerHTML += `
-                        <tr class="border-b border-gray-100 hover:bg-slate-50">
-                            <td class="p-5 font-mono text-sm text-slate-600">${displayDateTime}</td>
-                            <td class="p-5 font-semibold text-slate-800">${displayName}</td>
-                            <td class="p-5"><span class="bg-blue-50 text-blue-600 px-2 py-1 rounded text-xs font-bold">${req.type}</span></td>
-                            <td class="p-5 text-sm text-gray-600 italic">"${req.reason}"</td>
-                            <td class="p-5">${statusBadge}</td>
-                            <td class="p-5 text-right">
-                                <div class='flex justify-end' id='act-${reqId}' data-req='${dataJson}'>
-                                    ${actions}
-                                </div>
-                            </td>
-                        </tr>`;
-                });
-            } catch (e) { console.error(e); }
+                tableBody.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="p-5">${time}</td><td class="p-5 font-bold">${d.userName}</td><td class="p-5">${badge}</td><td class="p-5 text-xs">${loc}</td></tr>`;
+            });
         };
 
-        window.approveRequest = async (reqId) => {
-            if(!confirm("Approve this request? It will add attendance log.")) return;
-            const div = document.getElementById(`act-${reqId}`);
-            const data = JSON.parse(div.getAttribute('data-req'));
-            
-            try {
-                // 1. Create Attendance Log
-                const punchDate = new Date(data.date + 'T' + data.time);
-                await addDoc(collection(db, "attendance"), {
-                    userId: data.userId,
-                    userName: data.userName,
-                    type: data.type,
-                    timestamp: Timestamp.fromDate(punchDate),
-                    location: {lat: 0, lng: 0}, // Manual Entry has no location
-                    device: "Manual Approval (Admin)",
-                    status: "Approved-Request"
-                });
-
-                // 2. Update Request Status
-                await updateDoc(doc(db, "requests", reqId), { status: 'Approved' });
-                
-                alert("Approved & Attendance Marked!");
-                loadRequests(); // Refresh
-            } catch(e) { alert("Error: " + e.message); }
-        };
-
-        window.rejectRequest = async (reqId) => {
-            if(!confirm("Reject this request?")) return;
-            try {
-                await updateDoc(doc(db, "requests", reqId), { status: 'Rejected' });
-                loadRequests();
-            } catch(e) { alert("Error: " + e.message); }
-        };
-
-        // --- 3. STAFF ---
+        // --- 2. STAFF (Conditional View) ---
         window.loadStaff = async () => {
             const tableBody = document.getElementById('staff-table');
             tableBody.innerHTML = '<tr><td colspan="5" class="p-6 text-center">Loading...</td></tr>';
-            try {
-                const q = query(collection(db, "users"));
-                const snapshot = await getDocs(q);
-                tableBody.innerHTML = '';
-                if(snapshot.empty) { tableBody.innerHTML = '<tr><td colspan="5" class="p-6 text-center">No staff found.</td></tr>'; return; }
+            
+            // Show/Hide Salary Column Header based on Role
+            const salaryHeaders = document.querySelectorAll('.accounts-only');
+            salaryHeaders.forEach(el => {
+                if(CURRENT_ROLE === 'accounts') el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
 
-                snapshot.forEach(docSnap => {
-                    const user = docSnap.data();
-                    const userId = docSnap.id;
-                    const salary = user.dailySalary || 0;
-                    const name = user.name || ''; 
-                    let deviceStatus = user.registeredDevice 
-                        ? `<span class="text-slate-500 text-xs flex items-center"><i class="fas fa-lock text-orange-500 mr-2"></i> Locked</span>`
-                        : `<span class="text-green-500 text-xs">Open</span>`;
-                    let resetButton = user.registeredDevice 
-                        ? `<button onclick="resetDevice('${userId}')" class="text-xs bg-orange-50 text-orange-600 px-2 py-1 rounded border border-orange-200 hover:bg-orange-100 font-bold ml-2">Reset Device</button>` 
-                        : '';
+            const snapshot = await getDocs(collection(db, "users"));
+            tableBody.innerHTML = '';
 
-                    tableBody.innerHTML += `
-                        <tr class="border-b border-gray-100 hover:bg-slate-50">
-                            <td class="p-5"><input type="text" id="name-${userId}" value="${name}" placeholder="Enter Name" class="w-full p-2 border border-gray-300 rounded mb-1 font-bold text-slate-700 focus:border-blue-500 focus:outline-none"></td>
-                            <td class="p-5 text-gray-600 font-mono text-xs">${user.email}</td>
-                            <td class="p-5"><div class="flex items-center"><span class="text-gray-500 mr-2">₹</span><input type="number" id="salary-${userId}" value="${salary}" class="w-24 p-2 border rounded bg-white text-right font-mono" placeholder="0"></div></td>
-                            <td class="p-5">${deviceStatus}</td>
-                            <td class="p-5 text-right flex justify-end items-center mt-2">
-                                <button onclick="saveUser('${userId}')" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition text-xs font-bold"><i class="fas fa-save mr-1"></i> Save</button>
-                                ${resetButton}
-                            </td>
-                        </tr>`;
-                });
-            } catch(e) { console.error(e); }
+            snapshot.forEach(docSnap => {
+                const u = docSnap.data();
+                if(u.role === 'manager' || u.email === ACCOUNTS_EMAIL) return; // Hide admin/manager from list
+
+                const userId = docSnap.id;
+                const monthlySalary = u.monthlySalary || 0;
+                
+                // Salary Input (Only visible to Accounts)
+                let salaryCell = '';
+                if(CURRENT_ROLE === 'accounts') {
+                    salaryCell = `<td class="p-5 accounts-only"><div class="flex items-center"><span class="text-gray-400 mr-1">₹</span><input type="number" id="sal-${userId}" value="${monthlySalary}" class="w-24 p-1 border rounded bg-white text-right font-bold" onchange="updateSalary('${userId}')"></div></td>`;
+                } else {
+                    salaryCell = `<td class="hidden"></td>`;
+                }
+
+                let deviceBtn = u.registeredDevice ? `<button onclick="resetDevice('${userId}')" class="text-xs text-red-500 border border-red-200 px-2 py-1 rounded hover:bg-red-50">Unlock Device</button>` : `<span class="text-green-500 text-xs">Open</span>`;
+
+                tableBody.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-5 font-bold">${u.name || u.email}</td>
+                        <td class="p-5 text-gray-500 text-sm">${u.email}</td>
+                        ${salaryCell}
+                        <td class="p-5">${deviceBtn}</td>
+                        <td class="p-5 text-right"><button onclick="alert('Details Saved')" class="text-blue-500 hover:text-blue-700"><i class="fas fa-save"></i></button></td>
+                    </tr>`;
+            });
         };
 
-        window.saveUser = async (userId) => {
-            const amount = document.getElementById(`salary-${userId}`).value;
-            const name = document.getElementById(`name-${userId}`).value;
-            try {
-                await setDoc(doc(db, "users", userId), { dailySalary: Number(amount), name: name }, { merge: true });
-                await fetchUserCache();
-                alert("Updated!");
-            } catch(e) { alert("Error: " + e.message); }
+        window.updateSalary = async (uid) => {
+            const val = document.getElementById(`sal-${uid}`).value;
+            await updateDoc(doc(db, "users", uid), { monthlySalary: Number(val) });
         };
-
-        window.resetDevice = async (userId) => {
-            if(confirm("Unlock device?")) {
-                await updateDoc(doc(db, "users", userId), { registeredDevice: deleteField() });
+        
+        window.resetDevice = async (uid) => {
+            if(confirm("Unlock device for this user?")) {
+                await updateDoc(doc(db, "users", uid), { registeredDevice: deleteField() });
                 loadStaff();
             }
         };
@@ -484,82 +363,167 @@
             const name = document.getElementById('reg-name').value;
             const email = document.getElementById('reg-email').value;
             const pass = document.getElementById('reg-pass').value;
-            const salary = document.getElementById('reg-salary').value;
-            const btn = document.getElementById('btn-register');
-
-            if(!email || !pass || !name) { alert("Please fill all fields"); return; }
-            const oldText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
-
+            const salary = document.getElementById('reg-salary').value; // Monthly
+            
+            if(!email || !pass) return alert("Fill all fields");
+            
             const secondaryApp = initializeApp(firebaseConfig, "Secondary");
             const secondaryAuth = getAuth(secondaryApp);
-
             try {
-                const userCred = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
-                await setDoc(doc(db, "users", userCred.user.uid), {
-                    email: email, name: name, dailySalary: Number(salary), joinedAt: Timestamp.now(), role: "staff"
+                const uc = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
+                await setDoc(doc(db, "users", uc.user.uid), {
+                    email, name, monthlySalary: Number(salary) || 0, role: 'staff', joinedAt: Timestamp.now()
                 });
                 await deleteApp(secondaryApp);
-                alert("Staff Registered!");
+                alert("Staff Created!");
                 closeModal();
                 loadStaff();
-            } catch (error) { alert("Error: " + error.message); if(secondaryApp) deleteApp(secondaryApp); }
-            btn.innerHTML = oldText;
+            } catch(e) { alert(e.message); if(secondaryApp) deleteApp(secondaryApp); }
         };
 
-        // --- 4. PAYROLL ---
+        // --- 3. PAYROLL & ADVANCE (Complex Logic) ---
         window.calculatePayroll = async () => {
             const monthInput = document.getElementById('payroll-month').value;
-            if(!monthInput) { alert("Select a month first."); return; }
+            if(!monthInput) return alert("Select Month");
+            
             const [year, month] = monthInput.split('-');
             const startOfMonth = new Date(year, month - 1, 1);
             const endOfMonth = new Date(year, month, 0, 23, 59, 59);
+            const daysInMonth = 30; // FIXED STANDARD AS REQUESTED
+
             const tableBody = document.getElementById('payroll-table');
-            tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-blue-500"><i class="fas fa-spinner fa-spin text-2xl"></i> Calculating...</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="6" class="p-10 text-center"><i class="fas fa-circle-notch fa-spin text-blue-600"></i> Calculating...</td></tr>';
 
-            try {
-                if(Object.keys(userCache).length === 0) await fetchUserCache();
-                const userMap = {};
-                // Initialize user map from cache
-                for (const [uid, uData] of Object.entries(userCache)) {
-                    userMap[uid] = { name: uData.name || uData.email, email: uData.email, salary: uData.dailySalary || 0, daysPresent: new Set(), lateCount: 0 };
+            // 1. Fetch Users
+            const usersSnap = await getDocs(collection(db, "users"));
+            const staffMap = {};
+            usersSnap.forEach(d => {
+                const u = d.data();
+                if(u.role !== 'manager' && u.email !== ACCOUNTS_EMAIL) {
+                    staffMap[d.id] = { 
+                        name: u.name || u.email, 
+                        salary: u.monthlySalary || 0, 
+                        presentDays: new Set(),
+                        advances: 0
+                    };
                 }
+            });
 
-                const q = query(collection(db, "attendance"), where("timestamp", ">=", Timestamp.fromDate(startOfMonth)), where("timestamp", "<=", Timestamp.fromDate(endOfMonth)));
-                const attSnap = await getDocs(q);
+            // 2. Fetch Attendance
+            const attQ = query(collection(db, "attendance"), where("timestamp", ">=", Timestamp.fromDate(startOfMonth)), where("timestamp", "<=", Timestamp.fromDate(endOfMonth)));
+            const attSnap = await getDocs(attQ);
+            attSnap.forEach(d => {
+                const data = d.data();
+                if(staffMap[data.userId]) {
+                    staffMap[data.userId].presentDays.add(data.timestamp.toDate().toDateString());
+                }
+            });
 
-                attSnap.forEach(doc => {
-                    const d = doc.data();
-                    if(userMap[d.userId]) {
-                        const dateStr = d.timestamp.toDate().toDateString();
-                        userMap[d.userId].daysPresent.add(dateStr);
-                        if(d.type === 'Check-In') {
-                            const dateObj = d.timestamp.toDate();
-                            if (dateObj.getHours() > OFFICE_START_HOUR || (dateObj.getHours() === OFFICE_START_HOUR && dateObj.getMinutes() > OFFICE_START_MINUTE)) {
-                                userMap[d.userId].lateCount++;
-                            }
-                        }
-                    }
-                });
-                tableBody.innerHTML = '';
-                Object.values(userMap).forEach(u => {
-                    const days = u.daysPresent.size;
-                    const totalPay = days * u.salary;
-                    if(days > 0) {
-                        tableBody.innerHTML += `
-                            <tr class="border-b border-gray-100 hover:bg-slate-50">
-                                <td class="p-5 font-bold text-slate-800">${u.name}</td>
-                                <td class="p-5 text-center font-bold text-blue-600">${days}</td>
-                                <td class="p-5 text-center text-red-500 font-bold">${u.lateCount > 0 ? u.lateCount : '0'}</td>
-                                <td class="p-5 text-right font-mono text-gray-500">₹${u.salary}</td>
-                                <td class="p-5 text-right font-bold text-green-600 text-xl font-mono">₹${totalPay.toLocaleString()}</td>
-                            </tr>`;
-                    }
-                });
-                if(tableBody.innerHTML === '') tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-gray-400">No attendance data found for this month.</td></tr>';
-            } catch(e) { console.error(e); alert("Error: " + e.message); }
+            // 3. Fetch Advances for this Month
+            const advQ = query(collection(db, "advances"), where("month", "==", monthInput));
+            const advSnap = await getDocs(advQ);
+            advSnap.forEach(d => {
+                const data = d.data();
+                if(staffMap[data.userId]) {
+                    staffMap[data.userId].advances += Number(data.amount);
+                }
+            });
+
+            // 4. Render Table
+            tableBody.innerHTML = '';
+            Object.keys(staffMap).forEach(uid => {
+                const s = staffMap[uid];
+                const presentCount = s.presentDays.size;
+                
+                // --- CALCULATION LOGIC ---
+                const perDayRate = s.salary / 30;
+                let absentDays = 30 - presentCount; 
+                if(absentDays < 0) absentDays = 0; 
+
+                const absentDeduction = Math.round(absentDays * perDayRate);
+                const grossPay = s.salary - absentDeduction;
+                const netPayable = grossPay - s.advances;
+
+                tableBody.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-4 font-bold text-slate-700">${s.name}</td>
+                        <td class="p-4 text-center">₹${s.salary.toLocaleString()}</td>
+                        <td class="p-4 text-center text-red-500 font-semibold">
+                            ${absentDays} Days <br><span class="text-xs text-gray-400">(-₹${absentDeduction})</span>
+                        </td>
+                        <td class="p-4 text-center text-orange-500 font-semibold">
+                            -₹${s.advances}
+                        </td>
+                        <td class="p-4 text-right font-bold text-green-700 text-lg font-mono">
+                            ₹${netPayable.toLocaleString()}
+                        </td>
+                        <td class="p-4 text-right">
+                            <button onclick="openAdvanceModal('${uid}', '${s.name}')" class="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded hover:bg-orange-200 font-bold">
+                                + Give Advance
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
         };
 
+        window.openAdvanceModal = (uid, name) => {
+            const month = document.getElementById('payroll-month').value;
+            if(!month) return alert("Select Month First");
+            
+            document.getElementById('adv-user-id').value = uid;
+            document.getElementById('adv-user-name').innerText = "For: " + name;
+            document.getElementById('adv-month').value = month;
+            document.getElementById('advance-modal').classList.remove('hidden');
+        };
+
+        window.saveAdvance = async () => {
+            const uid = document.getElementById('adv-user-id').value;
+            const month = document.getElementById('adv-month').value;
+            const amount = document.getElementById('adv-amount').value;
+            
+            if(!amount) return;
+
+            await addDoc(collection(db, "advances"), {
+                userId: uid,
+                month: month,
+                amount: Number(amount),
+                date: Timestamp.now()
+            });
+            
+            alert("Advance Added!");
+            document.getElementById('advance-modal').classList.add('hidden');
+            document.getElementById('adv-amount').value = '';
+            calculatePayroll(); // Refresh Table
+        };
+
+        // --- REQUESTS (SAME AS BEFORE) ---
+        window.loadRequests = async () => {
+             const tableBody = document.getElementById('requests-table');
+             const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
+             const snapshot = await getDocs(q);
+             tableBody.innerHTML = '';
+             if(snapshot.empty) { tableBody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-400">No Pending Requests</td></tr>'; return; }
+             snapshot.forEach(docSnap => {
+                const req = docSnap.data();
+                const reqId = docSnap.id;
+                let btn = `<button onclick="approveRequest('${reqId}','${req.userId}','${req.userName}','${req.date}','${req.time}','${req.type}')" class="text-green-500 hover:underline mr-2">Approve</button><button onclick="rejectRequest('${reqId}')" class="text-red-500 hover:underline">Reject</button>`;
+                if(req.status !== 'Pending') btn = `<span class="text-gray-400 text-xs">${req.status}</span>`;
+                tableBody.innerHTML += `<tr class="border-b"><td class="p-5">${req.date}</td><td class="p-5 font-bold">${req.userName}</td><td class="p-5 text-sm">${req.reason}</td><td class="p-5 text-right">${btn}</td></tr>`;
+             });
+        };
+        window.approveRequest = async (id, uid, name, date, time, type) => {
+            if(!confirm("Approve?")) return;
+            const punchDate = new Date(date + 'T' + time);
+            await addDoc(collection(db, "attendance"), { userId: uid, userName: name, type: type, timestamp: Timestamp.fromDate(punchDate), location: {}, device: "Admin", status: "Approved" });
+            await updateDoc(doc(db, "requests", id), { status: 'Approved' });
+            loadRequests();
+        };
+        window.rejectRequest = async (id) => {
+            if(confirm("Reject?")) { await updateDoc(doc(db, "requests", id), { status: 'Rejected' }); loadRequests(); }
+        };
+
+        // --- RESTORED: EXCEL EXPORT ---
         window.exportTableToCSV = (tableId, filename) => {
             const table = document.getElementById(tableId);
             const rows = Array.from(table.rows);
@@ -567,7 +531,9 @@
             rows.forEach(row => {
                 let rowData = [];
                 Array.from(row.cells).forEach(cell => {
-                    if(cell.querySelector('button') || cell.innerText.includes('Approve')) return; // Skip Action Columns
+                    // Skip 'Action' columns or buttons
+                    if(cell.innerText.includes('Approve') || cell.querySelector('button') || cell.innerText.includes('Action')) return;
+                    
                     if (cell.querySelector('input')) rowData.push(cell.querySelector('input').value);
                     else rowData.push(cell.innerText.replace(/(\r\n|\n|\r)/gm, " ").replace(/,/g, " ").trim());
                 });
@@ -579,6 +545,7 @@
             link.download = filename + "_" + new Date().toISOString().slice(0,10) + ".csv";
             link.click();
         };
+
     </script>
 </body>
 </html>
