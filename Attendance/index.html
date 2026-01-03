@@ -157,7 +157,7 @@
             </div>
         </div>
     </div>
-    <script>
+<script>
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').then((registration) => {
             
@@ -217,6 +217,7 @@
         const ALLOWED_RADIUS = 2000; 
 
         let currentUser = null;
+        let currentUserName = ""; // असली नाम स्टोर करने के लिए
         let userLocation = null;
         let isOnline = navigator.onLine;
 
@@ -309,11 +310,27 @@ async function captureSelfie() {
     }
 }
 
-        function enterDashboard(user) {
+        async function enterDashboard(user) {
             currentUser = user;
+            
+            // --- NEW: Database se asli naam nikalna ---
+            try {
+                const docSnap = await getDoc(doc(db, "users", user.uid));
+                if(docSnap.exists() && docSnap.data().name) {
+                    currentUserName = docSnap.data().name; // Database wala naam
+                } else {
+                    currentUserName = user.email.split('@')[0]; // Fallback to email name
+                }
+            } catch(e) { 
+                currentUserName = user.email.split('@')[0]; 
+            }
+            
+            // Screen par naam update karein
+            document.getElementById('user-name').innerText = currentUserName;
+            
             document.getElementById('loading-screen').classList.add('hidden');
             document.getElementById('dashboard-screen').classList.remove('hidden');
-            document.getElementById('user-name').innerText = user.email.split('@')[0];
+            
             startLocation();
             loadLogs();
             checkOfflineQueue();
@@ -462,63 +479,60 @@ async function captureSelfie() {
                 }
             };
 
-    async function saveAttendance(type, selfieData) {
-        const record = {
-            userId: currentUser.uid,
-            userName: currentUser.email,
-            type: type,
-            timestamp: Timestamp.now(),
-            location: userLocation || {lat: 0, lng: 0},
-            device: navigator.userAgent,
-            photo: selfieData || "No Photo", // Yahan photo save ho rahi hai
-            status: isOnline ? 'Verified' : 'Offline-Sync-Pending'
-        };
+    // --- 1. UPDATE SAVE FUNCTION (Pass 'type' to animation) ---
+        async function saveAttendance(type, selfieData) {
+            const record = {
+                userId: currentUser.uid,
+                userName: currentUserName, // Ab asli naam save hoga
+                type: type,
+                timestamp: Timestamp.now(),
+                location: userLocation || {lat: 0, lng: 0},
+                device: navigator.userAgent,
+                photo: selfieData || "No Photo",
+                status: isOnline ? 'Verified' : 'Offline-Sync-Pending'
+            };
 
-        if (isOnline) {
-            try {
-                await addDoc(collection(db, "attendance"), record);
+            if (isOnline) {
+                try {
+                    await addDoc(collection(db, "attendance"), record);
+                    triggerSuccessAnimation(type); // Yahan 'type' bheja ja raha hai
+                    loadLogs();
+                    updateUIBasedOnLastPunch(); 
+                } catch (e) { saveOffline(record); }
+            } else { saveOffline(record); }
+        }
+
+        // --- 2. UPDATE ANIMATION FUNCTION (Smart Voice Feedback) ---
+        function triggerSuccessAnimation(type) {
+            const flash = document.getElementById('success-flash');
+            const msgEl = document.getElementById('success-msg'); // Success message element
+            
+            flash.classList.remove('hidden');
+
+            if ('speechSynthesis' in window) {
+                const msg = new SpeechSynthesisUtterance();
                 
-                // Success Animation call karein
-                if(typeof triggerSuccessAnimation === "function") {
-                    triggerSuccessAnimation(); 
+                // --- SMART VOICE LOGIC ---
+                if (type === 'Check-In') {
+                    msg.text = `Welcome Mr. ${currentUserName} अच्छे से मन लगाकर काम करो `;
+                    if(msgEl) msgEl.innerText = "Welcome, Good Morning!";
+                } else if (type === 'Check-Out') {
+                    msg.text = `Goodbye Mr. ${currentUserName} कल सुबह टाइम पर जाना `;
+                    if(msgEl) msgEl.innerText = "Goodbye, See you!";
                 } else {
-                    alert("Attendance Marked!"); // Fallback agar animation function nahi hai
+                    msg.text = `Attendance Marked`;
                 }
-
-                loadLogs();
-                updateUIBasedOnLastPunch(); 
-            } catch (e) { saveOffline(record); }
-        } else { saveOffline(record); }
-    }
-
-        // --- NEW FUNCTION: FULL SCREEN ANIMATION ---
-       // --- EXISTING FUNCTION KO UPDATE KAREIN ---
-            function triggerSuccessAnimation() {
-                const flash = document.getElementById('success-flash');
-                flash.classList.remove('hidden');
-
-                // --- NEW: VOICE FEEDBACK CODE ---
-                if ('speechSynthesis' in window) {
-                    // User ka naam nikalna (email se)
-                    const name = currentUser.email.split('@')[0];
-                    
-                    // Message set karna
-                    const msg = new SpeechSynthesisUtterance();
-                    msg.text = `Success! Attendance Marked. Welcome ${name}`;
-                    msg.volume = 1; // 0 to 1
-                    msg.rate = 1;   // Speed
-                    msg.pitch = 1;  // Awaz ka bhari-pan
-
-                    // Browser ko bolne ka order dena
-                    window.speechSynthesis.speak(msg);
-                }
-                // --------------------------------
-
-                // Auto hide after 2 seconds
-                setTimeout(() => {
-                    flash.classList.add('hidden');
-                }, 2000);
+                
+                msg.volume = 1; 
+                msg.rate = 1;   
+                window.speechSynthesis.speak(msg);
             }
+
+            setTimeout(() => { 
+                flash.classList.add('hidden'); 
+                if(msgEl) msgEl.innerText = "Attendance Marked"; // Reset text
+            }, 2000);
+        }
 
         function saveOffline(record) {
             record.timestamp = { seconds: record.timestamp.seconds, nanoseconds: record.timestamp.nanoseconds };
@@ -527,7 +541,7 @@ async function captureSelfie() {
             localStorage.setItem('oswal_offline_punches', JSON.stringify(offlineData));
             
             // Still show success animation even for offline save
-            triggerSuccessAnimation();
+            triggerSuccessAnimation(record.type);
             checkOfflineQueue();
         }
 
