@@ -438,46 +438,55 @@ async function captureSelfie() {
                 }
             }, err => console.error(err), options);
         }
+// --- UPDATED: BIOMETRIC + GEO-FENCING (LOCATION LOCK) ---
+        window.triggerBiometric = async (type) => {
+            if (!currentUser) return;
+            
+            // 1. Check if Location is Available
+            if (!userLocation && isOnline) { 
+                alert("Waiting for location... Please allow GPS."); 
+                return; 
+            }
 
-       // --- UPDATED: PREVENT DOUBLE PUNCH LOGIC ---
-            window.triggerBiometric = async (type) => {
-                if (!currentUser) return;
-                if (!userLocation && isOnline) { alert("Waiting for location..."); return; }
-
-                // 1. LOCK THE BUTTONS IMMEDIATELY (Isse Double Click nahi hoga)
-                document.getElementById('btn-in').classList.add('hidden');
-                document.getElementById('btn-out').classList.add('hidden');
-                document.getElementById('btn-loading').classList.remove('hidden');
-                document.getElementById('btn-loading').innerText = "Processing... Please Wait";
-
-                try {
-                    // STEP A: Selfie Le
-                    const selfieData = await captureSelfie();
-
-                    // STEP B: Fingerprint Le
-                    if (window.PublicKeyCredential) {
-                        const publicKey = {
-                            challenge: new Uint8Array([1,2,3,4]),
-                            rp: { name: "Oswal" },
-                            user: { id: new Uint8Array(16), name: currentUser.email, displayName: currentUser.email },
-                            pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                            timeout: 60000,
-                            authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }
-                        };
-                        await navigator.credentials.create({ publicKey });
-                    }
-
-                    // STEP C: Save Kare
-                    await saveAttendance(type, selfieData);
-
-                } catch (err) { 
-                    console.error(err);
-                    alert("Process Failed/Cancelled. Try Again.");
-                    
-                    // Agar fail ho jaye, to wapas sahi button dikhana padega
-                    updateUIBasedOnLastPunch(); 
+            // 2. GEO-FENCING LOCK (Yahi line add karni thi)
+            // Agar banda office se door hai to yahi rok do
+            if (isOnline) {
+                const dist = getDist(userLocation.lat, userLocation.lng, OFFICE_LAT, OFFICE_LNG);
+                if (dist > ALLOWED_RADIUS) {
+                    alert(`ACCESS DENIED!\nYou are ${Math.round(dist)} meters away from office.\nPlease go inside office to punch.`);
+                    return; // Stop function here
                 }
-            };
+            }
+
+            // 3. UI LOCK (Prevent Double Click)
+            document.getElementById('btn-in').classList.add('hidden');
+            document.getElementById('btn-out').classList.add('hidden');
+            document.getElementById('btn-loading').classList.remove('hidden');
+            document.getElementById('btn-loading').innerText = "Processing...";
+
+            // 4. Capture Selfie
+            const selfieData = await captureSelfie();
+
+            // 5. Trigger Fingerprint
+            try {
+                if (window.PublicKeyCredential) {
+                    const publicKey = {
+                        challenge: new Uint8Array([1,2,3,4]),
+                        rp: { name: "Oswal" },
+                        user: { id: new Uint8Array(16), name: currentUser.email, displayName: currentUserName },
+                        pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                        timeout: 60000,
+                        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }
+                    };
+                    await navigator.credentials.create({ publicKey });
+                }
+                await saveAttendance(type, selfieData);
+            } catch (err) { 
+                console.error(err);
+                alert("Cancelled or Failed.");
+                updateUIBasedOnLastPunch(); // Reset buttons
+            }
+        };
 
     // --- 1. UPDATE SAVE FUNCTION (Pass 'type' to animation) ---
         async function saveAttendance(type, selfieData) {
