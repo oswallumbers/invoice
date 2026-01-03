@@ -1,34 +1,33 @@
-const CACHE_NAME = 'oswal-store-v2'; // <-- Jab bhi update karein, isko v3, v4 karein
+const CACHE_NAME = 'oswal-store-v3'; // Version Update kar diya hai
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json',
-  'https://cdn.tailwindcss.com',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
+  './manifest.json'
+  // External links hata diye hain taki Error na aaye
 ];
 
-// 1. Install Event (Purana cache delete karega aur naya banayega)
+// 1. Install Event
 self.addEventListener('install', (e) => {
-  self.skipWaiting(); // Force new service worker to activate immediately
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)),
   );
 });
 
-// 2. Activate Event (Purana Cache Clean karega)
+// 2. Activate Event
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keyList) => {
       return Promise.all(
         keyList.map((key) => {
           if (key !== CACHE_NAME) {
-            return caches.delete(key); // Delete old version
+            return caches.delete(key);
           }
         })
       );
     })
   );
-  return self.clients.claim(); // Control open tabs immediately
+  return self.clients.claim();
 });
 
 // 3. Fetch Event
