@@ -232,8 +232,11 @@
         let OFFICE_START_HOUR = 9;   
         let OFFICE_START_MINUTE = 30;
 
+        // --- CACHE ---
+        let userCache = {}; // Store { uid: { name, email } }
+
         // --- AUTH & ROLE CHECK ---
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
                 document.getElementById('admin-login-screen').classList.add('hidden');
                 document.getElementById('admin-dashboard').classList.remove('hidden');
@@ -247,13 +250,22 @@
                     document.getElementById('role-display').innerHTML = '<i class="fas fa-user-tie text-blue-400"></i> Factory Manager';
                     document.getElementById('nav-payroll').classList.add('hidden'); 
                 }
-
+                
+                // Pre-fetch users for better display
+                await fetchUsersCache();
                 loadAttendance();
             } else {
                 document.getElementById('admin-login-screen').classList.remove('hidden');
                 document.getElementById('admin-dashboard').classList.add('hidden');
             }
         });
+
+        async function fetchUsersCache() {
+            try {
+                const snap = await getDocs(collection(db, "users"));
+                snap.forEach(d => { userCache[d.id] = d.data(); });
+            } catch(e) { console.error(e); }
+        }
 
         window.adminLogin = () => {
             const e = document.getElementById('admin-email-input').value;
@@ -278,7 +290,7 @@
             if(tab === 'requests') loadRequests();
         };
 
-        // --- 1. ATTENDANCE ---
+        // --- 1. ATTENDANCE (UPDATED: Name + Email) ---
         window.loadAttendance = async () => {
             const dateEl = document.getElementById('filter-date');
             if (!dateEl.value) dateEl.valueAsDate = new Date();
@@ -287,6 +299,10 @@
             const tableBody = document.getElementById('attendance-table');
             
             tableBody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-500">Loading...</td></tr>';
+            
+            // Check cache if empty
+            if(Object.keys(userCache).length === 0) await fetchUsersCache();
+
             const q = query(collection(db, "attendance"), where("timestamp", ">=", Timestamp.fromDate(start)), where("timestamp", "<=", Timestamp.fromDate(end)), orderBy("timestamp", "desc"));
             const snapshot = await getDocs(q);
             tableBody.innerHTML = '';
@@ -300,16 +316,35 @@
                 const badge = isLate ? `<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">LATE</span>` : `<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">${d.type}</span>`;
                 const loc = d.location && d.location.lat ? `<a href="https://maps.google.com/?q=${d.location.lat},${d.location.lng}" target="_blank" class="text-blue-500 hover:underline">View Map</a>` : '-';
                 
-                tableBody.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="p-5">${time}</td><td class="p-5 font-bold">${d.userName}</td><td class="p-5">${badge}</td><td class="p-5 text-xs">${loc}</td></tr>`;
+                // --- NEW NAME DISPLAY LOGIC ---
+                let displayName = d.userName; // Default from punch
+                let displayEmail = "";
+                
+                if (userCache[d.userId]) {
+                    displayName = userCache[d.userId].name || d.userName;
+                    displayEmail = userCache[d.userId].email || "";
+                }
+
+                tableBody.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-5">${time}</td>
+                        <td class="p-5">
+                            <div>
+                                <div class="font-bold text-slate-800">${displayName}</div>
+                                <div class="text-xs text-gray-500">${displayEmail}</div>
+                            </div>
+                        </td>
+                        <td class="p-5">${badge}</td>
+                        <td class="p-5 text-xs">${loc}</td>
+                    </tr>`;
             });
         };
 
-        // --- 2. STAFF (Conditional View) ---
+        // --- 2. STAFF ---
         window.loadStaff = async () => {
             const tableBody = document.getElementById('staff-table');
             tableBody.innerHTML = '<tr><td colspan="5" class="p-6 text-center">Loading...</td></tr>';
             
-            // Show/Hide Salary Column Header based on Role
             const salaryHeaders = document.querySelectorAll('.accounts-only');
             salaryHeaders.forEach(el => {
                 if(CURRENT_ROLE === 'accounts') el.classList.remove('hidden');
@@ -321,12 +356,11 @@
 
             snapshot.forEach(docSnap => {
                 const u = docSnap.data();
-                if(u.role === 'manager' || u.email === ACCOUNTS_EMAIL) return; // Hide admin/manager from list
+                if(u.role === 'manager' || u.email === ACCOUNTS_EMAIL) return; 
 
                 const userId = docSnap.id;
                 const monthlySalary = u.monthlySalary || 0;
                 
-                // Salary Input (Only visible to Accounts)
                 let salaryCell = '';
                 if(CURRENT_ROLE === 'accounts') {
                     salaryCell = `<td class="p-5 accounts-only"><div class="flex items-center"><span class="text-gray-400 mr-1">₹</span><input type="number" id="sal-${userId}" value="${monthlySalary}" class="w-24 p-1 border rounded bg-white text-right font-bold" onchange="updateSalary('${userId}')"></div></td>`;
@@ -363,7 +397,7 @@
             const name = document.getElementById('reg-name').value;
             const email = document.getElementById('reg-email').value;
             const pass = document.getElementById('reg-pass').value;
-            const salary = document.getElementById('reg-salary').value; // Monthly
+            const salary = document.getElementById('reg-salary').value;
             
             if(!email || !pass) return alert("Fill all fields");
             
@@ -381,7 +415,7 @@
             } catch(e) { alert(e.message); if(secondaryApp) deleteApp(secondaryApp); }
         };
 
-        // --- 3. PAYROLL & ADVANCE (Complex Logic) ---
+        // --- 3. PAYROLL & ADVANCE ---
         window.calculatePayroll = async () => {
             const monthInput = document.getElementById('payroll-month').value;
             if(!monthInput) return alert("Select Month");
@@ -389,12 +423,10 @@
             const [year, month] = monthInput.split('-');
             const startOfMonth = new Date(year, month - 1, 1);
             const endOfMonth = new Date(year, month, 0, 23, 59, 59);
-            const daysInMonth = 30; // FIXED STANDARD AS REQUESTED
 
             const tableBody = document.getElementById('payroll-table');
             tableBody.innerHTML = '<tr><td colspan="6" class="p-10 text-center"><i class="fas fa-circle-notch fa-spin text-blue-600"></i> Calculating...</td></tr>';
 
-            // 1. Fetch Users
             const usersSnap = await getDocs(collection(db, "users"));
             const staffMap = {};
             usersSnap.forEach(d => {
@@ -409,7 +441,6 @@
                 }
             });
 
-            // 2. Fetch Attendance
             const attQ = query(collection(db, "attendance"), where("timestamp", ">=", Timestamp.fromDate(startOfMonth)), where("timestamp", "<=", Timestamp.fromDate(endOfMonth)));
             const attSnap = await getDocs(attQ);
             attSnap.forEach(d => {
@@ -419,7 +450,6 @@
                 }
             });
 
-            // 3. Fetch Advances for this Month
             const advQ = query(collection(db, "advances"), where("month", "==", monthInput));
             const advSnap = await getDocs(advQ);
             advSnap.forEach(d => {
@@ -429,13 +459,11 @@
                 }
             });
 
-            // 4. Render Table
             tableBody.innerHTML = '';
             Object.keys(staffMap).forEach(uid => {
                 const s = staffMap[uid];
                 const presentCount = s.presentDays.size;
                 
-                // --- CALCULATION LOGIC ---
                 const perDayRate = s.salary / 30;
                 let absentDays = 30 - presentCount; 
                 if(absentDays < 0) absentDays = 0; 
@@ -494,10 +522,10 @@
             alert("Advance Added!");
             document.getElementById('advance-modal').classList.add('hidden');
             document.getElementById('adv-amount').value = '';
-            calculatePayroll(); // Refresh Table
+            calculatePayroll(); 
         };
 
-        // --- REQUESTS (SAME AS BEFORE) ---
+        // --- REQUESTS ---
         window.loadRequests = async () => {
              const tableBody = document.getElementById('requests-table');
              const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
@@ -523,7 +551,6 @@
             if(confirm("Reject?")) { await updateDoc(doc(db, "requests", id), { status: 'Rejected' }); loadRequests(); }
         };
 
-        // --- RESTORED: EXCEL EXPORT ---
         window.exportTableToCSV = (tableId, filename) => {
             const table = document.getElementById(tableId);
             const rows = Array.from(table.rows);
@@ -531,9 +558,7 @@
             rows.forEach(row => {
                 let rowData = [];
                 Array.from(row.cells).forEach(cell => {
-                    // Skip 'Action' columns or buttons
                     if(cell.innerText.includes('Approve') || cell.querySelector('button') || cell.innerText.includes('Action')) return;
-                    
                     if (cell.querySelector('input')) rowData.push(cell.querySelector('input').value);
                     else rowData.push(cell.innerText.replace(/(\r\n|\n|\r)/gm, " ").replace(/,/g, " ").trim());
                 });
