@@ -62,6 +62,9 @@
             <button id="install-btn" class="hidden w-full bg-gray-900 text-white p-4 rounded-xl font-bold text-lg shadow-lg mt-3 transition hover:bg-black flex items-center justify-center">
                 <i class="fas fa-download mr-2"></i> Install App
             </button>
+            <button onclick="testNotification()" class="w-full bg-purple-100 text-purple-700 p-3 rounded-xl font-bold mt-2 text-sm border border-purple-200">
+            <i class="fas fa-bell"></i> Test Notification Now
+        </button>
             <p id="login-msg" class="text-red-500 text-sm mt-4 font-bold"></p>
         </div>
     </div>
@@ -259,7 +262,7 @@
             const btn = document.getElementById('install-btn');
             if(btn) btn.classList.add('hidden');
         });
-        
+
         function getLocalDeviceId() {
             let deviceId = localStorage.getItem('oswal_device_id');
             if (!deviceId) {
@@ -620,35 +623,24 @@
         }
 
         // --- NEW: NOTIFICATION SYSTEM LOGIC ---
-        
-        // 1. UI Controls
-        window.toggleNotifPanel = () => {
-            const panel = document.getElementById('notif-panel');
-            if (panel.classList.contains('hidden')) {
-                panel.classList.remove('hidden');
-                document.getElementById('notif-badge').classList.add('hidden'); // Read karne par badge hatao
-                document.getElementById('notif-badge').innerText = '0';
-            } else {
-                panel.classList.add('hidden');
-            }
-        };
+       // --- IMPROVED NOTIFICATION SYSTEM ---
 
-        window.clearNotifications = () => {
-            localStorage.removeItem('oswal_notifications');
-            updateNotificationUI();
-        };
-
-        window.requestNotificationPermission = () => {
+        // 1. Permission & Setup
+        window.requestNotificationPermission = async () => {
             if (!("Notification" in window)) {
                 alert("This browser does not support notifications.");
                 return;
             }
-            Notification.requestPermission().then(permission => {
-                if (permission === "granted") {
-                    alert("Notifications Enabled!");
-                    document.getElementById('btn-allow-notif').classList.add('hidden');
-                }
-            });
+            const permission = await Notification.requestPermission();
+            if (permission === "granted") {
+                alert("Notifications Enabled! You will get alerts.");
+                document.getElementById('btn-allow-notif').classList.add('hidden');
+                
+                // Turant ek test bhejo confirmation ke liye
+                testNotification();
+            } else {
+                alert("Permission Denied. Please enable in Settings.");
+            }
         };
 
         function checkNotificationPermission() {
@@ -659,19 +651,77 @@
             }
         }
 
-        // 2. Logic to Add Notification to List
+        // 2. FORCE NOTIFICATION (Service Worker ke through)
+        window.testNotification = () => {
+            sendForceNotification("Test Successful!", "Your Notification System is working.");
+        };
+
+        function sendForceNotification(title, body) {
+            // A. Service Worker Notification (Powerful)
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.ready.then(function(registration) {
+                    registration.showNotification(title, {
+                        body: body,
+                        icon: "https://cdn-icons-png.flaticon.com/512/2921/2921226.png",
+                        vibrate: [200, 100, 200, 100, 200],
+                        tag: 'oswal-alert', // Overwrite old notification
+                        requireInteraction: true // User ko dismiss karna padega
+                    });
+                });
+            } 
+            // B. Fallback (Simple)
+            else {
+                new Notification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/2921/2921226.png" });
+            }
+            
+            // In-App Panel me bhi add karein
+            addNotification(title + " - " + body);
+        }
+
+        // 3. SCHEDULER ENGINE (Har Minute Check Karega)
+        function startNotificationScheduler() {
+            // Check every 30 seconds to be sure
+            setInterval(() => {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const currentTime = `${hours}:${minutes}`;
+                
+                // Last run check karein taki 1 minute me 10 bar na baje
+                const lastRun = localStorage.getItem('last_notif_time');
+
+                const triggers = {
+                    "07:50": "Good Morning! Please Mark Attendance & Enter.",
+                    "08:00": "Attention! Office Time. Mark Attendance Now.",
+                    "08:15": "Late Warning: Please Mark Attendance.",
+                    "08:20": "You are Late. Mark Attendance Immediately.",
+                    "09:00": "Final Call for Attendance.",
+                    "19:50": "Good Evening! Mark Attendance to Exit.",
+                    "20:00": "Office Closed. Mark Attendance & Exit.",
+                    "20:10": "Overtime? Don't forget to Punch Out."
+                };
+
+                if (triggers[currentTime] && lastRun !== currentTime) {
+                    // Send Alert
+                    sendForceNotification("Attendance Alert ⏰", triggers[currentTime]);
+                    
+                    // Save Time
+                    localStorage.setItem('last_notif_time', currentTime);
+                }
+
+            }, 30000); // 30 Seconds Interval
+        }
+
+        // 4. Panel Logic
         function addNotification(msg) {
             const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            const newNotif = { message: msg, time: time, id: Date.now() };
-            
             let list = JSON.parse(localStorage.getItem('oswal_notifications') || "[]");
-            list.unshift(newNotif); // Add to top
-            if(list.length > 20) list.pop(); // Keep only last 20
-            
+            list.unshift({ message: msg, time: time, id: Date.now() });
+            if(list.length > 20) list.pop();
             localStorage.setItem('oswal_notifications', JSON.stringify(list));
             updateNotificationUI();
             
-            // Show Badge Shake
+            // Badge Logic
             const badge = document.getElementById('notif-badge');
             badge.classList.remove('hidden');
             badge.innerText = "!";
@@ -683,63 +733,26 @@
             const listEl = document.getElementById('notif-list');
             let list = JSON.parse(localStorage.getItem('oswal_notifications') || "[]");
             listEl.innerHTML = '';
-            
             if(list.length === 0) {
                 listEl.innerHTML = '<li class="text-center text-gray-400 text-sm mt-10">No new notifications</li>';
             } else {
                 list.forEach(n => {
-                    listEl.innerHTML += `
-                        <li class="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
-                            <p class="text-sm font-bold text-gray-800">${n.message}</p>
-                            <p class="text-xs text-gray-500 mt-1">${n.time}</p>
-                        </li>
-                    `;
+                    listEl.innerHTML += `<li class="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500 mb-2"><p class="text-sm font-bold text-gray-800">${n.message}</p><p class="text-xs text-gray-500 mt-1">${n.time}</p></li>`;
                 });
             }
         }
-
-        // 3. Scheduler Engine (Checks every minute)
-        function startNotificationScheduler() {
-            // Format: HH:MM (24 Hour)
-            const triggers = {
-                "07:50": "Good Morning! Please Mark Attendance & Enter.",
-                "08:00": "Attention! Office Time. Mark Attendance Now.",
-                "08:15": "Late Warning: Please Mark Attendance.",
-                "08:20": "You are Late. Mark Attendance Immediately.",
-                "09:00": "Final Call for Attendance.",
-                "12:20": "DEMO CHECK.",
-                "19:50": "Good Evening! Mark Attendance to Exit.", // 7:50 PM
-                "20:00": "Office Closed. Mark Attendance & Exit.",  // 8:00 PM
-                "20:10": "Overtime? Don't forget to Punch Out."     // 8:10 PM
-            };
-
-            setInterval(() => {
-                const now = new Date();
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const currentTime = `${hours}:${minutes}`;
-
-                // Check if this time exists in our list AND we haven't notified for this minute yet
-                const lastRun = localStorage.getItem('last_notif_time');
-
-                if (triggers[currentTime] && lastRun !== currentTime) {
-                    // A. System Notification (Popup)
-                    if (Notification.permission === "granted") {
-                        new Notification("Oswal Attendance", {
-                            body: triggers[currentTime],
-                            icon: "https://cdn-icons-png.flaticon.com/512/2921/2921226.png",
-                            vibrate: [200, 100, 200]
-                        });
-                    }
-                    
-                    // B. In-App Notification (Panel)
-                    addNotification(triggers[currentTime]);
-                    
-                    // Save state to prevent double notification in same minute
-                    localStorage.setItem('last_notif_time', currentTime);
-                }
-            }, 5000); // Check every 5 seconds to be precise
-        }
+        
+        window.toggleNotifPanel = () => {
+            const panel = document.getElementById('notif-panel');
+            panel.classList.toggle('hidden');
+            if(!panel.classList.contains('hidden')) {
+                document.getElementById('notif-badge').classList.add('hidden');
+            }
+        };
+        window.clearNotifications = () => {
+            localStorage.removeItem('oswal_notifications');
+            updateNotificationUI();
+        };
     </script>
 </body>
 </html>
