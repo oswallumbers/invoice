@@ -1,4 +1,4 @@
-const CACHE_NAME = 'oswal-attendance-v1_1'; // Version updated
+const CACHE_NAME = 'oswal-attendance-v1_2'; // Version updated
 const ASSETS = [
   './',
   './index.html',
@@ -53,6 +53,7 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
 
 
 
