@@ -1,4 +1,4 @@
-const CACHE_NAME = 'oswal-attendance-v10'; // Version updated
+const CACHE_NAME = 'oswal-attendance-v1_1'; // Version updated
 const ASSETS = [
   './',
   './index.html',
@@ -48,3 +48,4 @@ self.addEventListener('notificationclick', function(event) {
     })
   );
 });
+
