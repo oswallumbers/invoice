@@ -1,13 +1,12 @@
-const CACHE_NAME = 'oswal-attendance-v8'; // <-- Version change kar diya hai (v8)
+const CACHE_NAME = 'oswal-attendance-v9'; // Version change kiya (v9)
 const ASSETS = [
   './',
   './index.html',
   './manifest.json'
-  // Yahan se Tailwind aur FontAwesome ke link hata diye hain
-  // Taki "Failed to fetch" ka error na aaye
+  // Yahan se external links hata diye gaye hain (IMPORTANT)
 ];
 
-// 1. Install Event (Files Cache karega)
+// 1. Install Event
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
@@ -15,7 +14,7 @@ self.addEventListener('install', (e) => {
   );
 });
 
-// 2. Activate Event (Purana Cache delete karega)
+// 2. Activate Event
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keyList) => {
@@ -31,23 +30,21 @@ self.addEventListener('activate', (e) => {
   return self.clients.claim();
 });
 
-// 3. Fetch Event (Offline Support with Error Handling)
+// 3. Fetch Event
 self.addEventListener('fetch', (e) => {
-  // Sirf http/https request ko handle karein (chrome-extension bugs avoid karne ke liye)
+  // Sirf http/https request ko handle karein
   if (!e.request.url.startsWith('http')) return;
 
   e.respondWith(
     caches.match(e.request).then((response) => {
-      // Agar cache me hai to wahi se do, nahi to network se lao
       return response || fetch(e.request).catch(err => {
-          console.log('Network fetch failed:', err);
-          // Agar internet nahi hai aur file cache me nahi hai, to error mat do
+          console.log('Offline: File not in cache', err);
       });
     })
   );
 });
 
-// 4. Force Notification Click Handler (App open karne ke liye)
+// 4. Force Notification Click Handler
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   event.waitUntil(
@@ -65,7 +62,7 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
-// 5. Skip Waiting Message (Update ke liye jaruri)
+// 5. Skip Waiting Message (Update Logic)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
