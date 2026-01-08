@@ -59,6 +59,9 @@
             <button onclick="login()" id="login-btn" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg hover:bg-blue-700 transition">
                 Link Device & Login
             </button>
+            <button id="install-btn" class="hidden w-full bg-gray-900 text-white p-4 rounded-xl font-bold text-lg shadow-lg mt-3 transition hover:bg-black flex items-center justify-center">
+                <i class="fas fa-download mr-2"></i> Install App
+            </button>
             <p id="login-msg" class="text-red-500 text-sm mt-4 font-bold"></p>
         </div>
     </div>
@@ -232,6 +235,31 @@
         let userLocation = null;
         let isOnline = navigator.onLine;
 
+        // --- PWA INSTALL LOGIC (NEW) ---
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('install-btn');
+            if(btn) {
+                btn.classList.remove('hidden');
+                btn.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        if (outcome === 'accepted') {
+                            btn.classList.add('hidden');
+                        }
+                        deferredPrompt = null;
+                    }
+                });
+            }
+        });
+        window.addEventListener('appinstalled', () => {
+            const btn = document.getElementById('install-btn');
+            if(btn) btn.classList.add('hidden');
+        });
+        
         function getLocalDeviceId() {
             let deviceId = localStorage.getItem('oswal_device_id');
             if (!deviceId) {
