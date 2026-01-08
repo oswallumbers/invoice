@@ -19,25 +19,29 @@
         .modal-bg { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
 
         /* Full Screen Success Animation */
-        #success-flash {
-            transition: opacity 0.3s ease-in-out;
-        }
+        #success-flash { transition: opacity 0.3s ease-in-out; }
         .scale-up { animation: scaleUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         @keyframes scaleUp {
             0% { transform: scale(0.5); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
+
+        /* Notification Badge Animation */
+        .bell-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
     </style>
 </head>
 <body class="h-screen flex flex-col select-none">
-<video id="hidden-video" autoplay playsinline class="hidden w-1 h-1 absolute top-0 left-0"></video>
-<canvas id="hidden-canvas" class="hidden"></canvas>
+
+    <video id="hidden-video" autoplay playsinline class="hidden w-1 h-1 absolute top-0 left-0"></video>
+    <canvas id="hidden-canvas" class="hidden"></canvas>
+
     <div id="success-flash" class="hidden fixed inset-0 z-[100] bg-green-500 flex flex-col justify-center items-center text-white">
         <div class="bg-white rounded-full p-8 mb-4 shadow-2xl scale-up">
             <i class="fas fa-check text-8xl text-green-500"></i>
         </div>
         <h2 class="text-3xl font-bold tracking-wide animate-pulse">SUCCESS!</h2>
-        <p class="text-green-100 mt-2 text-lg">Attendance Marked</p>
+        <p class="text-green-100 mt-2 text-lg" id="success-msg">Attendance Marked</p>
     </div>
 
     <div id="login-screen" class="flex-1 flex flex-col justify-center items-center p-6 bg-white">
@@ -71,7 +75,14 @@
                     <h2 class="text-2xl font-bold" id="user-name">User</h2>
                     <p class="text-blue-100 text-xs mt-1" id="connection-status"><i class="fas fa-wifi"></i> Online</p>
                 </div>
-                <button onclick="logout()" class="bg-blue-700 p-2 rounded-lg text-xs"><i class="fas fa-power-off"></i></button>
+                
+                <div class="flex gap-3">
+                    <button onclick="toggleNotifPanel()" class="relative bg-blue-700 p-2 rounded-lg text-white hover:bg-blue-800 transition">
+                        <i class="fas fa-bell" id="bell-icon"></i>
+                        <span id="notif-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">0</span>
+                    </button>
+                    <button onclick="logout()" class="bg-blue-700 p-2 rounded-lg text-xs"><i class="fas fa-power-off"></i></button>
+                </div>
             </div>
             <div class="mt-4 flex items-center bg-blue-800/50 p-2 rounded-lg backdrop-blur-sm">
                 <div id="loc-icon" class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
@@ -91,8 +102,11 @@
                 <i class="fas fa-sync fa-spin text-orange-500"></i>
             </div>
 
+            <button id="btn-allow-notif" onclick="requestNotificationPermission()" class="hidden w-full bg-yellow-100 text-yellow-800 p-3 rounded-xl text-sm font-bold border border-yellow-300">
+                <i class="fas fa-bell mr-2"></i> Enable Attendance Reminders
+            </button>
+
             <div id="smart-buttons-area" class="w-full flex justify-center">
-                
                 <div id="btn-loading" class="text-gray-400 font-bold animate-pulse">Checking Status...</div>
 
                 <button onclick="triggerBiometric('Check-In')" id="btn-in" class="hidden w-full max-w-xs bg-white border-2 border-green-100 p-6 rounded-2xl shadow-sm hover:shadow-md active:scale-95 transition flex items-center justify-between group">
@@ -127,7 +141,6 @@
                     <i class="fas fa-question-circle"></i> Forgot to Punch?
                 </button>
             </div>
-
         </div>
 
         <div class="bg-white rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.05)] p-6 h-1/3 overflow-y-auto">
@@ -136,11 +149,23 @@
         </div>
     </div>
 
+    <div id="notif-panel" class="hidden fixed inset-0 z-40">
+        <div class="absolute inset-0 bg-black/50" onclick="toggleNotifPanel()"></div>
+        <div class="absolute bottom-0 w-full bg-white rounded-t-3xl p-6 h-3/4 overflow-y-auto transition-transform duration-300">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">Notifications</h3>
+                <button onclick="clearNotifications()" class="text-xs text-red-500 font-bold">Clear All</button>
+            </div>
+            <ul id="notif-list" class="space-y-3">
+                <li class="text-center text-gray-400 text-sm mt-10">No new notifications</li>
+            </ul>
+        </div>
+    </div>
+
     <div id="request-modal" class="hidden fixed inset-0 modal-bg z-50 flex justify-center items-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 transform transition-all">
             <h3 class="text-xl font-bold text-gray-800 mb-1">Forgot Punch?</h3>
             <p class="text-xs text-gray-500 mb-4">Send a request to Admin to fix attendance.</p>
-            
             <div class="space-y-3">
                 <input type="date" id="req-date" class="w-full p-3 bg-gray-50 border rounded-lg text-sm">
                 <input type="time" id="req-time" class="w-full p-3 bg-gray-50 border rounded-lg text-sm">
@@ -150,54 +175,40 @@
                 </select>
                 <textarea id="req-reason" placeholder="Reason (e.g. Battery dead)" class="w-full p-3 bg-gray-50 border rounded-lg text-sm h-20"></textarea>
             </div>
-
             <div class="flex gap-2 mt-6">
                 <button onclick="closeRequestModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-sm">Cancel</button>
                 <button onclick="sendRequest()" id="btn-send-req" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg">Send Request</button>
             </div>
         </div>
     </div>
-<script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').then((registration) => {
-            
-            // Check for updates periodically
-            registration.onupdatefound = () => {
-                const newWorker = registration.installing;
-                newWorker.onstatechange = () => {
-                    if (newWorker.state === 'installed') {
-                        if (navigator.serviceWorker.controller) {
-                            // New update available
-                            console.log('New update available!');
-                            // Option A: Ask User
-                            if(confirm("New Update Available! Click OK to Refresh.")) {
-                                window.location.reload();
-                            }
-                            // Option B: Force Reload (Agar automatic chahiye to upar wala hatakar niche wala use kare)
-                            // window.location.reload(); 
-                        }
-                    }
-                };
-            };
-        });
 
-        // Detect controller change (Important for hard refresh)
-        let refreshing;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (refreshing) return;
-            window.location.reload();
-            refreshing = true;
-        });
-    }
-</script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').then((registration) => {
+                registration.onupdatefound = () => {
+                    const newWorker = registration.installing;
+                    newWorker.onstatechange = () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            if(confirm("New Update Available! Click OK to Refresh.")) { window.location.reload(); }
+                        }
+                    };
+                };
+            });
+            let refreshing;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (refreshing) return;
+                window.location.reload();
+                refreshing = true;
+            });
+        }
+    </script>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc, setDoc, Timestamp, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
-
-        // --- YOUR FIREBASE CONFIG ---
+        // --- FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyB-R05CTNKajcFMpbkutCesDCGLOZknehA",
             authDomain: "attendance-97b55.firebaseapp.com",
@@ -217,11 +228,10 @@
         const ALLOWED_RADIUS = 2000; 
 
         let currentUser = null;
-        let currentUserName = ""; // असली नाम स्टोर करने के लिए
+        let currentUserName = ""; 
         let userLocation = null;
         let isOnline = navigator.onLine;
 
-        // --- AUTH & DEVICE LOCK ---
         function getLocalDeviceId() {
             let deviceId = localStorage.getItem('oswal_device_id');
             if (!deviceId) {
@@ -278,56 +288,40 @@
             }
         });
 
-        // --- NEW: SELFIE CAPTURE FUNCTION (Storage ki jarurat nahi) ---
-async function captureSelfie() {
-    const video = document.getElementById('hidden-video');
-    const canvas = document.getElementById('hidden-canvas');
-    
-    try {
-        // Front Camera Chalu Karein
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-        video.srcObject = stream;
-        
-        // Video load hone ka wait karein
-        await new Promise(resolve => video.onloadedmetadata = resolve);
-        
-        // Canvas par draw karein (Size 300x300 rakha hai taki data kam bane)
-        const ctx = canvas.getContext('2d');
-        canvas.width = 300;
-        canvas.height = 300;
-        ctx.drawImage(video, 0, 0, 300, 300);
-        
-        // Image ko Text (Base64) me badalein (Quality 50%)
-        const base64Image = canvas.toDataURL('image/jpeg', 0.5);
-        
-        // Camera band karein
-        stream.getTracks().forEach(track => track.stop());
-        
-        return base64Image;
-    } catch (e) {
-        console.error("Camera Error:", e);
-        return "No Photo (Camera Error)"; // Agar camera fail ho to ye save hoga
-    }
-}
+        // --- SELFIE CAPTURE FUNCTION (NO STORAGE) ---
+        async function captureSelfie() {
+            const video = document.getElementById('hidden-video');
+            const canvas = document.getElementById('hidden-canvas');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+                await new Promise(resolve => video.onloadedmetadata = resolve);
+                const ctx = canvas.getContext('2d');
+                canvas.width = 300;
+                canvas.height = 300;
+                ctx.drawImage(video, 0, 0, 300, 300);
+                const base64Image = canvas.toDataURL('image/jpeg', 0.5);
+                stream.getTracks().forEach(track => track.stop());
+                return base64Image;
+            } catch (e) {
+                console.error("Camera Error:", e);
+                return "No Photo (Camera Error)";
+            }
+        }
 
         async function enterDashboard(user) {
             currentUser = user;
-            
-            // --- NEW: Database se asli naam nikalna ---
             try {
                 const docSnap = await getDoc(doc(db, "users", user.uid));
                 if(docSnap.exists() && docSnap.data().name) {
-                    currentUserName = docSnap.data().name; // Database wala naam
+                    currentUserName = docSnap.data().name; 
                 } else {
-                    currentUserName = user.email.split('@')[0]; // Fallback to email name
+                    currentUserName = user.email.split('@')[0]; 
                 }
             } catch(e) { 
                 currentUserName = user.email.split('@')[0]; 
             }
-            
-            // Screen par naam update karein
             document.getElementById('user-name').innerText = currentUserName;
-            
             document.getElementById('loading-screen').classList.add('hidden');
             document.getElementById('dashboard-screen').classList.remove('hidden');
             
@@ -335,6 +329,11 @@ async function captureSelfie() {
             loadLogs();
             checkOfflineQueue();
             updateUIBasedOnLastPunch(); 
+
+            // --- START NOTIFICATION SYSTEM ---
+            checkNotificationPermission();
+            startNotificationScheduler();
+            updateNotificationUI();
         }
 
         async function updateUIBasedOnLastPunch() {
@@ -343,9 +342,7 @@ async function captureSelfie() {
                 document.getElementById('btn-in').classList.remove('hidden'); 
                 return; 
             }
-
             const today = new Date(); today.setHours(0,0,0,0);
-            
             const q = query(
                 collection(db, "attendance"),
                 where("userId", "==", currentUser.uid),
@@ -388,32 +385,19 @@ async function captureSelfie() {
             const time = document.getElementById('req-time').value;
             const type = document.getElementById('req-type').value;
             const reason = document.getElementById('req-reason').value;
-            
             if(!date || !time || !reason) { alert("Please fill all details"); return; }
-
             const btn = document.getElementById('btn-send-req');
             btn.innerText = "Sending...";
-
             try {
                 await addDoc(collection(db, "requests"), {
-                    userId: currentUser.uid,
-                    userName: currentUser.email,
-                    date: date,
-                    time: time,
-                    type: type,
-                    reason: reason,
-                    status: 'Pending',
-                    timestamp: Timestamp.now()
+                    userId: currentUser.uid, userName: currentUser.email, date: date, time: time, type: type, reason: reason, status: 'Pending', timestamp: Timestamp.now()
                 });
                 alert("Request Sent Successfully!");
                 closeRequestModal();
                 document.getElementById('req-reason').value = "";
-            } catch(e) {
-                alert("Error sending request: " + e.message);
-            }
+            } catch(e) { alert("Error sending request: " + e.message); }
             btn.innerText = "Send Request";
         };
-
 
         window.addEventListener('online', () => { isOnline = true; syncOfflineData(); updateUIBasedOnLastPunch(); });
         window.addEventListener('offline', () => { isOnline = false; });
@@ -426,7 +410,6 @@ async function captureSelfie() {
                 const dist = getDist(userLocation.lat, userLocation.lng, OFFICE_LAT, OFFICE_LNG);
                 const statusEl = document.getElementById('location-status');
                 const iconEl = document.getElementById('loc-icon');
-
                 if (dist <= ALLOWED_RADIUS) {
                     statusEl.innerText = "Verified: Inside Office";
                     statusEl.className = "font-bold text-sm text-green-300";
@@ -438,36 +421,35 @@ async function captureSelfie() {
                 }
             }, err => console.error(err), options);
         }
-// --- UPDATED: BIOMETRIC + GEO-FENCING (LOCATION LOCK) ---
+
+        // --- MAIN ACTION: BIOMETRIC + SELFIE + GEOFENCE ---
         window.triggerBiometric = async (type) => {
             if (!currentUser) return;
-            
-            // 1. Check if Location is Available
-            if (!userLocation && isOnline) { 
-                alert("Waiting for location... Please allow GPS."); 
-                return; 
+            if (!userLocation && isOnline) { alert("Waiting for location... Please allow GPS."); return; }
+
+            // Wake up Audio
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const wakeUp = new SpeechSynthesisUtterance(" ");
+                window.speechSynthesis.speak(wakeUp);
             }
 
-            // 2. GEO-FENCING LOCK (Yahi line add karni thi)
-            // Agar banda office se door hai to yahi rok do
+            // Geo-Fencing
             if (isOnline) {
                 const dist = getDist(userLocation.lat, userLocation.lng, OFFICE_LAT, OFFICE_LNG);
                 if (dist > ALLOWED_RADIUS) {
                     alert(`ACCESS DENIED!\nYou are ${Math.round(dist)} meters away from office.\nPlease go inside office to punch.`);
-                    return; // Stop function here
+                    return; 
                 }
             }
 
-            // 3. UI LOCK (Prevent Double Click)
             document.getElementById('btn-in').classList.add('hidden');
             document.getElementById('btn-out').classList.add('hidden');
             document.getElementById('btn-loading').classList.remove('hidden');
             document.getElementById('btn-loading').innerText = "Processing...";
 
-            // 4. Capture Selfie
             const selfieData = await captureSelfie();
 
-            // 5. Trigger Fingerprint
             try {
                 if (window.PublicKeyCredential) {
                     const publicKey = {
@@ -484,15 +466,14 @@ async function captureSelfie() {
             } catch (err) { 
                 console.error(err);
                 alert("Cancelled or Failed.");
-                updateUIBasedOnLastPunch(); // Reset buttons
+                updateUIBasedOnLastPunch();
             }
         };
 
-    // --- 1. UPDATE SAVE FUNCTION (Pass 'type' to animation) ---
         async function saveAttendance(type, selfieData) {
             const record = {
                 userId: currentUser.uid,
-                userName: currentUserName, // Ab asli naam save hoga
+                userName: currentUserName,
                 type: type,
                 timestamp: Timestamp.now(),
                 location: userLocation || {lat: 0, lng: 0},
@@ -504,29 +485,28 @@ async function captureSelfie() {
             if (isOnline) {
                 try {
                     await addDoc(collection(db, "attendance"), record);
-                    triggerSuccessAnimation(type); // Yahan 'type' bheja ja raha hai
+                    triggerSuccessAnimation(type); 
                     loadLogs();
                     updateUIBasedOnLastPunch(); 
                 } catch (e) { saveOffline(record); }
             } else { saveOffline(record); }
         }
 
-        // --- 2. UPDATE ANIMATION FUNCTION (Smart Voice Feedback) ---
         function triggerSuccessAnimation(type) {
             const flash = document.getElementById('success-flash');
-            const msgEl = document.getElementById('success-msg'); // Success message element
-            
+            const msgEl = document.getElementById('success-msg'); 
             flash.classList.remove('hidden');
 
             if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
                 const msg = new SpeechSynthesisUtterance();
-                msg.lang = 'hi-IN';
-                // --- SMART VOICE LOGIC ---
+                
+                // --- CUSTOM VOICE LOGIC (PRESERVED) ---
                 if (type === 'Check-In') {
-                    msg.text = `Welcome Mr. ${currentUserName} अच्छे से मन लगाकर काम करो `;
+                    msg.text = `Welcome Mr. ${currentUserName} Give Your Best  `;
                     if(msgEl) msgEl.innerText = "Welcome, Good Morning!";
                 } else if (type === 'Check-Out') {
-                    msg.text = `Goodbye Mr. ${currentUserName} कल सुबह टाइम पर आ जाना `;
+                    msg.text = `Bye Mr. ${currentUserName} See you! `;
                     if(msgEl) msgEl.innerText = "Goodbye, See you!";
                 } else {
                     msg.text = `Attendance Marked`;
@@ -539,7 +519,7 @@ async function captureSelfie() {
 
             setTimeout(() => { 
                 flash.classList.add('hidden'); 
-                if(msgEl) msgEl.innerText = "Attendance Marked"; // Reset text
+                if(msgEl) msgEl.innerText = "Attendance Marked"; 
             }, 2000);
         }
 
@@ -548,8 +528,6 @@ async function captureSelfie() {
             let offlineData = JSON.parse(localStorage.getItem('oswal_offline_punches') || "[]");
             offlineData.push(record);
             localStorage.setItem('oswal_offline_punches', JSON.stringify(offlineData));
-            
-            // Still show success animation even for offline save
             triggerSuccessAnimation(record.type);
             checkOfflineQueue();
         }
@@ -568,7 +546,6 @@ async function captureSelfie() {
             }
             localStorage.setItem('oswal_offline_punches', JSON.stringify(newQueue));
             if (newQueue.length === 0) { 
-                // alert("Synced Successfully!"); 
                 loadLogs(); 
                 checkOfflineQueue(); 
                 updateUIBasedOnLastPunch(); 
@@ -612,6 +589,127 @@ async function captureSelfie() {
                         </li>`;
                 });
             } catch(e) { console.log(e); }
+        }
+
+        // --- NEW: NOTIFICATION SYSTEM LOGIC ---
+        
+        // 1. UI Controls
+        window.toggleNotifPanel = () => {
+            const panel = document.getElementById('notif-panel');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                document.getElementById('notif-badge').classList.add('hidden'); // Read karne par badge hatao
+                document.getElementById('notif-badge').innerText = '0';
+            } else {
+                panel.classList.add('hidden');
+            }
+        };
+
+        window.clearNotifications = () => {
+            localStorage.removeItem('oswal_notifications');
+            updateNotificationUI();
+        };
+
+        window.requestNotificationPermission = () => {
+            if (!("Notification" in window)) {
+                alert("This browser does not support notifications.");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    alert("Notifications Enabled!");
+                    document.getElementById('btn-allow-notif').classList.add('hidden');
+                }
+            });
+        };
+
+        function checkNotificationPermission() {
+            if ("Notification" in window && Notification.permission !== "granted") {
+                document.getElementById('btn-allow-notif').classList.remove('hidden');
+            } else {
+                document.getElementById('btn-allow-notif').classList.add('hidden');
+            }
+        }
+
+        // 2. Logic to Add Notification to List
+        function addNotification(msg) {
+            const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            const newNotif = { message: msg, time: time, id: Date.now() };
+            
+            let list = JSON.parse(localStorage.getItem('oswal_notifications') || "[]");
+            list.unshift(newNotif); // Add to top
+            if(list.length > 20) list.pop(); // Keep only last 20
+            
+            localStorage.setItem('oswal_notifications', JSON.stringify(list));
+            updateNotificationUI();
+            
+            // Show Badge Shake
+            const badge = document.getElementById('notif-badge');
+            badge.classList.remove('hidden');
+            badge.innerText = "!";
+            document.getElementById('bell-icon').classList.add('bell-shake');
+            setTimeout(()=> document.getElementById('bell-icon').classList.remove('bell-shake'), 500);
+        }
+
+        function updateNotificationUI() {
+            const listEl = document.getElementById('notif-list');
+            let list = JSON.parse(localStorage.getItem('oswal_notifications') || "[]");
+            listEl.innerHTML = '';
+            
+            if(list.length === 0) {
+                listEl.innerHTML = '<li class="text-center text-gray-400 text-sm mt-10">No new notifications</li>';
+            } else {
+                list.forEach(n => {
+                    listEl.innerHTML += `
+                        <li class="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
+                            <p class="text-sm font-bold text-gray-800">${n.message}</p>
+                            <p class="text-xs text-gray-500 mt-1">${n.time}</p>
+                        </li>
+                    `;
+                });
+            }
+        }
+
+        // 3. Scheduler Engine (Checks every minute)
+        function startNotificationScheduler() {
+            // Format: HH:MM (24 Hour)
+            const triggers = {
+                "07:50": "Good Morning! Please Mark Attendance & Enter.",
+                "08:00": "Attention! Office Time. Mark Attendance Now.",
+                "08:15": "Late Warning: Please Mark Attendance.",
+                "08:20": "You are Late. Mark Attendance Immediately.",
+                "09:00": "Final Call for Attendance.",
+                "19:50": "Good Evening! Mark Attendance to Exit.", // 7:50 PM
+                "20:00": "Office Closed. Mark Attendance & Exit.",  // 8:00 PM
+                "20:10": "Overtime? Don't forget to Punch Out."     // 8:10 PM
+            };
+
+            setInterval(() => {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const currentTime = `${hours}:${minutes}`;
+
+                // Check if this time exists in our list AND we haven't notified for this minute yet
+                const lastRun = localStorage.getItem('last_notif_time');
+
+                if (triggers[currentTime] && lastRun !== currentTime) {
+                    // A. System Notification (Popup)
+                    if (Notification.permission === "granted") {
+                        new Notification("Oswal Attendance", {
+                            body: triggers[currentTime],
+                            icon: "https://cdn-icons-png.flaticon.com/512/2921/2921226.png",
+                            vibrate: [200, 100, 200]
+                        });
+                    }
+                    
+                    // B. In-App Notification (Panel)
+                    addNotification(triggers[currentTime]);
+                    
+                    // Save state to prevent double notification in same minute
+                    localStorage.setItem('last_notif_time', currentTime);
+                }
+            }, 5000); // Check every 5 seconds to be precise
         }
     </script>
 </body>
