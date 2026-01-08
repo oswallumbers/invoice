@@ -1,4 +1,4 @@
-const CACHE_NAME = 'oswal-store-v5'; // Version Update kar diya hai
+const CACHE_NAME = 'oswal-store-v6'; // Version Update kar diya hai
 const ASSETS = [
   './',
   './index.html',
@@ -36,5 +36,6 @@ self.addEventListener('fetch', (e) => {
     caches.match(e.request).then((response) => response || fetch(e.request)),
   );
 });
+
 
 
