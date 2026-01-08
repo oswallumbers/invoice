@@ -47,5 +47,12 @@ self.addEventListener('notificationclick', function(event) {
       }
     })
   );
+  // --- LISTEN FOR SKIP WAITING MESSAGE ---
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
+
+
 
