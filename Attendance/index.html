@@ -652,8 +652,24 @@
         }
 
         // 2. FORCE NOTIFICATION (Service Worker ke through)
-        window.testNotification = () => {
-            sendForceNotification("Test Successful!", "Your Notification System is working.");
+       // --- UPDATED TEST FUNCTION (Auto-Request Permission) ---
+        window.testNotification = async () => {
+            // 1. Agar Permission 'Default' hai (na ha, na na), to maango
+            if (Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    alert("Notification Permission Denied!");
+                    return;
+                }
+            } 
+            // 2. Agar Permission 'Denied' (Block) hai
+            else if (Notification.permission === 'denied') {
+                alert("Notifications are BLOCKED in your browser settings.\nPlease click the Lock icon 🔒 in URL bar -> Site Settings -> Notifications -> Allow.");
+                return;
+            }
+            
+            // 3. Agar 'Granted' hai, to bhejo
+            sendForceNotification("Test Successful! 🎉", "Your Notification System is 100% working.");
         };
 
         function sendForceNotification(title, body) {
