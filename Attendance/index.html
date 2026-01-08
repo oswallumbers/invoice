@@ -754,5 +754,50 @@
             updateNotificationUI();
         };
     </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then((registration) => {
+                    
+                    // 1. Jaise hi app khule, turant update check karo
+                    registration.update();
+
+                    // 2. Agar update mil gaya (Waiting state me hai)
+                    if (registration.waiting) {
+                        invokeUpdate(registration);
+                    }
+
+                    // 3. Agar naya update install ho raha hai
+                    registration.onupdatefound = () => {
+                        const newWorker = registration.installing;
+                        newWorker.onstatechange = () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                invokeUpdate(registration);
+                            }
+                        };
+                    };
+                });
+            });
+
+            // Update function
+            function invokeUpdate(registration) {
+                if (confirm("New Version Available! 🚀\nClick OK to Update App.")) {
+                    if (registration.waiting) {
+                        // Naye worker ko message bhejo skipWaiting ke liye
+                        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    }
+                }
+            }
+
+            // Reload when new worker takes control
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    window.location.reload();
+                    refreshing = true;
+                }
+            });
+        }
+    </script>
 </body>
 </html>
