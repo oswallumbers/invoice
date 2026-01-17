@@ -151,35 +151,46 @@ function generatePackingList() {
         }
     });
 
-    let finalY = doc.autoTable.previous.finalY + 10;
+   // टेबल खत्म होने के बाद का गैप कम किया (10 -> 5)
+    let finalY = doc.autoTable.previous.finalY + 5;
 
     // --- Footer Details ---
     doc.setFontSize(9);
     doc.setFont(font, 'normal');
+    
     doc.text(`CONTAINER NO. ${document.getElementById('container-no').value}`, margin + 2, finalY);
     finalY += 5;
+    
     doc.text(document.getElementById('container-size').value, margin + 2, finalY);
     finalY += 5;
+    
     doc.text(`TOTAL ITEMS: ${document.getElementById('total-items').value}`, margin + 2, finalY);
-    finalY += 8;
+    finalY += 8; // इसे थोड़ा गैप रहने दिया ताकि अलग दिखे
+    
     doc.text(`TOTAL GROSS WEIGHT: ${document.getElementById('gross-weight').value}`, margin + 2, finalY);
     finalY += 5;
+    
     doc.text(`TOTAL NET WEIGHT: ${document.getElementById('net-weight').value}`, margin + 2, finalY);
     
-    const signatureY = finalY + 40;
+    // सिग्नेचर का गैप बहुत ज्यादा था (40), उसे कम करके 20 किया
+    const signatureY = finalY + 20; 
+
     doc.setFont(font, 'bold');
     doc.text('For, OSWAL LUMBERS PVT. LTD.', pageWidth - margin - 10, signatureY, { align: 'right' });
-    doc.text('AUTHORISED SIGNATORY', pageWidth - margin - 10, signatureY + 25, { align: 'right' });
     
-    const borderEndY = signatureY + 35;
+    // "AUTHORISED SIGNATORY" को थोड़ा पास लाया (25 -> 20)
+    doc.text('AUTHORISED SIGNATORY', pageWidth - margin - 10, signatureY + 20, { align: 'right' });
+    
+    // बॉर्डर को भी ऊपर शिफ्ट किया (35 -> 25)
+    const borderEndY = signatureY + 25; 
     
     // --- Outer Border (Explicitly Black) ---
-    doc.setDrawColor(0, 0, 0); 
-    doc.setLineWidth(0.7);
-    doc.line(margin, borderStartY, pageWidth - margin, borderStartY); // Top
+    doc.setDrawColor(0, 0, 0);
+    // ... बाकी का बॉर्डर कोड सेम रहेगा ...
+    doc.line(margin, margin + 5, pageWidth - margin, margin + 5); // Top
     doc.line(margin, borderEndY, pageWidth - margin, borderEndY); // Bottom
-    doc.line(margin, borderStartY, margin, borderEndY); // Left
-    doc.line(pageWidth - margin, borderStartY, pageWidth - margin, borderEndY); // Right
-
+    doc.line(margin, margin + 5, margin, borderEndY); // Left
+    doc.line(pageWidth - margin, margin + 5, pageWidth - margin, borderEndY); // Right
     doc.save('PackingList.pdf');
 }
+
