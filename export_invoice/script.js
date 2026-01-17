@@ -1239,13 +1239,13 @@ doc.setFont(font, 'bold');
 doc.text(document.getElementById('bank-details').value, middleX, rightSideFooterY, { lineHeightFactor: 1.5 });
 
 // Calculate signature position based on the new rightSideFooterY variable.
-let signatureY = rightSideFooterY + doc.getTextDimensions(document.getElementById('bank-details').value, { lineHeightFactor: 1.5 }).h + 25;
+let signatureY = rightSideFooterY + doc.getTextDimensions(document.getElementById('bank-details').value, { lineHeightFactor: 1.5 }).h + 30;
 doc.setFont(font, 'bold');
 doc.text('For, OSWAL LUMBERS PVT. LTD.', pageWidth - margin - 10, signatureY + 12, { align: 'right' });
 doc.text('AUTHORISED SIGNATORY', pageWidth - margin - 10, signatureY + 35, { align: 'right' });
 
 // This part for drawing the main border is unchanged.
-const borderEndY = signatureY + 45; 
+const borderEndY = signatureY + 40; 
 doc.setLineWidth(0.7);
 doc.setDrawColor(0, 0, 0);
 doc.line(margin, borderStartY, pageWidth - margin, borderStartY);
@@ -1327,6 +1327,7 @@ function amountToWords(amount) {
 }
 
 );
+
 
 
 
