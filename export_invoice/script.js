@@ -1,5 +1,10 @@
-// This is the complete script.js file with your existing code preserved.
-// The item comment functionality has been carefully integrated.
+function formatCurrency(amount) {
+    // अगर amount टेक्स्ट है तो उसे नंबर में बदलें और फिर फॉर्मेट करें
+    return Number(amount).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
 document.addEventListener('DOMContentLoaded', function () {
     const { jsPDF } = window.jspdf;
     const form = document.getElementById('invoice-form');
@@ -997,13 +1002,7 @@ function populateFormFromPerforma(data) {
         e.preventDefault();
         generatePDF();
     });
-    function formatCurrency(amount) {
-    // अगर amount टेक्स्ट है तो उसे नंबर में बदलें और फिर फॉर्मेट करें
-    return Number(amount).toLocaleString('en-IN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-}
+    
     /**
      * **MODIFIED**
      * Generates the PDF, combining the item description and comment into a single cell.
@@ -1292,6 +1291,7 @@ function amountToWords(amount) {
 }
 
 );
+
 
 
 
