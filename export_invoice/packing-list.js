@@ -166,12 +166,12 @@ function generatePackingList() {
     finalY += 5;
     doc.text(`TOTAL NET WEIGHT: ${document.getElementById('net-weight').value}`, margin + 2, finalY);
     
-    const signatureY = finalY + 30;
+    const signatureY = finalY + 20;
     doc.setFont(font, 'bold');
     doc.text('For, OSWAL LUMBERS PVT. LTD.', pageWidth - margin - 10, signatureY, { align: 'right' });
-    doc.text('AUTHORISED SIGNATORY', pageWidth - margin - 10, signatureY + 20, { align: 'right' });
+    doc.text('AUTHORISED SIGNATORY', pageWidth - margin - 10, signatureY + 18, { align: 'right' });
     
-    const borderEndY = signatureY + 30;
+    const borderEndY = signatureY + 25;
     
     // --- Outer Border (Explicitly Black) ---
     doc.setDrawColor(0, 0, 0); 
@@ -183,3 +183,4 @@ function generatePackingList() {
 
     doc.save('PackingList.pdf');
 }
+
