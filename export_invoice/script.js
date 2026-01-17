@@ -1247,7 +1247,7 @@ doc.text('For, OSWAL LUMBERS PVT. LTD.', pageWidth - margin - 10, signatureY + 1
 doc.text('AUTHORISED SIGNATORY', pageWidth - margin - 10, signatureY + 30, { align: 'right' });
 
 // This part for drawing the main border is unchanged.
-const borderEndY = signatureY + 35; 
+const borderEndY = signatureY + 30; 
 doc.setLineWidth(0.7);
 doc.setDrawColor(0, 0, 0);
 doc.line(margin, borderStartY, pageWidth - margin, borderStartY);
@@ -1329,6 +1329,7 @@ function amountToWords(amount) {
 }
 
 );
+
 
 
 
