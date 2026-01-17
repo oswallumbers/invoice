@@ -124,30 +124,66 @@ function populateForm(data) {
 }
     
     async function autoGenerateInvoiceNumber() {
-        // This function is unchanged.
         const settingsRef = db.collection('settings').doc('invoiceCounter');
+        
+        // 1. फाइनेंशियल ईयर (FY) कैलकुलेट करें (e.g. "25-26" or "26-27")
+        const now = new Date();
+        const currentMonth = now.getMonth(); // 0 = Jan, 3 = April
+        const currentYear = now.getFullYear();
+        
+        let fyStart, fyEnd;
+        // अगर महीना अप्रैल (3) या उसके बाद का है, तो FY करंट साल से शुरू होगा
+        if (currentMonth >= 3) { 
+            fyStart = currentYear;
+            fyEnd = currentYear + 1;
+        } else { 
+            // अगर जन-मार्च है, तो FY पिछले साल से शुरू हुआ था
+            fyStart = currentYear - 1;
+            fyEnd = currentYear;
+        }
+        // "25-26" जैसा फॉर्मेट बनाने के लिए
+        const fyString = `${fyStart.toString().slice(-2)}-${fyEnd.toString().slice(-2)}`;
+
         try {
             const nextNumber = await db.runTransaction(async (transaction) => {
                 const doc = await transaction.get(settingsRef);
+                
+                // अगर डेटाबेस में सेटिंग नहीं है, तो नई बनाओ
                 if (!doc.exists) {
-                    transaction.set(settingsRef, { nextInvoiceNumber: 2 });
+                    transaction.set(settingsRef, { nextInvoiceNumber: 2, financialYear: fyString });
                     return 1;
                 }
-                const newNextNumber = doc.data().nextInvoiceNumber;
-                transaction.update(settingsRef, { nextInvoiceNumber: newNextNumber + 1 });
-                return newNextNumber;
+
+                const data = doc.data();
+                
+                // चेक करें कि क्या डेटाबेस में पुराना FY सेव है या नहीं
+                // अगर फाइनेंशियल ईयर बदल गया है (या पहली बार सेट हो रहा है और मैच नहीं कर रहा)
+                if (data.financialYear && data.financialYear !== fyString) {
+                    // नया साल शुरू! नंबर को 1 पर रीसेट करें
+                    transaction.update(settingsRef, { nextInvoiceNumber: 2, financialYear: fyString });
+                    return 1;
+                } else {
+                    // वही साल चल रहा है, नंबर आगे बढ़ाएं
+                    // (और अगर financialYear सेव नहीं था, तो उसे भी सेव कर दें ताकि अगली बार रीसेट काम करे)
+                    let updateData = { nextInvoiceNumber: data.nextInvoiceNumber + 1 };
+                    if (!data.financialYear) {
+                        updateData.financialYear = fyString;
+                    }
+                    
+                    transaction.update(settingsRef, updateData);
+                    return data.nextInvoiceNumber;
+                }
             });
 
-            const year = new Date().getFullYear();
             const formattedNumber = nextNumber.toString().padStart(3, '0');
-            return `EXP/${formattedNumber}/${year}`;
+            return `EXP/${formattedNumber}/${fyString}`;
+            
         } catch (e) {
             console.error("Transaction failed: ", e);
             alert("Could not generate invoice number. Please try again.");
             return null;
         }
     }
-
     async function saveInvoice() {
         // This function is unchanged.
         const data = getFormData();
@@ -1291,6 +1327,7 @@ function amountToWords(amount) {
 }
 
 );
+
 
 
 
