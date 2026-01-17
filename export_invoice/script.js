@@ -1211,7 +1211,9 @@ doc.text(document.getElementById('net-weight').value, margin + 45, leftSideY);
 // ADD THIS NEW, SIMPLER BLOCK in the same place.
 
 // --- AMOUNT IN WORDS (Full Width, No Border) ---
-const totalInWords = amountToWords(parseFloat(totalAmount)) + " ONLY.";
+// टोटल को दोबारा बिना कॉमा के निकालें ताकि सही शब्द बनें
+const cleanTotalVal = document.getElementById('total-amount').textContent.replace(/[$,]/g, '');
+const totalInWords = amountToWords(parseFloat(cleanTotalVal)) + " ONLY.";
 // Create the single line of text you want.
 const fullAmountText = `Amounts in Word: ${totalInWords.toUpperCase()}`;
 
@@ -1327,6 +1329,7 @@ function amountToWords(amount) {
 }
 
 );
+
 
 
 
