@@ -997,7 +997,13 @@ function populateFormFromPerforma(data) {
         e.preventDefault();
         generatePDF();
     });
-    
+    function formatCurrency(amount) {
+    // अगर amount टेक्स्ट है तो उसे नंबर में बदलें और फिर फॉर्मेट करें
+    return Number(amount).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
     /**
      * **MODIFIED**
      * Generates the PDF, combining the item description and comment into a single cell.
@@ -1096,15 +1102,19 @@ function populateFormFromPerforma(data) {
                 row.querySelector('.item-qty').value,
                 row.querySelector('.item-uom').value,
                 parseFloat(row.querySelector('.item-m3').value).toFixed(3),
-                parseFloat(row.querySelector('.item-rate').value).toFixed(2),
-                parseFloat(row.querySelector('.item-amount').value).toFixed(2)
+                formatAmount(row.querySelector('.item-rate').value),   // यहाँ बदलाव किया है
+                formatAmount(row.querySelector('.item-amount').value)
             ]);
         });
         // **MODIFICATION END**
         
         const totalQty = document.getElementById('total-qty').textContent;
         const totalM3 = document.getElementById('total-m3').textContent;
-        const totalAmount = document.getElementById('total-amount').textContent.replace('$', '');
+        // नया कोड (New Code)
+// पहले $ और पुराने कॉमा (,) हटाकर साफ वैल्यू लें
+const rawTotal = document.getElementById('total-amount').textContent.replace(/[$,]/g, '');
+// फिर उसे फॉर्मेट करें
+const totalAmount = formatAmount(rawTotal);
         
         body.push([
             { content: 'TOTAL', colSpan: 3, styles: { fontStyle: 'bold', halign: 'right' } },
@@ -1282,5 +1292,6 @@ function amountToWords(amount) {
 }
 
 );
+
 
 
