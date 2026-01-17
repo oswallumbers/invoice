@@ -1,4 +1,4 @@
-function formatCurrency(amount) {
+function formatAmount(amount) {   // <-- इसे बदलकर 'formatAmount' करें
     // अगर amount टेक्स्ट है तो उसे नंबर में बदलें और फिर फॉर्मेट करें
     return Number(amount).toLocaleString('en-IN', {
         minimumFractionDigits: 2,
@@ -1291,6 +1291,7 @@ function amountToWords(amount) {
 }
 
 );
+
 
 
 
