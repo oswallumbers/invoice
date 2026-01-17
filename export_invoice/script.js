@@ -387,7 +387,7 @@ window.exportInvoiceExcel = function() {
         merges.push({ s: {r:row-1, c:1}, e: {r:row-1, c:3} });
     };
 
-    addFooterLine("CONTAINER NO:", data.containerNo);
+    addFooterLine("CONT. NO:", data.containerNo);
     addFooterLine("SIZE:", data.containerSize);
     addFooterLine("TOTAL ITEMS:", data.totalItems);
     addFooterLine("GROSS WEIGHT:", data.grossWeight);
@@ -1244,10 +1244,10 @@ doc.text(document.getElementById('bank-details').value, middleX, rightSideFooter
 let signatureY = rightSideFooterY + doc.getTextDimensions(document.getElementById('bank-details').value, { lineHeightFactor: 1.5 }).h + 30;
 doc.setFont(font, 'bold');
 doc.text('For, OSWAL LUMBERS PVT. LTD.', pageWidth - margin - 10, signatureY + 12, { align: 'right' });
-doc.text('AUTHORISED SIGNATORY', pageWidth - margin - 10, signatureY + 35, { align: 'right' });
+doc.text('AUTHORISED SIGNATORY', pageWidth - margin - 10, signatureY + 30, { align: 'right' });
 
 // This part for drawing the main border is unchanged.
-const borderEndY = signatureY + 40; 
+const borderEndY = signatureY + 35; 
 doc.setLineWidth(0.7);
 doc.setDrawColor(0, 0, 0);
 doc.line(margin, borderStartY, pageWidth - margin, borderStartY);
@@ -1329,6 +1329,7 @@ function amountToWords(amount) {
 }
 
 );
+
 
 
 
