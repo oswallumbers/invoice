@@ -6,6 +6,8 @@
     <title>Bulk Invoice Generator </title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         /* --- Screen UI Styles --- */
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
@@ -209,6 +211,14 @@ SWIFT: UBININBBGAN</textarea>
                     <i class="fas fa-box"></i> Print Packing List
                 </button>
             </div>
+<div class="flex gap-2 border-l pl-4">
+                    <button onclick="exportToExcel('invoice')" class="bg-green-700 text-white font-bold py-3 px-4 rounded shadow hover:bg-green-800 flex items-center gap-2">
+                        <i class="fas fa-file-excel"></i> Excel Inv
+                    </button>
+                    <button onclick="exportToExcel('packing')" class="bg-green-600 text-white font-bold py-3 px-4 rounded shadow hover:bg-green-700 flex items-center gap-2">
+                        <i class="fas fa-file-excel"></i> Excel Pack
+                    </button>
+                </div>
         </div>
     </div>
 
@@ -659,6 +669,287 @@ SWIFT: UBININBBGAN</textarea>
             });
 
             window.print();
+        };
+
+        window.exportToExcel = async function(type) {
+            const isPacking = (type === 'packing');
+            const wb = new ExcelJS.Workbook();
+            const ws = wb.addWorksheet(isPacking ? "Packing List" : "Invoice");
+
+            // -- UTILS --
+            // Helper to apply borders to a cell
+            const applyBorder = (cell, top = true, bottom = true, left = true, right = true) => {
+                cell.border = {
+                    top: top ? {style:'thin'} : undefined,
+                    bottom: bottom ? {style:'thin'} : undefined,
+                    left: left ? {style:'thin'} : undefined,
+                    right: right ? {style:'thin'} : undefined
+                };
+            };
+            const centerStyle = { vertical: 'middle', horizontal: 'center' };
+            const leftStyle = { vertical: 'top', horizontal: 'left', wrapText: true };
+            const rightStyle = { vertical: 'top', horizontal: 'right' };
+            const boldFont = { bold: true, name: 'Times New Roman' };
+            const normalFont = { name: 'Times New Roman' };
+
+            // 1. SETUP COLUMNS (Widths roughly matched to PDF)
+            // A=SNo, B=Desc, C=HSN, D=Qty, E=Vol, F=Rate, G=Amt
+            ws.columns = [
+                { width: 6 },  // A
+                { width: 45 }, // B
+                { width: 12 }, // C
+                { width: 10 }, // D
+                { width: 10 }, // E
+                { width: 12 }, // F
+                { width: 15 }  // G
+            ];
+
+            // 2. HEADER SECTION (Company Info)
+            ws.mergeCells('A1:G1');
+            const cName = ws.getCell('A1');
+            cName.value = "OSWAL LUMBERS PVT. LTD.";
+            cName.font = { name: 'Times New Roman', size: 20, bold: true };
+            cName.alignment = centerStyle;
+
+            ws.mergeCells('A2:G2');
+            const cAddr = ws.getCell('A2');
+            cAddr.value = "SURVEY NO 262, N H. 8/A, MITHIROHAR, GANDHIDHAM-370201-GUJARAT-INDIA";
+            cAddr.font = { name: 'Times New Roman', size: 10 };
+            cAddr.alignment = centerStyle;
+
+            ws.mergeCells('A3:G3');
+            const cContact = ws.getCell('A3');
+            cContact.value = "E-MAIL: info@oswallumbers.com | Ph: +91 9978555000";
+            cContact.font = { name: 'Times New Roman', size: 10 };
+            cContact.alignment = centerStyle;
+            // Border below header
+            ['A3','B3','C3','D3','E3','F3','G3'].forEach(k => ws.getCell(k).border = { bottom: { style: 'medium' } });
+
+            // 3. TITLE
+            ws.addRow([]); // Spacer
+            ws.mergeCells('A5:G5');
+            const cTitle = ws.getCell('A5');
+            cTitle.value = isPacking ? "PACKING LIST" : "INVOICE";
+            cTitle.font = { name: 'Times New Roman', size: 14, bold: true };
+            cTitle.alignment = { ...centerStyle, wrapText: false };
+            cTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE5E7EB' } };
+            applyBorder(cTitle);
+
+            // 4. ADDRESS GRID
+            // Seller A6:C10, Buyer D6:G10
+            ws.mergeCells('A6:C6'); ws.getCell('A6').value = "SELLER / SHIPPER:"; ws.getCell('A6').font = { ...boldFont, underline: true };
+            ws.mergeCells('D6:G6'); ws.getCell('D6').value = "BUYER / CONSIGNEE:"; ws.getCell('D6').font = { ...boldFont, underline: true };
+
+            ws.mergeCells('A7:C11');
+            const cellSeller = ws.getCell('A7');
+            cellSeller.value = document.getElementById('sellerDetails').value;
+            cellSeller.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+
+            ws.mergeCells('D7:G11');
+            const cellBuyer = ws.getCell('D7');
+            cellBuyer.value = document.getElementById('buyerDetails').value;
+            cellBuyer.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+
+            // Box Borders for Addresses
+            // Left Box
+            for(let r=6; r<=11; r++) { ['A','B','C'].forEach(c => applyBorder(ws.getCell(c+r))); }
+            // Right Box
+            for(let r=6; r<=11; r++) { ['D','E','F','G'].forEach(c => applyBorder(ws.getCell(c+r))); }
+
+            // 5. INFO GRID (Invoice No, Date, etc)
+            const addInfoRow = (r, l1, v1, l2, v2) => {
+                // Left Side (A-C) -> Label A, Value B-C
+                ws.getCell(`A${r}`).value = l1; ws.getCell(`A${r}`).font = boldFont; applyBorder(ws.getCell(`A${r}`));
+                ws.mergeCells(`B${r}:C${r}`); ws.getCell(`B${r}`).value = v1; applyBorder(ws.getCell(`B${r}`)); applyBorder(ws.getCell(`C${r}`));
+                
+                // Right Side (D-G) -> Label D-E, Value F-G
+                ws.mergeCells(`D${r}:E${r}`); ws.getCell(`D${r}`).value = l2; ws.getCell(`D${r}`).font = boldFont; applyBorder(ws.getCell(`D${r}`)); applyBorder(ws.getCell(`E${r}`));
+                ws.mergeCells(`F${r}:G${r}`); ws.getCell(`F${r}`).value = v2; applyBorder(ws.getCell(`F${r}`)); applyBorder(ws.getCell(`G${r}`));
+            };
+
+            const rawDate = document.getElementById('invoiceDate').value;
+            const fmtDate = rawDate ? rawDate.split('-').reverse().join('-') : '';
+
+            addInfoRow(12, "Invoice No:", document.getElementById('invoiceNo').value, "Loading Port:", document.getElementById('portLoading').value);
+            addInfoRow(13, "Date:", fmtDate, "Discharge Port:", document.getElementById('portDischarge').value);
+            addInfoRow(14, "Terms:", document.getElementById('terms').value, "Container:", document.getElementById('containerNo').value);
+            addInfoRow(15, "Origin:", document.getElementById('origin').value, "Size:", document.getElementById('containerSize').value);
+
+            // 6. TABLE HEADER
+            const headRowIdx = 17;
+            const headers = ["S.No", "Description of Goods", "HSN", "Qty (PCS)", "Vol (M3)", "Rate ($)", "Amount ($)"];
+            const rowH = ws.getRow(headRowIdx);
+            
+            headers.forEach((h, i) => {
+                const cell = rowH.getCell(i + 1);
+                cell.value = h;
+                cell.font = boldFont;
+                cell.alignment = centerStyle;
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
+                applyBorder(cell);
+            });
+
+            // Packing List: Clear/Hide Rate & Amount Headers
+            if(isPacking) {
+                rowH.getCell(6).value = ""; 
+                rowH.getCell(7).value = "";
+                // Remove borders for empty headers visually if desired, but keeping grid is better
+            }
+
+            // 7. TABLE DATA (With Merge Logic)
+            let currRowIdx = 18;
+            const rows = document.querySelectorAll('#itemsBody tr');
+            let previousItemName = "";
+            let serialCounter = 0;
+
+            rows.forEach((row, i) => {
+                const inputs = row.querySelectorAll('input, textarea');
+                const name = inputs[1].value.trim();
+                const cmt = inputs[2].value;
+                const qty = parseFloat(inputs[4].value) || 0;
+                const m3 = parseFloat(inputs[5].value) || 0;
+                const rate = parseFloat(inputs[6].value) || 0;
+                const amt = parseFloat(inputs[7].value) || 0;
+
+                const isSameItem = (i > 0 && name === previousItemName && name !== "");
+                
+                const r = ws.getRow(currRowIdx);
+                
+                // Serial & Desc
+                if (isSameItem) {
+                    r.getCell(1).value = ""; // Serial Empty
+                    r.getCell(2).value = cmt; // Only comment
+                    r.getCell(2).font = { size: 9, italic: true }; // Smaller font for size/comment
+                    // Top border should be missing to simulate merge
+                    // We handle borders later
+                } else {
+                    serialCounter++;
+                    r.getCell(1).value = serialCounter;
+                    
+                    // Rich Text for Name + Comment
+                    const richText = [ { text: name, font: boldFont } ];
+                    if(cmt) richText.push({ text: "\n" + cmt, font: { size: 9 } });
+                    
+                    r.getCell(2).value = { richText: richText };
+                }
+
+                // Values
+                r.getCell(3).value = inputs[3].value; // HSN
+                r.getCell(4).value = qty;
+                r.getCell(5).value = m3;
+
+                if(!isPacking) {
+                    r.getCell(6).value = rate;
+                    r.getCell(7).value = amt;
+                }
+
+                // Alignments
+                r.getCell(1).alignment = centerStyle;
+                r.getCell(2).alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+                r.getCell(3).alignment = centerStyle;
+                r.getCell(4).alignment = centerStyle;
+                r.getCell(5).alignment = { vertical: 'top', horizontal: 'right' };
+                r.getCell(6).alignment = { vertical: 'top', horizontal: 'right' };
+                r.getCell(7).alignment = { vertical: 'top', horizontal: 'right' };
+
+                // Borders
+                for(let c=1; c<=7; c++) {
+                    const cell = r.getCell(c);
+                    let borderObj = { left: {style:'thin'}, right: {style:'thin'} };
+                    
+                    // If NEW item, add top border. If SAME item, NO top border (looks merged)
+                    if (!isSameItem) borderObj.top = {style:'thin'};
+                    
+                    // If it's the LAST row of data, add bottom border
+                    if (i === rows.length - 1) borderObj.bottom = {style:'thin'};
+
+                    // Hide Rate/Amt borders for packing list if desired, or keep empty boxes
+                    if (isPacking && (c===6 || c===7)) {
+                        cell.value = "";
+                        // Optional: remove borders for these columns
+                    }
+                    
+                    cell.border = borderObj;
+                }
+
+                previousItemName = name;
+                currRowIdx++;
+            });
+
+            // 8. TOTALS
+            const startTotalRow = currRowIdx;
+            
+            // Total Qty
+            ws.mergeCells(`A${startTotalRow}:C${startTotalRow}`);
+            ws.getCell(`A${startTotalRow}`).value = "Total Qty:";
+            ws.getCell(`A${startTotalRow}`).alignment = { horizontal: 'right' };
+            ws.getCell(`A${startTotalRow}`).font = boldFont;
+            ws.getCell(`D${startTotalRow}`).value = parseFloat(document.getElementById('dispTotalQty').textContent);
+            ws.getCell(`D${startTotalRow}`).font = boldFont;
+            applyBorder(ws.getCell(`A${startTotalRow}`)); // Box around label
+            applyBorder(ws.getCell(`D${startTotalRow}`)); // Box around value
+
+            // Total M3
+            ws.mergeCells(`A${startTotalRow+1}:C${startTotalRow+1}`);
+            ws.getCell(`A${startTotalRow+1}`).value = "Total Volume (M3):";
+            ws.getCell(`A${startTotalRow+1}`).alignment = { horizontal: 'right' };
+            ws.getCell(`A${startTotalRow+1}`).font = boldFont;
+            ws.getCell(`D${startTotalRow+1}`).value = parseFloat(document.getElementById('dispTotalM3').textContent);
+            ws.getCell(`D${startTotalRow+1}`).font = boldFont;
+            
+            // Total Amount (Invoice Only)
+            if(!isPacking) {
+                ws.mergeCells(`E${startTotalRow}:F${startTotalRow}`);
+                ws.getCell(`E${startTotalRow}`).value = "Total Amount ($):";
+                ws.getCell(`E${startTotalRow}`).alignment = { horizontal: 'right' };
+                ws.getCell(`E${startTotalRow}`).font = boldFont;
+                
+                const amtVal = parseFloat(document.getElementById('dispTotalAmount').textContent.replace('$',''));
+                ws.getCell(`G${startTotalRow}`).value = amtVal;
+                ws.getCell(`G${startTotalRow}`).font = boldFont;
+                applyBorder(ws.getCell(`E${startTotalRow}`));
+                applyBorder(ws.getCell(`G${startTotalRow}`));
+
+                // Words
+                ws.mergeCells(`A${startTotalRow+2}:G${startTotalRow+2}`);
+                const wordCell = ws.getCell(`A${startTotalRow+2}`);
+                wordCell.value = "Amount in Words: " + window.amountToWords(amtVal) + " ONLY.";
+                wordCell.font = { italic: true, bold: true };
+                applyBorder(wordCell);
+            }
+
+            // 9. FOOTER (Weight, Bank, Sign)
+            const footerRow = startTotalRow + 4;
+            
+            // Weights
+            ws.mergeCells(`A${footerRow}:C${footerRow}`);
+            ws.getCell(`A${footerRow}`).value = "Gross Weight: " + document.getElementById('grossWeight').value;
+            ws.mergeCells(`A${footerRow+1}:C${footerRow+1}`);
+            ws.getCell(`A${footerRow+1}`).value = "Net Weight: " + document.getElementById('netWeight').value;
+
+            // Bank (Invoice Only)
+            if(!isPacking) {
+                ws.mergeCells(`A${footerRow+3}:C${footerRow+6}`);
+                const bankCell = ws.getCell(`A${footerRow+3}`);
+                bankCell.value = "Bank Details:\n" + document.getElementById('bankDetails').value;
+                bankCell.alignment = { vertical: 'top', wrapText: true };
+                applyBorder(bankCell);
+            }
+
+            // Signature
+            ws.mergeCells(`E${footerRow}:G${footerRow}`);
+            ws.getCell(`E${footerRow}`).value = "For, OSWAL LUMBERS PVT. LTD.";
+            ws.getCell(`E${footerRow}`).alignment = centerStyle;
+
+            ws.mergeCells(`E${footerRow+5}:G${footerRow+5}`);
+            ws.getCell(`E${footerRow+5}`).value = "AUTHORISED SIGNATORY";
+            ws.getCell(`E${footerRow+5}`).alignment = centerStyle;
+            ws.getCell(`E${footerRow+5}`).border = { top: { style: 'medium' } };
+
+            // 10. GENERATE & DOWNLOAD
+            const buf = await wb.xlsx.writeBuffer();
+            const fileName = (isPacking ? "PackingList_" : "Invoice_") + document.getElementById('invoiceNo').value + ".xlsx";
+            saveAs(new Blob([buf]), fileName);
         };
 
         // 8. Amount to Words
